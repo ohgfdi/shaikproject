@@ -42,9 +42,18 @@ describe("RLS query-path wiring", () => {
     expect(route).toMatch(/rows:\s*rls\.rows/);
   });
 
-  it("the tenancy module declares the query layer wired", () => {
+  it("the RLS wiring flag matches reality and enforcement fails closed", () => {
+    const status = read("lib/server/rls-status.ts");
+    // The query layer is NOT wrapped yet (npm run tenancy:audit still reports
+    // unwrapped tenant files), so the flag must stay false: enabling RLS against
+    // unset GUCs hides every row. A future refactor flips this constant, the
+    // audit and the docs together — and this test moves with them.
+    expect(status).toContain("RLS_QUERY_LAYER_WIRED = false");
     const tenancy = read("lib/server/tenancy.ts");
-    expect(tenancy).toContain("RLS_QUERY_LAYER_WIRED = true");
     expect(tenancy).toContain("setTenantContext");
+    // Requesting RLS while the layer is unwired must produce a readable config
+    // error rather than a silent, row-hiding "success".
+    expect(tenancy).toContain("rlsConfigError");
+    expect(tenancy).toContain("would hide every row");
   });
 });

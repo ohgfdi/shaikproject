@@ -1,9 +1,10 @@
 /**
  * Row-level-security posture for the deployment.
  *
- * RLS is wired in the query layer but enforcement is opt-in (RLS_ENABLED=true,
- * a non-owner role and prisma/rls.sql applied). That is a defensible choice for
- * a single-tenant dev box and an indefensible default for a production CA firm,
+ * RLS policies are prepared (prisma/rls.sql) but the query layer is NOT wrapped
+ * yet (`RLS_QUERY_LAYER_WIRED = false`), so enforcement is opt-in *and* refused
+ * until `npm run tenancy:audit` reaches zero. That is a defensible choice for a
+ * single-tenant dev box and an indefensible default for a production CA firm,
  * so the posture is computed explicitly instead of being left implicit in env.
  *
  * Pure: reads the supplied env only, so the matrix is unit-testable.

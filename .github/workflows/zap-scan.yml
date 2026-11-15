@@ -1,15 +1,9 @@
 name: ZAP baseline scan
 
-# DAST against a real boot of the app (the README honestly notes no DAST
-# scanner is bundled; this workflow closes that gap on every demand run and
-# weekly schedule). The scan targets the SQLite-profile container — the same
-# shape an evaluator deploys — plus the Postgres profile is scanned by
-# changing the compose profile below.
-#
-# The baseline scan fails the job only on explicitly flagged-failure alerts
-# (ZAP_FAIL_COUNT); tune with `zap-baseline.py -c zap-rules.conf` once a
-# baseline is understood. Alert TRENDS are the signal — a new alert after a
-# dependency bump deserves eyes before that bump ships.
+# Root-level copy: GitHub only runs workflows from `.github/workflows` at the
+# repository root, so the previous location inside the app subdirectory meant
+# this scan never executed. `docker compose` and the app both live in
+# `Aero_Tech-main/aerolexa-main`, hence the workflow default below.
 
 on:
   workflow_dispatch:
@@ -19,6 +13,10 @@ on:
 concurrency:
   group: zap-${{ github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Aero_Tech-main/aerolexa-main
 
 jobs:
   zap:
@@ -59,8 +57,8 @@ jobs:
         with:
           name: zap-baseline-report
           path: |
-            zap-report.html
-            zap-warnings.md
+            Aero_Tech-main/aerolexa-main/zap-report.html
+            Aero_Tech-main/aerolexa-main/zap-warnings.md
           if-no-files-found: warn
 
       - name: Tear down

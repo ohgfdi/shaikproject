@@ -1,6 +1,8 @@
 import { requireAuth, forbiddenError } from "@/lib/auth/guard";
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { activationVerdict, weeklyFunnel } from "@/lib/server/growth-funnel";
+import { practiceStall } from "@/lib/server/practice-funnel";
+import { practiceFunnelSnapshot } from "@/lib/server/practice-funnel-query";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +32,16 @@ export async function GET(request: Request) {
     const weeksRaw = Number(url.searchParams.get("weeks") ?? 12);
     const weeks = Number.isInteger(weeksRaw) && weeksRaw >= 1 && weeksRaw <= 52 ? weeksRaw : 12;
 
-    const rows = await weeklyFunnel(weeks);
+    const [rows, practice] = await Promise.all([weeklyFunnel(weeks), practiceFunnelSnapshot()]);
     const latest = rows[rows.length - 1];
 
     return ok({
       weeks,
       rows,
       latest,
+      // CA-firm value chain: the first missing step is the next build. This is
+      // the evidence Horizon 3 is decided by — not feature coverage.
+      practice: { counts: practice, ...practiceStall(practice) },
       verdict: activationVerdict(latest?.activationRate ?? null),
       definitions: {
         activated: "uploaded a dataset AND ran an analysis in their workspace",

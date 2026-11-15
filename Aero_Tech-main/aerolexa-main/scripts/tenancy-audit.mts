@@ -14,6 +14,7 @@ import "dotenv/config";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { RLS_UNWRAPPED_BASELINE } from "../lib/server/rls-status";
 import { auditTenantAccess, type SourceFile } from "../lib/server/tenancy-audit";
 
 const ROOTS = ["app", "lib/server"];
@@ -56,7 +57,9 @@ process.stdout.write(
     audit.summary,
     `Files scanned: ${audit.filesScanned}`,
     `Tenant files:  ${audit.tenantFiles}`,
-    `Unwrapped:     ${audit.unwrappedFiles}`,
+    `Unwrapped:     ${audit.unwrappedFiles} (baseline ${RLS_UNWRAPPED_BASELINE})`,
+    `Exempt:        ${audit.exemptFiles.length} declared global aggregate(s)`,
+    ...audit.exemptFiles.map((file) => `  ${file}`),
     "",
     "Largest unwrapped files:",
     ...top.map((finding) => `  ${finding.path} (${finding.models.join(", ")})`),
@@ -66,6 +69,16 @@ process.stdout.write(
 
 const strict = process.argv.includes("--strict");
 const rlsRequested = process.env.RLS_ENABLED === "true";
+
+// Ratchet: the gap may shrink as files are wrapped, never grow. A new direct
+// tenant query should be wrapped (or the baseline raised deliberately).
+if (audit.unwrappedFiles > RLS_UNWRAPPED_BASELINE) {
+  process.stderr.write(
+    `Tenancy regression: ${audit.unwrappedFiles} unwrapped tenant files, baseline is ${RLS_UNWRAPPED_BASELINE}. ` +
+      "Wrap the new direct Prisma access path, or raise RLS_UNWRAPPED_BASELINE with a reason.\n",
+  );
+  process.exitCode = 1;
+}
 
 if ((strict || rlsRequested) && !audit.ready) {
   process.stderr.write(

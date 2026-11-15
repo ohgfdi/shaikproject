@@ -4,6 +4,7 @@ import { nextRunAt, parseCron, CronError } from "@/lib/engine/cron";
 import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
+import { requirePlanFeature } from "@/lib/server/billing-features";
 import { requireRowRole } from "@/lib/server/members";
 import { requireModule } from "@/lib/server/modules";
 import { toScheduledNotebookView } from "@/lib/server/scheduled-notebook";
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
     const notebook = await prisma.notebook.findUnique({ where: { id: body.notebookId } });
     if (!notebook) throw new ApiError(404, "NOT_FOUND", "Notebook not found.");
     await requireRowRole(ctx, notebook, "EDITOR");
+    // Scheduled delivery is a distribution feature: Pro+. Creating/running the
+    // notebook itself is never gated — only this automation of it.
+    await requirePlanFeature(ctx.workspace.id, "scheduledNotebookPublish", "Scheduled notebook runs");
 
     const recipients = (Array.isArray(body.recipients) ? body.recipients : [])
       .map((r) => r.trim())

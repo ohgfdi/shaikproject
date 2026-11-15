@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components
 import { requirePageAuth } from "@/lib/auth/guard";
 import { fmtPct } from "@/lib/format";
 import { activationVerdict, weeklyFunnel, type WeeklyFunnelRow } from "@/lib/server/growth-funnel";
+import { practiceStall } from "@/lib/server/practice-funnel";
+import { practiceFunnelSnapshot } from "@/lib/server/practice-funnel-query";
 
 export const metadata = { title: "Growth Funnel" };
 
@@ -54,6 +56,8 @@ export default async function GrowthFunnelPage() {
   const isOperator = role === "OWNER" || role === "ADMIN";
 
   const rows = isOperator ? await weeklyFunnel(12) : [];
+  const practice = isOperator ? await practiceFunnelSnapshot() : null;
+  const stall = practice ? practiceStall(practice) : null;
   const latest = rows[rows.length - 1];
   const verdict = activationVerdict(latest?.activationRate ?? null);
   const totals = rows.reduce(
@@ -98,6 +102,42 @@ export default async function GrowthFunnelPage() {
               </Card>
             ))}
           </div>
+
+          {/* Where the pilot actually stalls — the CA-firm value chain. */}
+          {practice && stall && (
+            <section aria-label="Practice value chain" className="mt-8">
+              <h2 className="text-h3 text-foreground">Where the pilot stalls</h2>
+              <p className="mt-1 max-w-3xl text-caption text-muted">
+                A firm&apos;s value chain is engagement → client portal → filing prepared → filed → reconciled. The
+                first missing step is the next thing to build; everything after it is speculation. Counts are read from
+                stored rows, never estimated.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {[
+                  { label: "Engagements", value: practice.engagements },
+                  { label: "Portal accounts", value: practice.portalAccounts },
+                  { label: "Filings prepared", value: practice.preparedFilings },
+                  { label: "Transmitted", value: practice.filedFilings },
+                  { label: "Reconciled", value: practice.reconciledFilings },
+                ].map((stat) => (
+                  <Card key={stat.label} className="p-4">
+                    <p className="text-2xl font-bold text-foreground">{stat.value.toLocaleString()}</p>
+                    <p className="mt-0.5 text-caption text-muted">{stat.label}</p>
+                  </Card>
+                ))}
+              </div>
+              <Card className="mt-3 p-4">
+                <p className="text-sm font-semibold text-foreground">{stall.summary}</p>
+                <p className="mt-1 text-sm text-muted">
+                  <span className="font-medium text-foreground">Next build: </span>
+                  {stall.nextBuild}
+                </p>
+                <p className="mt-1 text-caption text-muted">
+                  Stage: <code className="rounded bg-surface-2 px-1">{stall.stage}</code>
+                </p>
+              </Card>
+            </section>
+          )}
 
           {/* Weekly cohort table */}
           <h2 className="mt-8 flex items-center gap-2 text-h3 text-foreground">

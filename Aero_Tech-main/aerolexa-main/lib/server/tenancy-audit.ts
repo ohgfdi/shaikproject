@@ -19,12 +19,20 @@ export interface TenantAccessFinding {
   path: string;
   models: string[];
   wrapped: boolean;
+  /**
+   * Declared deployment-wide aggregate (an operator metric that MUST cross
+   * tenants). Not a wrapped file, but an audited exception rather than an
+   * oversight — see TENANCY_GLOBAL_MARKER.
+   */
+  exempt?: boolean;
 }
 
 export interface TenancyAudit {
   filesScanned: number;
   tenantFiles: number;
   unwrappedFiles: number;
+  /** Files exempted with TENANCY_GLOBAL_MARKER, listed so the exception is visible. */
+  exemptFiles: string[];
   modelCounts: Record<string, number>;
   findings: TenantAccessFinding[];
   /** True only when tenant files exist and none is unwrapped. */
@@ -33,6 +41,14 @@ export interface TenancyAudit {
 }
 
 const TENANT_MODEL_SET = new Set(TENANT_MODELS);
+
+/**
+ * Annotation for a deliberate deployment-wide aggregate (e.g. operator funnel
+ * counts). Such a file cannot use withTenantContext() — it has no single tenant
+ * — so it is declared and reported instead of silently counted as wrapped or
+ * silently ignored.
+ */
+export const TENANCY_GLOBAL_MARKER = "tenancy-audit: global-operator";
 
 /** All tenant-model accessors used in one source file. */
 export function tenantModelsIn(content: string, prefixes: readonly string[] = ["prisma", "tx"]): string[] {
@@ -50,6 +66,7 @@ export function tenantModelsIn(content: string, prefixes: readonly string[] = ["
 
 export function auditTenantAccess(files: SourceFile[]): TenancyAudit {
   const findings: TenantAccessFinding[] = [];
+  const exemptFiles: string[] = [];
   const modelCounts: Record<string, number> = {};
 
   for (const file of files) {
@@ -60,14 +77,18 @@ export function auditTenantAccess(files: SourceFile[]): TenancyAudit {
     // also calls withTenantContext() for other queries: partial wrapping is how
     // a cross-tenant read slips through.
     const direct = tenantModelsIn(file.content, ["prisma"]);
+    const exempt = file.content.includes(TENANCY_GLOBAL_MARKER);
+    if (exempt) exemptFiles.push(file.path);
     findings.push({
       path: file.path,
       models,
+      exempt,
       wrapped:
-        (file.content.includes("withTenantContext(") ||
+        exempt ||
+        ((file.content.includes("withTenantContext(") ||
           file.content.includes("withTenantDb(") ||
           file.content.includes("withUserContext(")) &&
-        direct.length === 0,
+          direct.length === 0),
     });
   }
 
@@ -76,6 +97,7 @@ export function auditTenantAccess(files: SourceFile[]): TenancyAudit {
     filesScanned: files.length,
     tenantFiles: findings.length,
     unwrappedFiles: unwrapped.length,
+    exemptFiles,
     modelCounts,
     findings: findings.sort((a, b) => a.path.localeCompare(b.path)),
     ready: findings.length > 0 && unwrapped.length === 0,

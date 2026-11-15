@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage, LoadingSkeleton } from "@/components/ui/feedback";
 import { Badge, Card } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
+import { CALCULATED_LABEL, TRUST_EXPLANATION } from "@/lib/trust/labels";
 import { timeAgo } from "@/lib/format";
 
 export interface AnalysisVersionRow {
@@ -86,6 +87,7 @@ export function AnalysisVersions({ analysisId }: { analysisId: string }) {
           <Badge variant="outline">
             {versions.length} run{versions.length === 1 ? "" : "s"}
           </Badge>
+          <Badge variant="success">{CALCULATED_LABEL}</Badge>
         </p>
         <div className="flex-1" />
         {versions.length > 0 && (

@@ -18,6 +18,7 @@ import {
   type Granularity,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { trustLabelForKind } from "@/lib/trust/labels";
 
 export interface WizardColumn {
   name: string;
@@ -524,6 +525,16 @@ export function AnalysisWizard({
                     <span className="flex items-center gap-2">
                       <FlaskConical aria-hidden className="size-4 text-accent" />
                       <span className="font-medium text-foreground">{ANALYSIS_KIND_LABELS[k]}</span>
+                      <span
+                        className={cn(
+                          "ml-auto rounded px-1.5 py-0.5 text-caption font-semibold",
+                          trustLabelForKind(k) === "Calculated (oracle-validated)"
+                            ? "bg-success/10 text-success"
+                            : "bg-amber/10 text-amber",
+                        )}
+                      >
+                        {trustLabelForKind(k)}
+                      </span>
                     </span>
                     <span className="text-sm text-muted">{ANALYSIS_KIND_DESCRIPTIONS[k]}</span>
                     {!ok && (
@@ -1165,6 +1176,23 @@ export function AnalysisWizard({
             <Field label="" htmlFor="">
               <span className="text-caption text-muted">
                 Results include stats, charts, data-quality warnings and a full “How was this calculated?” breakdown.
+              </span>
+              <span className="mt-1 block text-caption">
+                <span
+                  className={cn(
+                    "rounded px-1.5 py-0.5 font-semibold",
+                    trustLabelForKind(kind) === "Calculated (oracle-validated)"
+                      ? "bg-success/10 text-success"
+                      : "bg-amber/10 text-amber",
+                  )}
+                >
+                  {trustLabelForKind(kind)}
+                </span>{" "}
+                <span className="text-muted">
+                  {trustLabelForKind(kind) === "Calculated (oracle-validated)"
+                    ? "— every figure this run produces is verified against SciPy/NumPy/statsmodels oracles in CI and traceable via provenance; the versions panel on the result records it as an immutable snapshot."
+                    : "— prototype-grade logic: the result is always labelled as such and never presented as production-verified."}
+                </span>
               </span>
             </Field>
             <Button onClick={run} loading={running} disabled={!canRun} icon={<Play aria-hidden className="size-4" />}>

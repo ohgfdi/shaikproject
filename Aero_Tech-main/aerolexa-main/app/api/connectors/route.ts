@@ -7,6 +7,7 @@ import { testConnector, CONNECTOR_IMPLEMENTED_KINDS } from "@/lib/engine/connect
 import { parseCron, CronError } from "@/lib/engine/cron";
 import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
+import { requirePlanFeature } from "@/lib/server/billing-features";
 import { connectorView } from "@/lib/server/connectors";
 import { requireEntitlement } from "@/lib/server/entitlements";
 
@@ -74,6 +75,13 @@ export async function POST(request: Request) {
             : "The cron expression is invalid. How to fix: use the 5-field format (minute hour day month weekday).",
         );
       }
+    }
+
+    // Setting up UNATTENDED sync is the automation/distribution half of a
+    // connector; the connection itself is already covered by the
+    // externalConnectors entitlement above.
+    if (body.syncEnabled) {
+      await requirePlanFeature(ctx.workspace.id, "scheduledConnectorSync", "Scheduled connector sync");
     }
 
     const connector = await prisma.connector.create({

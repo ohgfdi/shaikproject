@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, Eye, FilePlus, FlaskConical, Lightbulb, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, FilePlus, FlaskConical, Lightbulb, ShieldCheck, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Dialog, useToast } from "@/components/ui/overlays";
 import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { CONFIDENCE_LABEL } from "@/components/ui/theme";
 import { api, errorMessage } from "@/lib/client/api";
+import { PROTOTYPE_LABEL, TRUST_EXPLANATION, trustLabelForConfidence } from "@/lib/trust/labels";
 import type { InsightCard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,7 @@ interface ReportOption {
 export function InsightCardView({ insight, onDelete }: { insight: InsightCard; onDelete?: () => void }) {
   const [open, setOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [trustOpen, setTrustOpen] = useState(false);
   const [addToReportOpen, setAddToReportOpen] = useState(false);
   const [reports, setReports] = useState<ReportOption[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
@@ -95,6 +98,17 @@ export function InsightCardView({ insight, onDelete }: { insight: InsightCard; o
                 >
                   {SEVERITY_LABEL[insight.severity] ?? insight.severity}
                 </Badge>
+                {insight.confidence === "calculated" ? (
+                  <Badge variant="success" className="gap-1">
+                    <ShieldCheck aria-hidden className="size-3" />
+                    {trustLabelForConfidence(insight.confidence)}
+                  </Badge>
+                ) : (
+                  <Badge variant="amber" className="gap-1">
+                    <FlaskConical aria-hidden className="size-3" />
+                    {PROTOTYPE_LABEL}
+                  </Badge>
+                )}
                 {insight.confidence === "inferred" && (
                   <Badge variant="amber" className="gap-1">
                     <FlaskConical aria-hidden className="size-3" />
@@ -131,7 +145,40 @@ export function InsightCardView({ insight, onDelete }: { insight: InsightCard; o
               Confidence: <span className="font-medium text-foreground">{insight.confidence}</span>
             </span>
             {insight.createdAt && <span>· {new Date(insight.createdAt).toLocaleDateString()}</span>}
+            <button
+              onClick={() => setTrustOpen((v) => !v)}
+              aria-expanded={trustOpen}
+              className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
+            >
+              <ShieldCheck aria-hidden className="size-3" />
+              How this number is verified
+              <ChevronDown
+                aria-hidden
+                className={cn("size-3 transition-transform", trustOpen && "rotate-180")}
+              />
+            </button>
           </div>
+
+          {trustOpen && (
+            <div className="mt-2 rounded-md border border-line bg-surface-2/60 px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-caption font-semibold text-foreground">
+                <ShieldCheck aria-hidden className="size-3.5 text-success" />
+                {trustLabelForConfidence(insight.confidence)}
+              </p>
+              {TRUST_EXPLANATION.map((line) => (
+                <p key={line} className="mt-1.5 text-caption leading-relaxed text-muted">
+                  {line}
+                </p>
+              ))}
+              <p className="mt-2 text-caption text-muted">
+                Open an analysis result and use its{" "}
+                <Link href="/analyses" className="font-medium text-accent hover:underline">
+                  versions panel
+                </Link>{" "}
+                to diff two runs and see exactly what changed.
+              </p>
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap gap-2">
             <Button

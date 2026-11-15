@@ -49,6 +49,7 @@
     "filing:canary": "tsx scripts/filing-canary.mts",
     "filing:certify": "tsx scripts/filing-certify.mts",
     "preflight:prod": "tsx scripts/preflight-prod.mts",
+    "pilot:readiness": "tsx scripts/pilot-readiness.mts",
     "drill:backup": "node scripts/backup-drill.mjs",
     "demo": "node scripts/sales-demo.mjs",
     "test:mysql": "node scripts/test-mysql.mjs",

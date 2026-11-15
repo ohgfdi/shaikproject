@@ -110,7 +110,19 @@ export async function withUserContext<T>(userId: string, fn: (tx: Prisma.Transac
   });
 }
 
-/** Set the tenant GUCs for the current transaction (PostgreSQL only). */
+/**
+ * Set every GUC a policy compares against, for the current transaction
+ * (PostgreSQL only).
+ *
+ * The three names are not interchangeable history — they are all LIVE keys:
+ * `prisma/rls.sql` and the batch migrations contain policies that read
+ * `app.tenant_id` (workspace-keyed tables), `app.current_workspace` (the
+ * legacy analytics policies), `app.current_organization` and
+ * `app.current_user` (auth bootstrap). Setting only some of them makes the
+ * remaining policies compare against NULL, which hides every row instead of
+ * failing loudly. `__tests__/unit/rls-guc-contract.test.ts` holds this list
+ * to the policies that actually ship.
+ */
 async function setTenantContext(
   tx: Prisma.TransactionClient,
   workspaceId: string,
@@ -118,6 +130,7 @@ async function setTenantContext(
   userId: string,
 ): Promise<void> {
   await tx.$executeRaw`SELECT set_config('app.current_user', ${userId}, true)`;
+  await tx.$executeRaw`SELECT set_config('app.tenant_id', ${workspaceId}, true)`;
   await tx.$executeRaw`SELECT set_config('app.current_workspace', ${workspaceId}, true)`;
   await tx.$executeRaw`SELECT set_config('app.current_organization', ${organizationId ?? ""}, true)`;
 }
@@ -131,6 +144,12 @@ export async function withTenantContext<T>(
   opts: { workspaceId: string; organizationId: string | null; userId: string },
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
+  // Fail closed: a missing tenant id must never mean "all rows". The policies
+  // would hide everything, but a caller that reached here without resolving a
+  // workspace has a bug worth surfacing as an error, not as empty results.
+  if (!opts.workspaceId) {
+    throw new Error("withTenantContext called without a workspaceId — refusing to run a tenant query (fail closed).");
+  }
   if (!rlsEnabled()) return fn(prisma);
   return prisma.$transaction(async (tx) => {
     await setTenantContext(tx, opts.workspaceId, opts.organizationId, opts.userId);

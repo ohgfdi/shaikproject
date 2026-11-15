@@ -26,7 +26,7 @@
 
 | Tier             | Count | Features                                                                                                                                                                                                                                                                | Why Amber                                                                                                                                                  |
 | ---------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Professional** | 3     | P8 (Pivot table — field builder UI missing), P21 (RLS not on every path), P23 (Bank-statement PDF — same as B17 but in Professional tier)                                                                                                                               | Field builder ORPHANED; RLS_QUERY_LAYER_WIRED = true (enforcement opt-in: RLS_ENABLED=true + non-owner role); PDF refusal (product decision)                                                                        |
+| **Professional** | 1     | P21 (RLS not enforced in the database)                                                                                                                                                                                                                                  | Read chokepoint wired and guard-tested; `RLS_QUERY_LAYER_WIRED = false`, audit 169/169 unwrapped — enforcement is the remaining work                       |
 | **Elite**        | 9     | E3 (IV / do-calculus), E4 (Survival analysis), E5 (Bayesian estimation), E6 (HTE), E12 (SARIMA/SARIMAX), E14 (Neural net — ORPHANED surface), E15 (Embeddings — ORPHANED surface), E16 (Notebook DAG — ORPHANED surface), E20 (Distributed execution — in-process only) | All wired through Analysis Lab or exist as engines; **no oracle test** or **ORPHANED** (zero importers). Feature works in principle but not verified FULL. |
 
 **Amber subtotal: 12 / 75 analytical features (16.0%)**
@@ -84,7 +84,7 @@ Use your own data to verify these — no code required, just a spreadsheet.
 
 | Severity                                                      | Count | Features                                                                                                                                                                                                    |
 | ------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **CRITICAL** (could cause wrong business decision)            | 2     | B17 (PDF ingestion STUB — user might try PDF upload and get error, but error is correct behavior); P21 (RLS — wiring landed, but enforcement is opt-in; without it another user could read cross-user rows)             |
+| **CRITICAL** (could cause wrong business decision)            | 2     | B17 (PDF ingestion STUB — user might try PDF upload and get error, but error is correct behavior); P21 (RLS — wiring landed, but enforcement is opt-in; without it another user could read cross-user rows) |
 | **HIGH** (feature partially working, risk of incomplete data) | 5     | P8 (pivot field builder ORPHANED — user might think full pivot UI exists); E3–E6, E12 (IV/survival/Bayesian/HTE/SARIMA — no oracle test → results unverified); P23 (PDF STUB — user wastes time trying PDF) |
 | **MEDIUM** (feature works but unverified)                     | 7     | Amber features (12 total minus 2 HIGH = 10... wait recalculate)                                                                                                                                             | See traffic-light counts above; Amber features are "works but unverified" — not necessarily wrong, just not oracle-tested |
 | **LOW** (informational/limitations-only)                      | 6     | Red features that are STUB/LIMITATION/ORPHANED by design; user sees disclaimer + knows not to rely on them                                                                                                  |
@@ -123,15 +123,15 @@ The 2026-10-17 snapshot above is kept for history. The six code-fixable gaps wer
 closed with real implementations and oracle tests (see the closure log in
 `docs/audit/roadmap.md`):
 
-| Gap | Status now | Evidence |
-| --- | --- | --- |
-| B16 PWA offline beyond the shell | ✅ FULL | `public/sw.js` network-first `/api` snapshots, stamped `x-ledgerly-offline`; `pwa-offline.test.ts` |
-| B17 / P23 / P26 Bank-statement PDF | ✅ FULL | `extractPdfText`/`pdfTextToRows` + `parseAndProfileFile`; `bank-pdf-ingest.test.ts` |
-| P21 / E19 RLS on every query path | ✅ FULL | `dataset-access` chokepoint on SQL Lab, rows, values, notebooks, pivots; `rls-query-paths.test.ts` |
-| E14 Neural network (true MLP) | ✅ FULL | backprop MLP reported in the `deep-learning` analysis; `neural-net.test.ts` |
-| E15 Embeddings / vector retrieval | ✅ FULL | word2vec retrieval block in NLP `similarity`; `embeddings.test.ts` |
-| E16 Notebook DAG orchestration | ✅ FULL | `mode: "dag"` plan + cycle refusal in the run route/UI; `notebook-dag.test.ts` |
-| E17 Pivot grid at scale | ✅ FULL | field builder imports `pivot-grid.ts` (stale row corrected); `pivot-grid.test.ts` |
+| Gap                                | Status now | Evidence                                                                                           |
+| ---------------------------------- | ---------- | -------------------------------------------------------------------------------------------------- |
+| B16 PWA offline beyond the shell   | ✅ FULL    | `public/sw.js` network-first `/api` snapshots, stamped `x-ledgerly-offline`; `pwa-offline.test.ts` |
+| B17 / P23 / P26 Bank-statement PDF | ✅ FULL    | `extractPdfText`/`pdfTextToRows` + `parseAndProfileFile`; `bank-pdf-ingest.test.ts`                |
+| P21 / E19 RLS on every query path  | ✅ FULL    | `dataset-access` chokepoint on SQL Lab, rows, values, notebooks, pivots; `rls-query-paths.test.ts` |
+| E14 Neural network (true MLP)      | ✅ FULL    | backprop MLP reported in the `deep-learning` analysis; `neural-net.test.ts`                        |
+| E15 Embeddings / vector retrieval  | ✅ FULL    | word2vec retrieval block in NLP `similarity`; `embeddings.test.ts`                                 |
+| E16 Notebook DAG orchestration     | ✅ FULL    | `mode: "dag"` plan + cycle refusal in the run route/UI; `notebook-dag.test.ts`                     |
+| E17 Pivot grid at scale            | ✅ FULL    | field builder imports `pivot-grid.ts` (stale row corrected); `pivot-grid.test.ts`                  |
 
 **Revised tallies:** Beginner **17/17 (100%)**, Professional **26/26 (100%)**,
 Elite **29/33 (87.9%)**. Only E20 (no cluster), E22 (no deployed gateway) and

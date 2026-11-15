@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { auditEntriesToCsv } from "@/lib/engine/audit-csv";
 import { toErrorResponse } from "@/lib/server/api";
+import { requirePlanFeature } from "@/lib/server/billing-features";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,10 @@ const SECURITY_TYPES = new Set([
 export async function GET(request: Request) {
   try {
     const ctx = await requireAuth();
+    // The on-screen audit trail stays readable on every plan (it is the
+    // workspace's own history); handing a filterable CSV to an external
+    // auditor is the Firm-tier governance export.
+    await requirePlanFeature(ctx.workspace.id, "auditExport", "Audit-trail CSV export");
     const url = new URL(request.url);
     const scope = url.searchParams.get("scope") === "security" ? "security" : "activity";
     const actorId = url.searchParams.get("actorId") ?? null;

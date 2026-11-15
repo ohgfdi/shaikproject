@@ -3,6 +3,7 @@
 import { Ban, Check, Copy, KeyRound, Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,6 +12,7 @@ import { Checkbox, Field, Input } from "@/components/ui/form";
 import { Dialog, useToast } from "@/components/ui/overlays";
 import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
+import { planGateFromError, type PlanGateInfo } from "@/lib/client/plan-gate";
 import { timeAgo } from "@/lib/format";
 
 /**
@@ -75,6 +77,7 @@ export function ApiKeysPanel() {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [planGate, setPlanGate] = useState<PlanGateInfo | null>(null);
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>(["datasets:read", "reports:read"]);
   const [rateLimit, setRateLimit] = useState("60");
@@ -104,6 +107,7 @@ export function ApiKeysPanel() {
     setRateLimit("60");
     setExpiresInDays("");
     setFormError(null);
+    setPlanGate(null);
     setCreating(true);
   };
 
@@ -113,6 +117,7 @@ export function ApiKeysPanel() {
   const create = async () => {
     setBusy(true);
     setFormError(null);
+    setPlanGate(null);
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
@@ -131,7 +136,9 @@ export function ApiKeysPanel() {
       await load();
       toast({ title: "API key created", message: data.warning, type: "success" });
     } catch (err) {
-      setFormError(errorMessage(err));
+      const gate = planGateFromError(err);
+      setPlanGate(gate);
+      setFormError(gate ? null : errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -301,7 +308,11 @@ export function ApiKeysPanel() {
         description="Scope the key to the minimum permissions it needs. The secret is shown once after creation."
       >
         <div className="flex flex-col gap-4">
-          {formError && <ErrorMessage title="Could not create key" message={formError} />}
+          {planGate ? (
+            <UpgradeNotice plan={planGate.plan} feature="API keys" />
+          ) : (
+            formError && <ErrorMessage title="Could not create key" message={formError} />
+          )}
           <Field label="Name" helper="What is this key for? (e.g. “CI pipeline”, “Zapier”)">
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="CI pipeline" />
           </Field>

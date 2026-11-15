@@ -11,6 +11,17 @@
  */
 export const RLS_QUERY_LAYER_WIRED = false;
 
+/**
+ * Measured `npm run tenancy:audit` count at the time this baseline was set.
+ *
+ * A ratchet, not a target: unwrappedFiles may fall below it as files are
+ * wrapped, and must never rise above it. Adding a direct Prisma access path on
+ * a tenant model fails `tenancy-ratchet.test.ts`, which forces the choice
+ * between wrapping the file and consciously raising this number with a reason.
+ * When the audit reaches zero, flip RLS_QUERY_LAYER_WIRED and delete this.
+ */
+export const RLS_UNWRAPPED_BASELINE = 169;
+
 /** Tenant-scoped Prisma accessors covered by the audit. */
 export const TENANT_MODELS: readonly string[] = [
   "organization",

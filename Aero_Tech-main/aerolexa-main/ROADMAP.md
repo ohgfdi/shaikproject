@@ -2,7 +2,7 @@
 
 _"From strong prototype to the best-in-class self-hosted analytics platform."_
 
-> **Status snapshot (updated 2026-09):** Phases 0, 1, 2, 5 and 6 are **closed** — every item shipped with its oracle
+> **Status snapshot (updated 2026-09; RLS correction 2026-11-15):** Phases 0, 1, 2, 5 and 6 are **closed** — every item shipped with its oracle
 > tests. Phase 3 is closed (3.5 drill-through shipped: `lib/engine/drill-through.ts`, detail page, dashboards + reports).
 > Phase 4 is closed — reactive re-runs execute the client-side plan (`lib/engine/reactive-run.ts`, strict sequential
 > bursts with supersession) and published notebooks render live widget filters + the real chart suite
@@ -52,13 +52,13 @@ _"From strong prototype to the best-in-class self-hosted analytics platform."_
 
 **Domain standard:** Power BI's measure/model experience.
 
-| #   | Item                                                                                                                                                                                                                  | Definition of done                                                                                         |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 2.1 | **DAX everywhere** — surface `lib/engine/dax.ts` (150+ functions incl. the full time-intelligence and boundary families, already oracle-tested) in dashboards AND the Power Query UI output, not just the studio page | A measure defined once can be reused in any visual                                                         |
-| 2.2 | **Multi-table model with relationships** — extend the single-table DAX engine: `ProjectJoinMapping`-backed table registry, `RELATED()`-style row propagation via the join graph, star-schema cardinality checks       | `CALCULATE(SUM([Amount]), RELATED(DimCustomer[Segment]) = "VIP")` returns the hand-computed value in tests |
-| 2.3 | **Measure & column lineage UI** — dependency graph of measures → columns → tables                                                                                                                                     | Deleting a column warns with the exact list of broken measures                                             |
-| 2.4 | **Time-dimension table** — auto-generated date dimension (fiscal periods, week-of-year) so `SAMEPERIODLASTYEAR` etc. work on sparse facts without hacks                                                               | YTD across a 3-year sparse fact matches a SQL oracle in CI                                                 |
-| 2.5 | **Row-level security (RLS)** — `prisma/rls.sql` exists but is decorative; implement role filters evaluated in the DAX filter-context engine per user                                                                  | A VIEWER in region "East" sees only East rows in every visual; test with two users proves it               |
+| #   | Item                                                                                                                                                                                                                                                                                                                               | Definition of done                                                                                                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1 | **DAX everywhere** — surface `lib/engine/dax.ts` (150+ functions incl. the full time-intelligence and boundary families, already oracle-tested) in dashboards AND the Power Query UI output, not just the studio page                                                                                                              | A measure defined once can be reused in any visual                                                                                                              |
+| 2.2 | **Multi-table model with relationships** — extend the single-table DAX engine: `ProjectJoinMapping`-backed table registry, `RELATED()`-style row propagation via the join graph, star-schema cardinality checks                                                                                                                    | `CALCULATE(SUM([Amount]), RELATED(DimCustomer[Segment]) = "VIP")` returns the hand-computed value in tests                                                      |
+| 2.3 | **Measure & column lineage UI** — dependency graph of measures → columns → tables                                                                                                                                                                                                                                                  | Deleting a column warns with the exact list of broken measures                                                                                                  |
+| 2.4 | **Time-dimension table** — auto-generated date dimension (fiscal periods, week-of-year) so `SAMEPERIODLASTYEAR` etc. work on sparse facts without hacks                                                                                                                                                                            | YTD across a 3-year sparse fact matches a SQL oracle in CI                                                                                                      |
+| 2.5 | **Row-level security (RLS)** — `prisma/rls.sql` exists but is **not enforced**. `RLS_QUERY_LAYER_WIRED = false`; `npm run tenancy:audit` reports 169/169 tenant files outside `withTenantContext()`. The dataset read chokepoint (`dataset-access.ts`) is wired and guard-tested, but DB policies stay off or they hide every row. | Two users in different firms see zero foreign rows through SQL Lab, rows, exports, search and the portal; audit reaches zero; `RLS_ENABLED=true` is green in CI |
 
 ---
 
@@ -149,14 +149,14 @@ Phase 7 interleaves: one polish item per sprint from Phase 2 onward
 
 ## What "best" means — the bar to defend
 
-| Domain     | Bench tool            | Our current gap                                                                                                   | Closed by  |
-| ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------- |
-| Transforms | Power Query           | ~~engine done, no UI, no persistence~~ CLOSED — studio UI + persisted re-run steps                                | 1.1–1.2 ✅ |
-| Modeling   | Power BI DAX          | ~~single-table engine done~~ CLOSED — relationships, RELATED(), RLS, date dimension, lineage                      | 2.1–2.5 ✅ |
-| Visuals    | Power BI + Observable | CLOSED — visual picker, maps and drill-through (3.5) all shipped                                                  | 3.1–3.5 ✅ |
-| Notebooks  | Hex                   | CLOSED — SQL cells + SQL→Python handoff, client-side reactive re-runs (4.3) and published filter UI (4.4) shipped | 4.1–4.4 ✅ |
-| Governance | Metabase              | ~~audit trail exists, no exports/keys/RLS~~ CLOSED — CSV export, keys+UI, per-key limits, durable queue, OpenAPI  | 5.1–5.6 ✅ |
-| AI         | — (trust bar)         | ~~chat exists, not grounded~~ CLOSED — DAX bridge, grounded why/where tools, eval suites, insight→report          | 6.1–6.4 ✅ |
+| Domain     | Bench tool            | Our current gap                                                                                                                   | Closed by            |
+| ---------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Transforms | Power Query           | ~~engine done, no UI, no persistence~~ CLOSED — studio UI + persisted re-run steps                                                | 1.1–1.2 ✅           |
+| Modeling   | Power BI DAX          | Relationships, RELATED(), date dimension and lineage are closed; **RLS is still open** (P21/E19) — the query layer is not wrapped | 2.1–2.4 ✅, 2.5 open |
+| Visuals    | Power BI + Observable | CLOSED — visual picker, maps and drill-through (3.5) all shipped                                                                  | 3.1–3.5 ✅           |
+| Notebooks  | Hex                   | CLOSED — SQL cells + SQL→Python handoff, client-side reactive re-runs (4.3) and published filter UI (4.4) shipped                 | 4.1–4.4 ✅           |
+| Governance | Metabase              | ~~audit trail exists, no exports/keys/RLS~~ CLOSED — CSV export, keys+UI, per-key limits, durable queue, OpenAPI                  | 5.1–5.6 ✅           |
+| AI         | — (trust bar)         | ~~chat exists, not grounded~~ CLOSED — DAX bridge, grounded why/where tools, eval suites, insight→report                          | 6.1–6.4 ✅           |
 
 ## Definition of done for the whole plan
 

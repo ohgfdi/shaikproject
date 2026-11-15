@@ -11,6 +11,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { activityMeta } from "@/components/activity/activity-meta";
 import { KpiSlabRow, type KpiSlab } from "@/components/dashboard/kpi-slabs";
@@ -29,6 +30,15 @@ export const metadata = { title: "Home" };
 
 export default async function DashboardHome() {
   const ctx = await requirePageAuth();
+
+  // Firm home. For a user attached to an organization, the daily question is
+  // "what is due next, for which client" — the statutory calendar, not an
+  // analytics overview. Opt-in at the instance level until pilot evidence says
+  // otherwise, and reversible with FIRM_HOME=analytics.
+  if (ctx.organization && (process.env.FIRM_HOME ?? "analytics") === "compliance") {
+    redirect("/compliance");
+  }
+
   const workspaceId = ctx.workspace.id;
 
   const today = new Date().toISOString().slice(0, 10);
@@ -149,7 +159,11 @@ export default async function DashboardHome() {
                 {cockpit.counts.critical} overdue · {cockpit.counts.warning} due soon · {cockpit.counts.info} to review
               </p>
             </div>
-            <ButtonLink href="/compliance/filings" variant="secondary" icon={<CalendarClock aria-hidden className="size-4" />}>
+            <ButtonLink
+              href="/compliance/filings"
+              variant="secondary"
+              icon={<CalendarClock aria-hidden className="size-4" />}
+            >
               Open filing board
             </ButtonLink>
           </div>
@@ -169,7 +183,9 @@ export default async function DashboardHome() {
                     </span>
                   </span>
                   <Badge
-                    variant={item.severity === "critical" ? "critical" : item.severity === "warning" ? "warning" : "info"}
+                    variant={
+                      item.severity === "critical" ? "critical" : item.severity === "warning" ? "warning" : "info"
+                    }
                     className="shrink-0"
                   >
                     {item.severity === "critical" ? "Overdue" : item.severity === "warning" ? "Soon" : "Review"}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/feedback";
 import { Card, Badge } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
+import { CALCULATED_LABEL, TRUST_EXPLANATION } from "@/lib/trust/labels";
 
 export interface AnalysisVersionView {
   id: string;
@@ -117,6 +118,7 @@ export function VersionsPanel({ analysisId }: { analysisId: string }) {
         <p className="flex items-center gap-2 font-medium text-foreground">
           <History aria-hidden className="size-4" /> Version history
         </p>
+        <span className="badge bg-success/10 text-success">{CALCULATED_LABEL}</span>
         <div className="flex-1" />
         <Button
           variant="secondary"

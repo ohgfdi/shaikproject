@@ -35,7 +35,7 @@ proves cross-workspace access is refused (403 on another account's resource).
 
 **Row-level security** (`prisma/rls.sql`, PostgreSQL only) is prepared as an
 _additional_ layer but is **not active by default**, though the query layer is now wired
-(`RLS_QUERY_LAYER_WIRED = true` in `lib/server/tenancy.ts`). The file enables and FORCEs policies on the
+(`RLS_QUERY_LAYER_WIRED = false` in `lib/server/rls-status.ts`: the query layer is **not** wrapped yet, and `npm run tenancy:audit` reports the gap). The file enables and FORCEs policies on the
 org/workspace tables, so it is real — but it only protects a deployment that
 also (a) connects as a dedicated non-owner, non-`BYPASSRLS` role and (b) runs
 tenant queries through `withTenantContext()` (which sets the `app.current_*`

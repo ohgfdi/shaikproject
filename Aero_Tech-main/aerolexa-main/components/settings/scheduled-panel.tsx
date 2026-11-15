@@ -4,6 +4,7 @@ import { CalendarClock, Clock, Play, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,6 +12,7 @@ import { DemoBadge, ErrorMessage, LoadingSkeleton } from "@/components/ui/feedba
 import { Dialog, useToast } from "@/components/ui/overlays";
 import { Badge, Card } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
+import { planGateFromError, type PlanGateInfo } from "@/lib/client/plan-gate";
 import { CRON_PRESETS, type ScheduledReportView } from "@/lib/types";
 
 export interface ReportOption {
@@ -27,6 +29,7 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [planGate, setPlanGate] = useState<PlanGateInfo | null>(null);
   const [name, setName] = useState("");
   const [reportId, setReportId] = useState("");
   const [cron, setCron] = useState<string>(CRON_PRESETS[0]?.cron ?? "0 9 * * *");
@@ -47,9 +50,16 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
     void load();
   }, [load]);
 
+  const openCreate = () => {
+    setFormError(null);
+    setPlanGate(null);
+    setCreating(true);
+  };
+
   const create = async () => {
     setBusy(true);
     setFormError(null);
+    setPlanGate(null);
     try {
       const data = await api<{ schedule: ScheduledReportView }>("/api/scheduled-reports", {
         method: "POST",
@@ -69,12 +79,15 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
         type: "success",
       });
       setCreating(false);
+      setPlanGate(null);
       setName("");
       setRecipients("");
       await load();
       void data;
     } catch (err) {
-      setFormError(errorMessage(err));
+      const gate = planGateFromError(err);
+      setPlanGate(gate);
+      setFormError(gate ? null : errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -138,7 +151,7 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
         <DemoBadge tooltip="Scheduled email delivery requires SMTP config; exports always generate locally. Scheduler process runs when SCHEDULER_ENABLED=true." />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button onClick={() => setCreating(true)} icon={<Plus aria-hidden className="size-4" />}>
+        <Button onClick={openCreate} icon={<Plus aria-hidden className="size-4" />}>
           Add schedule
         </Button>
         {schedules?.length ? (
@@ -170,7 +183,7 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
             title="No schedules yet"
             description="Automate recurring reporting — pick a report template and a cron."
             action={
-              <Button onClick={() => setCreating(true)} icon={<Plus aria-hidden className="size-4" />}>
+              <Button onClick={openCreate} icon={<Plus aria-hidden className="size-4" />}>
                 Add schedule
               </Button>
             }
@@ -253,7 +266,11 @@ export function ScheduledPanel({ reports, schedulerEnabled }: { reports: ReportO
         }
       >
         <div className="flex flex-col gap-4">
-          {formError && <ErrorMessage title="Could not create the schedule" message={formError} />}
+          {planGate ? (
+            <UpgradeNotice plan={planGate.plan} feature="Scheduled report delivery" />
+          ) : (
+            formError && <ErrorMessage title="Could not create the schedule" message={formError} />
+          )}
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-foreground">Name</span>
             <input
