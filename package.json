@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "freebuff": "^0.2.30",
     "opencode-ai": "^1.18.32",
     "postgresql": "^0.0.1"
