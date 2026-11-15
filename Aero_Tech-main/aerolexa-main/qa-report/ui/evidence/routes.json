@@ -1,0 +1,506 @@
+[
+  {
+    "width": 1440,
+    "href": "/dashboard",
+    "status": 200,
+    "mainLength": 1750,
+    "sample": "Welcome back, UI Your uploaded data drives everything below ",
+    "url": "http://127.0.0.1:3000/dashboard"
+  },
+  {
+    "width": 1440,
+    "href": "/copilot",
+    "status": 200,
+    "mainLength": 952,
+    "sample": "Conversations Your conversations will appear here. Copilot C",
+    "url": "http://127.0.0.1:3000/copilot"
+  },
+  {
+    "width": 1440,
+    "href": "/projects",
+    "status": 200,
+    "mainLength": 277,
+    "sample": "My Projects Every artifact lives inside a project — datasets",
+    "url": "http://127.0.0.1:3000/projects"
+  },
+  {
+    "width": 1440,
+    "href": "/analyses",
+    "status": 200,
+    "mainLength": 158,
+    "sample": "Analyses Statistical analyses and lab runs across every proj",
+    "url": "http://127.0.0.1:3000/analyses"
+  },
+  {
+    "width": 1440,
+    "href": "/dashboards",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Dashboards Interactive dashboards created from your analyses",
+    "url": "http://127.0.0.1:3000/dashboards"
+  },
+  {
+    "width": 1440,
+    "href": "/reports",
+    "status": 200,
+    "mainLength": 322,
+    "sample": "Reports Board-ready reports built from your analyses — expor",
+    "url": "http://127.0.0.1:3000/reports"
+  },
+  {
+    "width": 1440,
+    "href": "/presentations",
+    "status": 200,
+    "mainLength": 200,
+    "sample": "Presentations Slide decks and visual narratives assembled fr",
+    "url": "http://127.0.0.1:3000/presentations"
+  },
+  {
+    "width": 1440,
+    "href": "/books",
+    "status": 200,
+    "mainLength": 784,
+    "sample": "Books Double-entry books of accounts per client — chart of a",
+    "url": "http://127.0.0.1:3000/books"
+  },
+  {
+    "width": 1440,
+    "href": "/ca-sources",
+    "status": 200,
+    "mainLength": 486,
+    "sample": "CA Sources Ingest a client's source systems into a canonical",
+    "url": "http://127.0.0.1:3000/ca-sources"
+  },
+  {
+    "width": 1440,
+    "href": "/ca-compute",
+    "status": 200,
+    "mainLength": 843,
+    "sample": "CA Compute Direct-tax computations for a client: salary u/s ",
+    "url": "http://127.0.0.1:3000/ca-compute"
+  },
+  {
+    "width": 1440,
+    "href": "/gst-recon",
+    "status": 200,
+    "mainLength": 1065,
+    "sample": "GST Reconciliation Match a purchase register against GSTR-2B",
+    "url": "http://127.0.0.1:3000/gst-recon"
+  },
+  {
+    "width": 1440,
+    "href": "/statutes",
+    "status": 200,
+    "mainLength": 3611,
+    "sample": "Rule & Rate Registry The statutory rules this firm computes ",
+    "url": "http://127.0.0.1:3000/statutes"
+  },
+  {
+    "width": 1440,
+    "href": "/audit",
+    "status": 200,
+    "mainLength": 4781,
+    "sample": "Audit Log Read-only audit trail of sign-ins, dataset uploads",
+    "url": "http://127.0.0.1:3000/audit"
+  },
+  {
+    "width": 1440,
+    "href": "/notebooks",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Notebooks Python notebooks and prototype code across every p",
+    "url": "http://127.0.0.1:3000/notebooks"
+  },
+  {
+    "width": 1440,
+    "href": "/models",
+    "status": 200,
+    "mainLength": 126,
+    "sample": "Models Trained model versions across every project. No model",
+    "url": "http://127.0.0.1:3000/models"
+  },
+  {
+    "width": 1440,
+    "href": "/advisor",
+    "status": 200,
+    "mainLength": 1327,
+    "sample": "Business Advisor Ask questions in plain language. The adviso",
+    "url": "http://127.0.0.1:3000/advisor"
+  },
+  {
+    "width": 1440,
+    "href": "/connectors",
+    "status": 200,
+    "mainLength": 791,
+    "sample": "Data Connectors Configure read-only external data sources. C",
+    "url": "http://127.0.0.1:3000/connectors"
+  },
+  {
+    "width": 1440,
+    "href": "/scheduled-reports",
+    "status": 200,
+    "mainLength": 592,
+    "sample": "Scheduled Reports Automated report generation via cron sched",
+    "url": "http://127.0.0.1:3000/scheduled-reports"
+  },
+  {
+    "width": 1440,
+    "href": "/prompts",
+    "status": 200,
+    "mainLength": 193,
+    "sample": "Prompt Library Reusable prompt templates with detected varia",
+    "url": "http://127.0.0.1:3000/prompts"
+  },
+  {
+    "width": 1440,
+    "href": "/growth",
+    "status": 200,
+    "mainLength": 1345,
+    "sample": "Growth Funnel The weekly cohort table that decides whether t",
+    "url": "http://127.0.0.1:3000/growth"
+  },
+  {
+    "width": 1440,
+    "href": "/settings",
+    "status": 200,
+    "mainLength": 1420,
+    "sample": "Settings Your account, workspace, display and data preferenc",
+    "url": "http://127.0.0.1:3000/settings"
+  },
+  {
+    "width": 768,
+    "href": "/dashboard",
+    "status": 200,
+    "mainLength": 1746,
+    "sample": "Welcome back, UI Your uploaded data drives everything below ",
+    "url": "http://127.0.0.1:3000/dashboard"
+  },
+  {
+    "width": 768,
+    "href": "/copilot",
+    "status": 200,
+    "mainLength": 909,
+    "sample": "Copilot ChatGPT-style assistant with optional live web searc",
+    "url": "http://127.0.0.1:3000/copilot"
+  },
+  {
+    "width": 768,
+    "href": "/projects",
+    "status": 200,
+    "mainLength": 277,
+    "sample": "My Projects Every artifact lives inside a project — datasets",
+    "url": "http://127.0.0.1:3000/projects"
+  },
+  {
+    "width": 768,
+    "href": "/analyses",
+    "status": 200,
+    "mainLength": 158,
+    "sample": "Analyses Statistical analyses and lab runs across every proj",
+    "url": "http://127.0.0.1:3000/analyses"
+  },
+  {
+    "width": 768,
+    "href": "/dashboards",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Dashboards Interactive dashboards created from your analyses",
+    "url": "http://127.0.0.1:3000/dashboards"
+  },
+  {
+    "width": 768,
+    "href": "/reports",
+    "status": 200,
+    "mainLength": 322,
+    "sample": "Reports Board-ready reports built from your analyses — expor",
+    "url": "http://127.0.0.1:3000/reports"
+  },
+  {
+    "width": 768,
+    "href": "/presentations",
+    "status": 200,
+    "mainLength": 200,
+    "sample": "Presentations Slide decks and visual narratives assembled fr",
+    "url": "http://127.0.0.1:3000/presentations"
+  },
+  {
+    "width": 768,
+    "href": "/books",
+    "status": 200,
+    "mainLength": 784,
+    "sample": "Books Double-entry books of accounts per client — chart of a",
+    "url": "http://127.0.0.1:3000/books"
+  },
+  {
+    "width": 768,
+    "href": "/ca-sources",
+    "status": 200,
+    "mainLength": 486,
+    "sample": "CA Sources Ingest a client's source systems into a canonical",
+    "url": "http://127.0.0.1:3000/ca-sources"
+  },
+  {
+    "width": 768,
+    "href": "/ca-compute",
+    "status": 200,
+    "mainLength": 843,
+    "sample": "CA Compute Direct-tax computations for a client: salary u/s ",
+    "url": "http://127.0.0.1:3000/ca-compute"
+  },
+  {
+    "width": 768,
+    "href": "/gst-recon",
+    "status": 200,
+    "mainLength": 1065,
+    "sample": "GST Reconciliation Match a purchase register against GSTR-2B",
+    "url": "http://127.0.0.1:3000/gst-recon"
+  },
+  {
+    "width": 768,
+    "href": "/statutes",
+    "status": 200,
+    "mainLength": 3611,
+    "sample": "Rule & Rate Registry The statutory rules this firm computes ",
+    "url": "http://127.0.0.1:3000/statutes"
+  },
+  {
+    "width": 768,
+    "href": "/audit",
+    "status": 200,
+    "mainLength": 4781,
+    "sample": "Audit Log Read-only audit trail of sign-ins, dataset uploads",
+    "url": "http://127.0.0.1:3000/audit"
+  },
+  {
+    "width": 768,
+    "href": "/notebooks",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Notebooks Python notebooks and prototype code across every p",
+    "url": "http://127.0.0.1:3000/notebooks"
+  },
+  {
+    "width": 768,
+    "href": "/models",
+    "status": 200,
+    "mainLength": 126,
+    "sample": "Models Trained model versions across every project. No model",
+    "url": "http://127.0.0.1:3000/models"
+  },
+  {
+    "width": 768,
+    "href": "/advisor",
+    "status": 200,
+    "mainLength": 1327,
+    "sample": "Business Advisor Ask questions in plain language. The adviso",
+    "url": "http://127.0.0.1:3000/advisor"
+  },
+  {
+    "width": 768,
+    "href": "/connectors",
+    "status": 200,
+    "mainLength": 791,
+    "sample": "Data Connectors Configure read-only external data sources. C",
+    "url": "http://127.0.0.1:3000/connectors"
+  },
+  {
+    "width": 768,
+    "href": "/scheduled-reports",
+    "status": 200,
+    "mainLength": 592,
+    "sample": "Scheduled Reports Automated report generation via cron sched",
+    "url": "http://127.0.0.1:3000/scheduled-reports"
+  },
+  {
+    "width": 768,
+    "href": "/prompts",
+    "status": 200,
+    "mainLength": 193,
+    "sample": "Prompt Library Reusable prompt templates with detected varia",
+    "url": "http://127.0.0.1:3000/prompts"
+  },
+  {
+    "width": 768,
+    "href": "/growth",
+    "status": 200,
+    "mainLength": 1345,
+    "sample": "Growth Funnel The weekly cohort table that decides whether t",
+    "url": "http://127.0.0.1:3000/growth"
+  },
+  {
+    "width": 768,
+    "href": "/settings",
+    "status": 200,
+    "mainLength": 1420,
+    "sample": "Settings Your account, workspace, display and data preferenc",
+    "url": "http://127.0.0.1:3000/settings"
+  },
+  {
+    "width": 390,
+    "href": "/dashboard",
+    "status": 200,
+    "mainLength": 1746,
+    "sample": "Welcome back, UI Your uploaded data drives everything below ",
+    "url": "http://127.0.0.1:3000/dashboard"
+  },
+  {
+    "width": 390,
+    "href": "/copilot",
+    "status": 200,
+    "mainLength": 885,
+    "sample": "Copilot ChatGPT-style assistant with optional live web searc",
+    "url": "http://127.0.0.1:3000/copilot"
+  },
+  {
+    "width": 390,
+    "href": "/projects",
+    "status": 200,
+    "mainLength": 277,
+    "sample": "My Projects Every artifact lives inside a project — datasets",
+    "url": "http://127.0.0.1:3000/projects"
+  },
+  {
+    "width": 390,
+    "href": "/analyses",
+    "status": 200,
+    "mainLength": 158,
+    "sample": "Analyses Statistical analyses and lab runs across every proj",
+    "url": "http://127.0.0.1:3000/analyses"
+  },
+  {
+    "width": 390,
+    "href": "/dashboards",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Dashboards Interactive dashboards created from your analyses",
+    "url": "http://127.0.0.1:3000/dashboards"
+  },
+  {
+    "width": 390,
+    "href": "/reports",
+    "status": 200,
+    "mainLength": 322,
+    "sample": "Reports Board-ready reports built from your analyses — expor",
+    "url": "http://127.0.0.1:3000/reports"
+  },
+  {
+    "width": 390,
+    "href": "/presentations",
+    "status": 200,
+    "mainLength": 200,
+    "sample": "Presentations Slide decks and visual narratives assembled fr",
+    "url": "http://127.0.0.1:3000/presentations"
+  },
+  {
+    "width": 390,
+    "href": "/books",
+    "status": 200,
+    "mainLength": 784,
+    "sample": "Books Double-entry books of accounts per client — chart of a",
+    "url": "http://127.0.0.1:3000/books"
+  },
+  {
+    "width": 390,
+    "href": "/ca-sources",
+    "status": 200,
+    "mainLength": 486,
+    "sample": "CA Sources Ingest a client's source systems into a canonical",
+    "url": "http://127.0.0.1:3000/ca-sources"
+  },
+  {
+    "width": 390,
+    "href": "/ca-compute",
+    "status": 200,
+    "mainLength": 843,
+    "sample": "CA Compute Direct-tax computations for a client: salary u/s ",
+    "url": "http://127.0.0.1:3000/ca-compute"
+  },
+  {
+    "width": 390,
+    "href": "/gst-recon",
+    "status": 200,
+    "mainLength": 1065,
+    "sample": "GST Reconciliation Match a purchase register against GSTR-2B",
+    "url": "http://127.0.0.1:3000/gst-recon"
+  },
+  {
+    "width": 390,
+    "href": "/statutes",
+    "status": 200,
+    "mainLength": 3611,
+    "sample": "Rule & Rate Registry The statutory rules this firm computes ",
+    "url": "http://127.0.0.1:3000/statutes"
+  },
+  {
+    "width": 390,
+    "href": "/audit",
+    "status": 200,
+    "mainLength": 4781,
+    "sample": "Audit Log Read-only audit trail of sign-ins, dataset uploads",
+    "url": "http://127.0.0.1:3000/audit"
+  },
+  {
+    "width": 390,
+    "href": "/notebooks",
+    "status": 200,
+    "mainLength": 190,
+    "sample": "Notebooks Python notebooks and prototype code across every p",
+    "url": "http://127.0.0.1:3000/notebooks"
+  },
+  {
+    "width": 390,
+    "href": "/models",
+    "status": 200,
+    "mainLength": 126,
+    "sample": "Models Trained model versions across every project. No model",
+    "url": "http://127.0.0.1:3000/models"
+  },
+  {
+    "width": 390,
+    "href": "/advisor",
+    "status": 200,
+    "mainLength": 1327,
+    "sample": "Business Advisor Ask questions in plain language. The adviso",
+    "url": "http://127.0.0.1:3000/advisor"
+  },
+  {
+    "width": 390,
+    "href": "/connectors",
+    "status": 200,
+    "mainLength": 791,
+    "sample": "Data Connectors Configure read-only external data sources. C",
+    "url": "http://127.0.0.1:3000/connectors"
+  },
+  {
+    "width": 390,
+    "href": "/scheduled-reports",
+    "status": 200,
+    "mainLength": 592,
+    "sample": "Scheduled Reports Automated report generation via cron sched",
+    "url": "http://127.0.0.1:3000/scheduled-reports"
+  },
+  {
+    "width": 390,
+    "href": "/prompts",
+    "status": 200,
+    "mainLength": 193,
+    "sample": "Prompt Library Reusable prompt templates with detected varia",
+    "url": "http://127.0.0.1:3000/prompts"
+  },
+  {
+    "width": 390,
+    "href": "/growth",
+    "status": 200,
+    "mainLength": 1345,
+    "sample": "Growth Funnel The weekly cohort table that decides whether t",
+    "url": "http://127.0.0.1:3000/growth"
+  },
+  {
+    "width": 390,
+    "href": "/settings",
+    "status": 200,
+    "mainLength": 1420,
+    "sample": "Settings Your account, workspace, display and data preferenc",
+    "url": "http://127.0.0.1:3000/settings"
+  }
+]

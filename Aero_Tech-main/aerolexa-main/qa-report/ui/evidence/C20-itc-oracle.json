@@ -1,0 +1,267 @@
+{
+  "fixture": {
+    "twoB": [
+      {
+        "gstin": "27AAPFU0939F1ZV",
+        "supplierName": "Alpha Traders",
+        "invoiceNumber": "INV-001",
+        "invoiceDate": "2026-09-01",
+        "taxableValue": 1000,
+        "igst": 180,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "27",
+        "supplierFiledGstr1": true
+      },
+      {
+        "gstin": "29AABCU9603R1ZM",
+        "supplierName": "Beta Supplies",
+        "invoiceNumber": "INV-002",
+        "invoiceDate": "2026-09-05",
+        "taxableValue": 2000,
+        "igst": 0,
+        "cgst": 180,
+        "sgst": 180,
+        "placeOfSupply": "29",
+        "supplierFiledGstr1": true
+      },
+      {
+        "gstin": "27AAACR5055K1Z1",
+        "supplierName": "Gamma Services",
+        "invoiceNumber": "INV-003",
+        "invoiceDate": "2026-09-10",
+        "taxableValue": 500,
+        "igst": 90,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "27",
+        "supplierFiledGstr1": true
+      },
+      {
+        "gstin": "27AACCM1234A1Z5",
+        "supplierName": "Delta Motors",
+        "invoiceNumber": "INV-005",
+        "invoiceDate": "2026-09-15",
+        "taxableValue": 1000,
+        "igst": 180,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "27",
+        "supplierFiledGstr1": true
+      }
+    ],
+    "purchases": [
+      {
+        "gstin": "27AAPFU0939F1ZV",
+        "invoiceNumber": "INV-001",
+        "invoiceDate": "2026-09-01",
+        "taxableValue": 1000,
+        "igst": 180,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "27"
+      },
+      {
+        "gstin": "29AABCU9603R1ZM",
+        "invoiceNumber": "INV-002",
+        "invoiceDate": "2026-09-05",
+        "taxableValue": 2000,
+        "igst": 0,
+        "cgst": 180,
+        "sgst": 180,
+        "placeOfSupply": "29"
+      },
+      {
+        "gstin": "27AACCM1234A1Z5",
+        "invoiceNumber": "INV-005",
+        "invoiceDate": "2026-09-15",
+        "taxableValue": 1000,
+        "igst": 90,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "27"
+      },
+      {
+        "gstin": "24AAACC1206D1ZM",
+        "invoiceNumber": "INV-004",
+        "invoiceDate": "2026-09-12",
+        "taxableValue": 800,
+        "igst": 144,
+        "cgst": 0,
+        "sgst": 0,
+        "placeOfSupply": "24"
+      }
+    ],
+    "asOfDate": "2026-10-19",
+    "tolerance": 1
+  },
+  "oracle": {
+    "expectedCounts": {
+      "matched-eligible": 2,
+      "matched-eligible-rcm": 0,
+      "matched-blocked": 0,
+      "matched-rule37": 0,
+      "matched-expired-s16": 0,
+      "amount-mismatch": 1,
+      "in-2b-only": 1,
+      "in-books-only": 1
+    },
+    "expectedTable4": {
+      "itcAvailed": {
+        "taxableValue": 300000,
+        "igst": 18000,
+        "cgst": 18000,
+        "sgst": 18000,
+        "cess": 0
+      },
+      "pending2b": {
+        "taxableValue": 80000,
+        "igst": 14400,
+        "cgst": 0,
+        "sgst": 0,
+        "cess": 0
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "counts": {
+      "matched-eligible": 2,
+      "matched-eligible-rcm": 0,
+      "matched-blocked": 0,
+      "matched-rule37": 0,
+      "matched-expired-s16": 0,
+      "amount-mismatch": 1,
+      "in-2b-only": 1,
+      "in-books-only": 1
+    },
+    "table4": {
+      "itcAvailed": {
+        "taxableValue": 300000,
+        "igst": 18000,
+        "cgst": 18000,
+        "sgst": 18000,
+        "cess": 0
+      },
+      "itcAvailedRcm": {
+        "taxableValue": 0,
+        "igst": 0,
+        "cgst": 0,
+        "sgst": 0,
+        "cess": 0
+      },
+      "itcReversed": {
+        "taxableValue": 0,
+        "igst": 0,
+        "cgst": 0,
+        "sgst": 0,
+        "cess": 0
+      },
+      "netItc": {
+        "taxableValue": 0,
+        "igst": 18000,
+        "cgst": 18000,
+        "sgst": 18000,
+        "cess": 0
+      },
+      "itcAvailable": {
+        "taxableValue": 300000,
+        "igst": 18000,
+        "cgst": 18000,
+        "sgst": 18000,
+        "cess": 0
+      },
+      "rule364Excess": 0,
+      "pending2b": {
+        "taxableValue": 80000,
+        "igst": 14400,
+        "cgst": 0,
+        "sgst": 0,
+        "cess": 0
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "http 200",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "count matched-eligible=2",
+      "ok": true,
+      "detail": "actual=2"
+    },
+    {
+      "name": "count matched-eligible-rcm=0",
+      "ok": true,
+      "detail": "actual=0"
+    },
+    {
+      "name": "count matched-blocked=0",
+      "ok": true,
+      "detail": "actual=0"
+    },
+    {
+      "name": "count matched-rule37=0",
+      "ok": true,
+      "detail": "actual=0"
+    },
+    {
+      "name": "count matched-expired-s16=0",
+      "ok": true,
+      "detail": "actual=0"
+    },
+    {
+      "name": "count amount-mismatch=1",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "count in-2b-only=1",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "count in-books-only=1",
+      "ok": true,
+      "detail": "actual=1"
+    },
+    {
+      "name": "table4 itcAvailed",
+      "ok": true,
+      "detail": "expected={\"taxableValue\":300000,\"igst\":18000,\"cgst\":18000,\"sgst\":18000,\"cess\":0} actual={\"taxableValue\":300000,\"igst\":18000,\"cgst\":18000,\"sgst\":18000,\"cess\":0}"
+    },
+    {
+      "name": "table4 pending2b (books-only ITC held back)",
+      "ok": true,
+      "detail": "expected={\"taxableValue\":80000,\"igst\":14400,\"cgst\":0,\"sgst\":0,\"cess\":0} actual={\"taxableValue\":80000,\"igst\":14400,\"cgst\":0,\"sgst\":0,\"cess\":0}"
+    },
+    {
+      "name": "4(C)=4(A)-4(B) igst",
+      "ok": true,
+      "detail": "expected=18000 actual=18000"
+    },
+    {
+      "name": "4(C)=4(A)-4(B) cgst",
+      "ok": true,
+      "detail": "expected=18000 actual=18000"
+    },
+    {
+      "name": "4(C)=4(A)-4(B) sgst",
+      "ok": true,
+      "detail": "expected=18000 actual=18000"
+    },
+    {
+      "name": "4(C)=4(A)-4(B) cess",
+      "ok": true,
+      "detail": "expected=0 actual=0"
+    },
+    {
+      "name": "books-only IGST not availed in 4(A)",
+      "ok": true,
+      "detail": "4(A).igst=18000, books-only=14400"
+    }
+  ],
+  "ok": true
+}

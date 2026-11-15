@@ -1,0 +1,39 @@
+{
+  "securityHeaders": [
+    "CSP",
+    "HSTS",
+    "nosniff",
+    "frame",
+    "referrer",
+    "permissions"
+  ],
+  "signup": {
+    "status": 200,
+    "cookieFlags": {
+      "httpOnly": true,
+      "sameSite": true,
+      "secure": true
+    },
+    "body": "{\"ok\":true,\"data\":{\"user\":{\"id\":\"cmveknxk5000fmy781xesp236\",\"email\":\"sec580190142@example.com\",\"name\":\"Sec Probe\",\"profi"
+  },
+  "injection": [
+    {
+      "path": "/api/auth/signup?x=%3Cscript%3Ealert(1)%",
+      "status": 405,
+      "echoedScript": false,
+      "leakedStack": false
+    },
+    {
+      "path": "/?q='%20OR%201%3D1--",
+      "status": 200,
+      "echoedScript": false,
+      "leakedStack": false
+    },
+    {
+      "path": "/login?next=https%3A%2F%2Fevil.example.c",
+      "status": 200,
+      "echoedScript": false,
+      "leakedStack": false
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+# Aerolexa — local compose
+#
+# Default (`docker compose up --build`): the app runs on its own SQLite file
+# mounted into ./data — zero external services, ideal for trying the prototype.
+#
+# PostgreSQL profile (`docker compose --profile pg up --build`):
+#   1. Switch provider + install the Postgres migration set:  npm run switch:postgres
+#      (fresh installs are fully migrated by `prisma migrate deploy` on boot —
+#      no manual migration regeneration needed)
+#   2. Compose now starts a Postgres instance and an app pointing at it
+#      (app-pg on port 3001, leaving 3000 free for a local dev server).
+#
+# Secrets come from the shell environment or a .env file — never hard-code
+# production values here.
+#
+# testdb profile (`docker compose --profile testdb up -d`): disposable mySQL 8 +
+# MongoDB 7 servers for the connector integration suites
+# (npm run test:mysql / test:mongodb). Ports map to 127.0.0.1 only; the MongoDB
+# container is intentionally auth-less, so never expose this profile on a
+# network-visible host.
+name: aerolexa
+
+services:
+  app:
+    build: .
+    profiles: [""]
+    container_name: aerolexa-app
+    environment:
+      NODE_ENV: production
+      # SQLite (default) — file created under /app/data
+      DATABASE_URL: "file:/app/data/aerolexa.db"
+      AUTH_SECRET: ${AUTH_SECRET:-local-compose-secret-change-me-0123456789abcdef}
+      # This default profile is an explicit local prototype (`docker compose up`
+      # to try the app). It runs NODE_ENV=production for production parity, so
+      # it must acknowledge the dev transports (console mail, no email verify).
+      # A real deployment uses the `pg` profile / the deploy runbook instead and
+      # leaves this false so a half-configured instance refuses to boot.
+      ALLOW_INSECURE_PROD_TRANSPORTS: ${ALLOW_INSECURE_PROD_TRANSPORTS:-true}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      MAIL_FROM: ${MAIL_FROM:-Aerolexa <no-reply@example.com>}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      # Keep uploaded files + the SQLite database on the host
+      - aerolexa-data:/app/data
+    healthcheck:
+      # /api/health verifies the DB round-trip, not just that the HTTP server
+      # answers — a 503 here means "dependency broken", not "process dead".
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  pg:
+    image: postgres:16-alpine
+    profiles: ["pg"]
+    container_name: aerolexa-pg
+    environment:
+      POSTGRES_USER: aerolexa
+      POSTGRES_PASSWORD: aerolexa
+      POSTGRES_DB: aerolexa
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aerolexa -d aerolexa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mysql:
+    image: mysql:8
+    profiles: ["testdb"]
+    container_name: aerolexa-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mongo:
+    image: mongo:7
+    profiles: ["testdb"]
+    container_name: aerolexa-mongo
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", 'mongosh --quiet --eval "db.runCommand({ ping: 1 }).ok" | grep 1']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app-pg:
+    build: .
+    profiles: ["pg"]
+    container_name: aerolexa-app-pg
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://aerolexa:aerolexa@pg:5432/aerolexa?schema=public"
+      # Readiness gate: /api/health counts applied migrations against the
+      # migrations shipped in this build (ROADMAP 5.5).
+      DEPLOYMENT_DATABASE: postgres
+      AUTH_SECRET: ${AUTH_SECRET:-local-compose-secret-change-me-0123456789abcdef}
+      # Production safety gate: refuses to boot with console mail or without
+      # email verification. Configure MAIL_TRANSPORT=smtp + SMTP_* (and set
+      # AUTH_REQUIRE_EMAIL_VERIFY=true) at launch, or deliberately opt out here.
+      ALLOW_INSECURE_PROD_TRANSPORTS: ${ALLOW_INSECURE_PROD_TRANSPORTS:-false}
+      AUTH_REQUIRE_EMAIL_VERIFY: ${AUTH_REQUIRE_EMAIL_VERIFY:-true}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      MAIL_FROM: ${MAIL_FROM:-Aerolexa <no-reply@example.com>}
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      # Multi-instance storage: point AEROLEXA_STORAGE=s3 + S3_* at a shared
+      # bucket (R2/MinIO/S3) when running more than one app replica.
+      AEROLEXA_STORAGE: ${AEROLEXA_STORAGE:-local}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+    depends_on:
+      pg:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    volumes:
+      - aerolexa-data-pg:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  aerolexa-data:
+  aerolexa-data-pg:
+  pg-data:
+  mysql-data:
+  mongo-data:

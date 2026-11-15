@@ -1,0 +1,174 @@
+{
+  "pre_registered": [
+    {
+      "id": "B0-BUILD",
+      "area": "baseline",
+      "expected": "npm run build completes with exit code 0 on commit ff566ae from a fresh .next; every route marked within budget; no BLOCKING warnings (errors treated as blockers)",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "B1-START",
+      "area": "baseline",
+      "expected": "'npm start' (next start) serves HTTP on localhost; server process stays up; a request to /returns 200 with a text/html body containing a <title> tag and the string 'Ledgerly' in the first 5000 chars, and no 'Application error' in the first response body",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "NC1-HTTP",
+      "area": "harness",
+      "expected": "Control case that must FAIL: the HTTP assertion harness, pointed at GET /__qa_nonexistent_route__ with an expected status of 200, must report FAIL (actual status nonzero/404). Proves the HTTP assertion can fail.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "NC2-STYLING",
+      "area": "harness",
+      "expected": "Control case that must FAIL: the styling detector run against a page with zero loaded <link rel=stylesheet> and body font-family 'Times New Roman'/default (about:blank or a synthetic page) must report UNSTYLED/FAIL. Proves the styling detector can fail.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "NC3-ORACLE",
+      "area": "harness",
+      "expected": "Control case that must FAIL: the numeric oracle comparison fed a deliberately wrong expected number (expected=0 for a known sum, e.g. fixture sum != 0) must report FAIL. Proves the oracle comparison can fail.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "S-PUBLIC-LOGIN",
+      "area": "styling",
+      "expected": "Playwright real-browser Chromium, production server, cache disabled: /login at 1440x900 serves >=1 stylesheet with HTTP 200; body computed font-family is NOT the browser default serif/Times; body computed background-color differs from transparent default in painted terms (non-zero alpha); no request status>=400; no console errors; body horizontal scrollWidth <= viewport width + 1px. Full-page screenshot saved.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "S-PUBLIC-SIGNUP",
+      "area": "styling",
+      "expected": "Same criteria as S-PUBLIC-LOGIN for /signup at 1440x900, 768x1024, 390x844: >=1 stylesheet 200, non-default font, no >=400 requests, no console errors, no horizontal overflow at all three widths.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "S-PUBLIC-STATIC",
+      "area": "styling",
+      "expected": "Same styling criteria as S-PUBLIC-LOGIN for /forgot-password, /reset-password, /verify-email, /templates (if redirecting when logged out, the status must be a redirect to /login rather than a 500, and the smoke criterion applies to the landing target).",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "S-PROTECTED-UNAUTH",
+      "area": "styling",
+      "expected": "Unauthenticated visit of /(app)/dashboard and /(app)/settings redirects (307/302) to a login-family URL; it must NOT return 500 and must NOT render dashboard content (unauth access).",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "S-404-PAGE",
+      "area": "styling",
+      "expected": "GET of a nonexistent route (/__qa_nonexistent_route__) returns a 404 render (Next.js not-found) with no server 5xx.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-SIGNUP-OK",
+      "area": "auth",
+      "depends_on_env": "MAIL_TRANSPORT=console (I8)",
+      "expected": "POST /api/auth/signup {name: 'QA Auditor', email: qa-audit-<ts>@example.test, password: 'Passw0rdAudit'} with allowInsecure=true env → HTTP 200 body ok:true, data.user.email matches; a Set-Cookie session cookie is returned with HttpOnly; the server log contains a verification link URL containing a token; the verification token string does NOT appear in the HTTP response body.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-SIGNUP-DUP",
+      "area": "auth",
+      "expected": "Repeating A-SIGNUP-OK with the same email → response is an error (4xx; likely 409) whose body does not contain a stack trace, and does NOT create a second user with the same email in the DB.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-SIGNUP-BAD",
+      "area": "auth",
+      "expected": "POST /api/auth/signup with invalid email string 'not-an-email' → 4xx validation error; with 7-char password 'Abc1234' → 4xx; body messages usable, no stack traces.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-VERIFY-REPLAY",
+      "area": "auth",
+      "expected": "Using the console-log verification token: first GET of the verify link (or POST equivalent observed in log) succeeds/redirects and marks account verified; replaying the SAME link/token afterwards must NOT succeed again (error or already-verified path without changing state).",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-LOGIN-OK",
+      "area": "auth",
+      "expected": "Login (POST /api/auth/login or NextAuth /api/auth/[...nextauth] credentials callback as implemented) with correct email+password → 200/redirect and a session cookie; DB user row's password verifies.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-LOGIN-WRONGPW",
+      "area": "auth",
+      "expected": "Login with correct email but wrong password → 4xx (401/403), no session cookie set, error message generic.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-PROTECTED-WHILE-OUT",
+      "area": "auth",
+      "expected": "GET /api/me (or /api/me equivalent) without a session cookie → 401/403 JSON, no user data leaked.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "A-FORGOT-RESET",
+      "area": "auth",
+      "depends_on_env": "MAIL_TRANSPORT=console (I8)",
+      "expected": "POST forgot-password flows a console-logged reset token; resetting with it changes login success and the reset token cannot be reused for a second reset.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "D-ORACLE-SUM",
+      "area": "data",
+      "expected": "Feeding a deterministic 9-row CSV fixture (values with negatives, decimals, unicode text, quoted commas) through the app's dataset upload + query/aggregation API yields numeric aggregates (sum/count) exactly equal (0 tolerance) to the independent Python-computed oracle values; mismatch = FAIL.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "D-UPLOAD-INVALID",
+      "area": "data",
+      "expected": "Empty-file upload returns a clean 4xx error (not 500, no stack trace); header-only CSV upload either rejects with 4xx or resolves to zero data rows with a clear response; the wrong-type/malformed file does not crash the server.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-COOKIE-FLAGS",
+      "area": "security",
+      "expected": "The session cookie set by signup/login carries HttpOnly:true and SameSite non-'none'; with ALLOW_INSECURE_PROD_TRANSPORTS=true in test, Secure may be false (flagged via I8).",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-HEADERS",
+      "area": "security",
+      "expected": "Every page and API response carries CSP (script-src NOT 'unsafe-inline' alone without nonce), plus at least frame-ancestors or X-Frame-Options, nonces on scripts where CSP allows inline.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-INJECTION-XSS",
+      "area": "security",
+      "expected": "Signup name field 'QA<script>alert(1)</script>Audit' round-trips to GET /api/me name as text — the raw '<script>' never appears as a parsed DOM element in any rendered public page.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-IDOR-SPOT",
+      "area": "security",
+      "expected": "GET /api/datasets/some-other-tenant-uuid (fabricated id, no auth or as the QA user) → 401/403/404, never another user's data.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-RATELIMIT-LOGIN",
+      "area": "security",
+      "expected": "6 rapid failed login attempts from one IP on login endpoint: at least one attempt within the burst returns 429 or the established limiter behavior (observed response headers carry limiter signals); no 500s. If no limiter is present, this becomes a FAIL finding.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "SEC-AUDIT",
+      "area": "security",
+      "expected": "npm audit (readonly) lists advisories; result recorded; each listed advisory is assessed reachable/unreachable in this app (no fix applied).",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "P-WEBVITALS",
+      "area": "performance",
+      "expected": "Playwright collects LCP/CLS/INP on the 3 heaviest logged-in pages; INP heuristic via long-task observation. If unavailable, NOT TESTED with blocker.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    },
+    {
+      "id": "R-SOAK",
+      "area": "performance",
+      "expected": "60s soak of the home page with 5 concurrent workers: no unbounded memory growth beyond +50% of the server process RSS at start; no 5xx responses.",
+      "registered_at": "2026-10-19T00:00:00Z"
+    }
+  ]
+}

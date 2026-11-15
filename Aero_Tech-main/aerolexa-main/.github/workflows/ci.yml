@@ -1,0 +1,207 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck · tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # The connector integration suites require a REAL Postgres server. A
+      # service container keeps them executing on every push instead of
+      # silently skipping — see scripts/test-postgres.mjs (same thing locally:
+      # `npm run test:postgres`).
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Isolated scratch DB so tests never touch a developer database.
+      DATABASE_URL: "postgresql://test:test@127.0.0.1:5432/test"
+      DATA_DIR: "data"
+      AUTH_SECRET: "ci-secret-0123456789abcdefghijklmnopqrstuv"
+      MAIL_TRANSPORT: console
+      # No ALLOW_INSECURE_PROD_TRANSPORTS here: the production build runs the
+      # runtime boot gates only when serving, so "Collecting page data" no
+      # longer needs the dev-transport opt-out. The jobs that actually start a
+      # server (`next start`) set it themselves — see below.
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Real Postgres for the connector integration suites (they skip cleanly
+      # without it — which is exactly how 12 tests can silently stop running).
+      TEST_POSTGRES_URL: postgres://test:test@127.0.0.1:5432/test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint (ESLint, zero errors)
+        run: npm run lint
+
+      - name: Format check (Prettier)
+        run: npm run format:check
+
+      - name: Prepare scratch database
+        run: |
+          mkdir -p data
+          npx prisma migrate deploy
+
+      - name: Setup Python venv (SciPy/NumPy oracles + python-export suites)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scientific stack for oracle validation
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet numpy scipy pandas scikit-learn nbformat statsmodels
+
+      - name: Typecheck (strict)
+        run: npm run typecheck
+
+      - name: Unit & component tests
+        run: npm test
+
+      - name: Training-worker thread verification (real threads, outside jest)
+        run: npm run verify:worker
+
+      - name: Postgres-gated suites (zero-skip gate)
+        # TEST_POSTGRES_URL is set, so scripts/test-postgres.mjs reuses the
+        # service container and additionally FAILS the build if any test was
+        # skipped — a skipped integration test is an unverified claim.
+        run: npm run test:postgres
+
+      - name: API integration tests
+        run: npm run test:api
+
+      - name: Production build
+        run: npm run build
+
+  e2e:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: "postgresql://test:test@127.0.0.1:5432/test"
+      DATA_DIR: "data"
+      AUTH_SECRET: "ci-secret-0123456789abcdefghijklmnopqrstuv"
+      MAIL_TRANSPORT: console
+      # This job runs a real `next start` (NODE_ENV=production), and the console
+      # transport is what lets the email-verification specs read their links.
+      # The build needs no such opt-out; never use this flag in a real
+      # deployment (set MAIL_TRANSPORT=smtp + AUTH_REQUIRE_EMAIL_VERIFY=true).
+      ALLOW_INSECURE_PROD_TRANSPORTS: "true"
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e smoke tests
+        run: npx playwright test
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # S7 — the 3D scene gates, executed on a real build artifact. This is the
+  # run the sandbox could never do (OOM): production build → budget gates →
+  # fps/budget/screenshot e2e specs → scoreboard numbers back into
+  # docs/quality-baseline.md.
+  scene-gates:
+    name: Scene gates (3D build + e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: "postgresql://test:test@127.0.0.1:5432/test"
+      DATA_DIR: "data"
+      AUTH_SECRET: "ci-secret-0123456789abcdefghijklmnopqrstuv"
+      MAIL_TRANSPORT: console
+      # Needed for the e2e `next start` below (NODE_ENV=production), not for
+      # the build: the production gates skip the build phase.
+      ALLOW_INSECURE_PROD_TRANSPORTS: "true"
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare scratch database
+        run: |
+          mkdir -p data
+          npx prisma migrate deploy
+
+      # The build step also runs scripts/check-bundle-budgets.mjs — a budget
+      # breach fails here, before any e2e spec runs.
+      - name: Production build (incl. bundle budget gate)
+        run: npm run build
+
+      # scene.spec.ts: tier-override honesty, fps floors, S2.3 draw-call/heap
+      # budgets (real gl.info via the __sceneGl hook) and per-tier
+      # screenshot-diff baselines. viewer.spec.ts: S10 viewer-tier + memory
+      # audit. device-lab is opt-in only (DEVICE_LAB=1) and stays skipped here.
+      # --update-snapshots=missing records the per-tier baselines on the first
+      # run and diffs against them on every run after — existing baselines are
+      # never silently overwritten (an intentional re-baseline is a deliberate
+      # PR that removes the old PNGs).
+      - name: Scene e2e gates (tier honesty · fps · budgets · snapshots)
+        run: npx playwright test scene.spec.ts viewer.spec.ts --update-snapshots=missing
+
+      - name: Upload scene test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-test-artifacts
+          path: |
+            playwright-report/
+            __tests__/e2e/**/*-snapshots/
+            test-results/
+          retention-days: 7

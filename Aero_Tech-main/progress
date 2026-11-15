@@ -1,0 +1,169 @@
+=======================================================================
+ PROGRESS — SKIPPED TEST SUITES (handoff for the next AI agent)
+=======================================================================
+
+State as of: Sat Sep 12 2026
+Verified & checked in (commits 6e8ad24, 254335f on origin/main):
+
+  - Unit + component suites : 33 suites passed, 3 skipped, 255 passed / 0 failed
+  - API suites               : 3 passed (versioning, app, modules), 1 skipped,
+    `npm run typecheck`      : clean
+    `npm run lint`           : 0 errors / 41 pre-existing warnings
+    `npm run build`          : green (56/56 static pages)
+
+Everything below is green ALREADY EXCEPT the 4 suites listed here. They
+are skipped cleanly (not failing) because their external runtime is not
+installed/configured in this environment. This file is the runbook for
+disabling the skip and executing them.
+
+-----------------------------------------------------------------------
+ 1. WHY THEY ARE SKIPPED (do not "force" them — they EARNO the skip)
+-----------------------------------------------------------------------
+
+The test suites gate themselves on a runtime prerequisite and call
+`describe.skip` / `it.skip` when it is missing:
+
+  * TEST_POSTGRES_URL  -> a real PostgreSQL the test process can reach.
+  * .venv/bin/python   -> a project-local Python virtualenv with
+                          numpy, scipy, pandas, scikit-learn AND nbformat.
+
+The skip logic is intentional so CI without Postgres/Python still runs
+everything else. To run them: provide the runtime, that is all.
+
+-----------------------------------------------------------------------
+ 2. SKIPPED UNIT SUITES (Jest reports 3 suites / 17 tests skipped)
+-----------------------------------------------------------------------
+
+  a) __tests__/unit/python-export.test.ts        (6 tests)
+     - Purpose (read its docstring): the Phase 1.5 "export runnable code"
+       contract — every exported Python script (what-if, analysis, model,
+       hypothesis) is EXECUTED in the project-local .venv and its printed
+       `RESULT:` line must match the JS engine's numbers to float tolerance.
+       Also validates exported .ipynb against the real `nbformat` library.
+     - Skip guard: `const maybe = existsSync(PY) ? describe : describe.skip;`
+       where PY = <cwd>/.venv/bin/python (line 34-35).
+
+  b) __tests__/unit/connectors-postgres.test.ts  (8 tests)
+     - Purpose: real Postgres connector engine integration — connects
+       (server version + latency), lists tables, samples rows, maps pg
+       types to column types, identifier-quoting safety ("order items"
+       table + reserved-word column "select"). Creates + drops its own
+       scratch schema `aurelia_test_engine`. Touches NO user data.
+     - Skip guard: `const maybe = TEST_PG ? describe : describe.skip;`
+       where TEST_PG = process.env.TEST_POSTGRES_URL (line 22, 64).
+
+  c) __tests__/unit/connector-scheduler.test.ts  (4 tests)
+     - Purpose: `runDueConnectorSyncs` re-pulls a connector-backed dataset
+       when its cron is due and records a NEW versioned run with a
+       diff-able change log (never a silent overwrite). Uses a fresh
+       scratch SQLite DB (migrated in beforeAll) + real Postgres in a
+       scratch schema `aurelia_test_sched`.
+     - Skip guard: same TEST_POSTGRES_URL pattern (line 16, 22).
+
+  NOTE: __tests__/unit/phase15-versioning.test.ts contains 3 "exported
+  Python script actually executes" tests gated on system `python3`
+  (`hasPythonSync()`, line 36-46). They RUN (not skip) in this
+  environment and pass — included here only for completeness.
+
+-----------------------------------------------------------------------
+ 3. SKIPPED API SUITE (Jest reports 1 suite / 14 tests skipped)
+-----------------------------------------------------------------------
+
+  d) __tests__/api/connectors.test.ts             (14 tests)
+     - Purpose (read its docstring): full request pipeline — auth cookies,
+       workspace auth, create/test/tables/sample connector endpoints, a
+       real Postgres source seeded in scratch schema `aurelia_test_api`,
+       dataset materialization, and the secret-leak sentinel (the real
+       password must never appear in any client response).
+     - Skip guard: `const maybe = TEST_PG ? describe : describe.skip;`
+       (line 25). Boots ephemeral Next dev server via __tests__/api/
+       global-setup.cjs on port 3210 with fresh scratch SQLite DB.
+     - Successfully refactored in commit 6e8ad24 so it IMPORTS CLEANLY and
+       skips (previously it crashed at module load with `new URL("")`).
+
+-----------------------------------------------------------------------
+ 4. PREREQUISITES — HOW TO INSTALL / CONFIGURE
+-----------------------------------------------------------------------
+
+  (i) TEST_POSTGRES_URL
+      Any PostgreSQL the local machine can reach. Example:
+        postgres://postgres:aurelia-test-pw-9f3c2b@127.0.0.1:55432/aurelia_test
+      The suites only create/drop their OWN scratch schemas
+      (aurelia_test_api / aurelia_test_engine / aurelia_test_sched), so a
+      real local Postgres is fine. Quickest local option:
+        docker run -d --name pg-test -p 55432:5432 \
+          -e POSTGRES_PASSWORD=aurelia-test-pw-9f3c2b postgres:16
+      Then: TEST_POSTGRES_URL=postgres://postgres:aurelia-test-pw-9f3c2b@127.0.0.1:55432/postgres
+      Use a DISTINCTIVE password, not `postgres`: the API connectors suite
+      asserts the literal password never appears in any response, and a
+      response legitimately contains `"kind":"postgres"` (plus the database
+      name when the URL path is /postgres), which trips that sentinel.
+
+  (ii) .venv for python-export tests
+      Create the venv in aerolexa-main and install the exact deps:
+        cd aerolexa-main
+        python3 -m venv .venv
+        .venv/bin/pip install numpy scipy pandas scikit-learn nbformat
+      (nbformat is REQUIRED — the ipynb tests call `nbformat.validate`.)
+
+-----------------------------------------------------------------------
+ 5. HOW TO RUN (exact commands, from aerolexa-main)
+-----------------------------------------------------------------------
+
+  # Unit, connectors + scheduler (needs TEST_POSTGRES_URL only):
+  TEST_POSTGRES_URL=postgres://... npx jest --runInBand --testTimeout=25000 \
+    --testPathPattern='__tests__/unit/(connectors-postgres|connector-scheduler)'
+
+  # Unit, python-export (needs only the .venv):
+  npx jest --runInBand --testTimeout=30000 \
+    --testPathPattern='__tests__/unit/python-export'
+
+  # Full unit suite (all non-API tests, warns on open handles at the end —
+  # result counts are still printed; ignore the "did not exit" note):
+  npx jest --runInBand --testTimeout=25000 --silent \
+    --testPathIgnorePatterns='__tests__/api'
+
+  # API suite incl. connectors (needs TEST_POSTGRES_URL). MUST target
+  # __tests__/api — global-setup ONLY boots the dev server (port 3210)
+  # when the pattern contains __tests__/api; otherwise everything
+  # ECONNREFUSEDs against 127.0.0.1:3210:
+  TEST_POSTGRES_URL=postgres://... npx jest --runInBand --testTimeout=30000 \
+    --testPathPattern='__tests__/api'
+
+-----------------------------------------------------------------------
+ 6. GOTCHAS LEARNED THIS SESSION (save you from re-discovering them)
+-----------------------------------------------------------------------
+
+  * Never run the API suites without --testPathPattern='__tests__/api' —
+    the global-setup boots the server only for that pattern.
+  * Before an API run, kill stray dev servers or you get ECONNRESET /
+    500s from a stale process fighting for the port:
+        pkill -f 'next dev'; pkill -f 'next start'
+  * Only the TEST process needs TEST_POSTGRES_URL exported; the dev
+    server inherits env from global-setup (which spreads process.env),
+    and the app itself connects using connector config received in the
+    request body (credentials aren't read from the server env).
+  * Full `npm test` (no pattern) is slow and mixes API (needs server)
+    with unit — it gets aborted; prefer the targeted commands above.
+  * The API connectors suite also asserts JSON responses parse correctly
+    (getPgPassword() is now computed lazily — don't re-introduce a
+    module-level `new URL(TEST_PG)` or the file crashes when unset).
+  * Never run `pkill -f 'next dev'` from a shell whose own command line
+    contains that string — pkill matches the shell itself and kills the
+    run before Jest starts. Use `pkill -f '[n]ext dev'` instead.
+
+-----------------------------------------------------------------------
+ 7. KNOWN VERIFICATION WORKSTREAM FOR THE NEXT AGENT
+-----------------------------------------------------------------------
+
+  * python-export tests encode the REAL execution contract for
+    lib/export/python.ts, which was reworked in commit 6e8ad24 (added
+    "AURELIA ... export" headers, `RESULT:` JSON prints for kpi/trend and
+    models, fixed a missing `import json` and an undefined `predictions`
+    variable). Once the .venv exists, run suite (a) — if any parity
+    assertion fails, the fix belongs in lib/export/python.ts (or, only if
+    genuinely stale, the test) so that exported scripts actually run.
+  * After enabling TEST_POSTGRES_URL, re-run suites (b), (c), (d).
+  * Do NOT lower the guards to force-run without the runtimes — the
+    suites are designed to skip, and swapping `describe.skip` to
+    `describe` makes CI fail on machines without Postgres.

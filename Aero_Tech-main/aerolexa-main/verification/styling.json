@@ -1,0 +1,349 @@
+{
+  "summary": {
+    "routes": 34,
+    "styled": 32,
+    "crittersRegression": 0
+  },
+  "rows": [
+    {
+      "route": "/",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/"
+    },
+    {
+      "route": "/signup",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/signup"
+    },
+    {
+      "route": "/login",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login"
+    },
+    {
+      "route": "/forgot-password",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/forgot-password"
+    },
+    {
+      "route": "/reset-password",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/reset-password"
+    },
+    {
+      "route": "/verify-email",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/verify-email"
+    },
+    {
+      "route": "/offline",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/offline"
+    },
+    {
+      "route": "/dashboard",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fdashboard"
+    },
+    {
+      "route": "/dashboards",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fdashboards"
+    },
+    {
+      "route": "/datasets",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fdatasets"
+    },
+    {
+      "route": "/books",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fbooks"
+    },
+    {
+      "route": "/ca-compute",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fca-compute"
+    },
+    {
+      "route": "/ca-sources",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fca-sources"
+    },
+    {
+      "route": "/connectors",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fconnectors"
+    },
+    {
+      "route": "/copilot",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fcopilot"
+    },
+    {
+      "route": "/analyses",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fanalyses"
+    },
+    {
+      "route": "/audit",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Faudit"
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fprojects"
+    },
+    {
+      "route": "/reports",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Freports"
+    },
+    {
+      "route": "/notebooks",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fnotebooks"
+    },
+    {
+      "route": "/models",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fmodels"
+    },
+    {
+      "route": "/statutes",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fstatutes"
+    },
+    {
+      "route": "/search",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fsearch"
+    },
+    {
+      "route": "/settings",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fsettings"
+    },
+    {
+      "route": "/presentations",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fpresentations"
+    },
+    {
+      "route": "/studio",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fstudio"
+    },
+    {
+      "route": "/prompts",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fprompts"
+    },
+    {
+      "route": "/advisor",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fadvisor"
+    },
+    {
+      "route": "/growth",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fgrowth"
+    },
+    {
+      "route": "/notifications",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fnotifications"
+    },
+    {
+      "route": "/scheduled-reports",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/login?next=%2Fscheduled-reports"
+    },
+    {
+      "route": "/templates",
+      "status": 200,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": true,
+      "finalUrl": "/templates"
+    },
+    {
+      "route": "/apps",
+      "status": 404,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": false,
+      "finalUrl": "/apps"
+    },
+    {
+      "route": "/embed",
+      "status": 404,
+      "stylesheets": 1,
+      "crittersRegression": 0,
+      "cssStatus": 200,
+      "cssBytes": 90389,
+      "styled": false,
+      "finalUrl": "/embed"
+    }
+  ]
+}

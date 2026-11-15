@@ -1,0 +1,8 @@
+commit=083413fcdbc4ec4922afb40dbd9a8d803287f2f4
+branch=ui/ca-exposure
+node=v24.21.0
+npm=11.19.0
+date=2026-10-19T03:41:15+00:00
+               total        used        free      shared  buff/cache   available
+Mem:            7942        5907         132          66        2283        2034
+Swap:              0           0           0

@@ -1,0 +1,63 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended", "prettier"],
+  "plugins": ["import"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "ecmaFeatures": { "jsx": true }
+  },
+  "env": { "browser": true, "node": true, "jest": true },
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "data/**",
+    "test-results/**",
+    "playwright-report/**",
+    "coverage/**",
+    "out/**",
+    "public/duckdb/**", // DuckDB-wasm binaries copied from node_modules
+    "public/vendor/**", // vendored third-party assets (Swagger UI bundles) — never linted
+    "next-env.d.ts",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/worker-bootstrap.js", // plain-JS worker entry: CJS require is intentional
+    "prisma/migrations/**",
+    "aerolexa-*.tar.gz",
+    "aerolexa-*.zip"
+  ],
+  "rules": {
+    // Import grouping + alphabetical ordering, enforced (autofixable).
+    // Groups: external → @/ internal → parent/sibling → index. This keeps every
+    // module's dependency graph readable at a glance.
+    "import/order": [
+      "error",
+      {
+        "groups": [["builtin", "external"], "internal", ["parent", "sibling", "index"]],
+        "pathGroups": [{ "pattern": "@/**", "group": "internal", "position": "before" }],
+        "pathGroupsExcludedImportTypes": ["builtin"],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc", "caseInsensitive": true }
+      }
+    ],
+    // TypeScript-aware unused checks (args/vars may be prefixed with _).
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    // Deliberate `any` is rare in this codebase; flag but do not break the build.
+    "@typescript-eslint/no-explicit-any": "warn",
+    // Server console output is a first-class transport (mail, env errors).
+    "no-console": "off",
+    // We run Prettier separately; base rule stays off to avoid duplication.
+    "prettier/prettier": "off"
+  },
+  "overrides": [
+    {
+      // Tests may use focused/only assertions while debugging locally.
+      "files": ["**/__tests__/**"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "react/display-name": "off"
+      }
+    }
+  ]
+}

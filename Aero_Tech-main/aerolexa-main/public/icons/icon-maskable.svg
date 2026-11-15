@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ledgerly">
+  <rect width="512" height="512" fill="#0A0A0A"/>
+  <!-- Safe zone: content within the inner 80% survives Android maskable cropping -->
+  <polyline points="136,360 220,280 288,320 376,196" fill="none" stroke="#5AA8AA" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="376" cy="196" r="30" fill="#FFB400"/>
+</svg>

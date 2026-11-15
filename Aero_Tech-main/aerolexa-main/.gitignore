@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Python virtual environment
+.venv/
+
+# Next.js build output
+.next/
+out/
+build/
+next-env.d.ts
+
+# Environment & secrets — never commit real credentials
+.env
+.env.local
+.env*.local
+.env.bak
+*.bak
+
+# Debug / scratch scripts — never commit
+check-login.mjs
+sql-repro.mjs
+repro-*.mjs
+
+# Aerolexa runtime data (SQLite db + uploaded files)
+data/
+!data/.gitkeep
+
+# DuckDB-wasm browser assets (copied from node_modules by npm run copy:duckdb)
+public/duckdb/
+
+# Prisma 7 generated client (prisma-client generator writes TS here; `prisma generate` recreates it)
+generated/
+
+# Tests & tooling
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+.turbo/
+node_modules
+
+# Packaging artifacts (npm run package)
+aerolexa-*.zip
+aerolexa-*.tar.gz

@@ -1,0 +1,195 @@
+{
+  "capturedAt": "2026-10-19T03:44:43.405Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "widths": {
+    "390": {
+      "states": {
+        "expanded": {
+          "shots": {
+            "dashboard": "before/dashboard-390-expanded.png",
+            "analyses": "before/analyses-390-expanded.png",
+            "reports": "before/reports-390-expanded.png",
+            "settings": "before/settings-390-expanded.png"
+          },
+          "metrics": {
+            "asideCount": 0,
+            "asides": [],
+            "navTotal": 0,
+            "navLabels": [],
+            "sidebarNavCount": 0,
+            "sidebarScrollWidth": null,
+            "sidebarClientWidth": null,
+            "duplicates": [],
+            "sidebarHtmlLength": 0
+          }
+        },
+        "after-toggle-controls": {
+          "shots": {
+            "dashboard": "before/dashboard-390-after-toggle-controls.png",
+            "analyses": "before/analyses-390-after-toggle-controls.png",
+            "reports": "before/reports-390-after-toggle-controls.png",
+            "settings": "before/settings-390-after-toggle-controls.png"
+          },
+          "metrics": {
+            "asideCount": 0,
+            "asides": [],
+            "navTotal": 0,
+            "navLabels": [],
+            "sidebarNavCount": 0,
+            "sidebarScrollWidth": null,
+            "sidebarClientWidth": null,
+            "duplicates": [],
+            "sidebarHtmlLength": 0
+          }
+        }
+      }
+    },
+    "768": {
+      "states": {
+        "expanded": {
+          "shots": {
+            "dashboard": "before/dashboard-768-expanded.png",
+            "analyses": "before/analyses-768-expanded.png",
+            "reports": "before/reports-768-expanded.png",
+            "settings": "before/settings-768-expanded.png"
+          },
+          "metrics": {
+            "asideCount": 0,
+            "asides": [],
+            "navTotal": 0,
+            "navLabels": [],
+            "sidebarNavCount": 0,
+            "sidebarScrollWidth": null,
+            "sidebarClientWidth": null,
+            "duplicates": [],
+            "sidebarHtmlLength": 0
+          }
+        },
+        "after-toggle-controls": {
+          "shots": {
+            "dashboard": "before/dashboard-768-after-toggle-controls.png",
+            "analyses": "before/analyses-768-after-toggle-controls.png",
+            "reports": "before/reports-768-after-toggle-controls.png",
+            "settings": "before/settings-768-after-toggle-controls.png"
+          },
+          "metrics": {
+            "asideCount": 0,
+            "asides": [],
+            "navTotal": 0,
+            "navLabels": [],
+            "sidebarNavCount": 0,
+            "sidebarScrollWidth": null,
+            "sidebarClientWidth": null,
+            "duplicates": [],
+            "sidebarHtmlLength": 0
+          }
+        }
+      }
+    },
+    "1440": {
+      "states": {
+        "expanded": {
+          "shots": {
+            "dashboard": "before/dashboard-1440-expanded.png",
+            "analyses": "before/analyses-1440-expanded.png",
+            "reports": "before/reports-1440-expanded.png",
+            "settings": "before/settings-1440-expanded.png"
+          },
+          "metrics": {
+            "asideCount": 1,
+            "asides": [
+              {
+                "width": 256,
+                "left": 0,
+                "className": "fixed inset-y-0 left-0 z-30 w-64 border-r border-line bg-surface transition-colors hover:bg-surface/50 lg:block hover:bg-surface/30 lg:hover:bg-surface/20 lg:group-hover:bg-surface/10 group-focus-within:outline-none group-focus-within:outline-offset-2 group-focus-within:outline-accent"
+              }
+            ],
+            "navTotal": 1,
+            "navLabels": [
+              "Primary"
+            ],
+            "sidebarNavCount": 1,
+            "sidebarScrollWidth": 315,
+            "sidebarClientWidth": 255,
+            "duplicates": [],
+            "sidebarHtmlLength": 31592
+          }
+        },
+        "after-toggle-controls": {
+          "shots": {
+            "dashboard": "before/dashboard-1440-after-toggle-controls.png",
+            "analyses": "before/analyses-1440-after-toggle-controls.png",
+            "reports": "before/reports-1440-after-toggle-controls.png",
+            "settings": "before/settings-1440-after-toggle-controls.png"
+          },
+          "metrics": {
+            "asideCount": 0,
+            "asides": [],
+            "navTotal": 0,
+            "navLabels": [],
+            "sidebarNavCount": 0,
+            "sidebarScrollWidth": null,
+            "sidebarClientWidth": null,
+            "duplicates": [],
+            "sidebarHtmlLength": 0
+          }
+        }
+      }
+    }
+  },
+  "routes": [
+    "/",
+    "/advisor",
+    "/analyses",
+    "/analyses/[id]",
+    "/analyses/new",
+    "/apps/[shareToken]",
+    "/audit",
+    "/books",
+    "/ca-compute",
+    "/ca-sources",
+    "/connectors",
+    "/copilot",
+    "/dashboard",
+    "/dashboards",
+    "/dashboards/[id]",
+    "/dashboards/new",
+    "/datasets",
+    "/datasets/[id]",
+    "/datasets/[id]/detail",
+    "/datasets/[id]/query",
+    "/datasets/[id]/studio",
+    "/datasets/[id]/transform",
+    "/datasets/[id]/whatif",
+    "/embed/[token]",
+    "/forgot-password",
+    "/growth",
+    "/login",
+    "/models",
+    "/notebooks",
+    "/notifications",
+    "/offline",
+    "/onboarding",
+    "/presentations",
+    "/presentations/[id]",
+    "/presentations/new",
+    "/projects",
+    "/projects/[id]",
+    "/prompts",
+    "/published-notebook",
+    "/reports",
+    "/reports/[id]",
+    "/reports/new",
+    "/reset-password",
+    "/scheduled-reports",
+    "/search",
+    "/settings",
+    "/signup",
+    "/statutes",
+    "/studio",
+    "/templates",
+    "/templates/[id]",
+    "/verify-email"
+  ],
+  "sidebarSearchInputs": []
+}

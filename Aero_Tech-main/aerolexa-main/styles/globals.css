@@ -1,0 +1,384 @@
+/* Tailwind v4: one import replaces the three @tailwind directives. The JS
+   config is still the single source of the design tokens, loaded through
+   @config so theme extensions (colours, fonts, radii, shadows) keep working. */
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* v4 defaults `dark:` to prefers-color-scheme; this app toggles a .dark class
+   on <html> (see tailwind.config.ts darkMode: "class"). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic colour tokens. Tailwind v4 resolves opacity modifiers (`bg-surface/80`, `focus:bg-accent/90`) through color-mix, which needs the tokens declared here rather than as `<alpha-value>` placeholders in the JS config. The underlying rgb triplets stay defined below for light/dark and accent switching. */
+@theme inline {
+  --color-background: rgb(var(--background));
+  --color-surface: rgb(var(--surface));
+  --color-surface-2: rgb(var(--surface-2));
+  --color-surface-3: rgb(var(--surface-3));
+  --color-foreground: rgb(var(--foreground));
+  --color-muted: rgb(var(--muted));
+  --color-line: rgb(var(--line));
+  --color-accent: rgb(var(--accent));
+  --color-accent-strong: rgb(var(--accent-strong));
+  --color-on-accent: rgb(var(--on-accent));
+  --color-amber: rgb(var(--amber));
+  --color-focus: rgb(var(--focus));
+  --color-success: rgb(var(--success));
+  --color-danger: rgb(var(--danger));
+  --color-warning: rgb(var(--warning));
+  --color-info: rgb(var(--info));
+  /* Names keep the v3 config's `chart1`…`chart10` utilities. */
+  --color-chart1: rgb(var(--chart-1));
+  --color-chart2: rgb(var(--chart-2));
+  --color-chart3: rgb(var(--chart-3));
+  --color-chart4: rgb(var(--chart-4));
+  --color-chart5: rgb(var(--chart-5));
+  --color-chart6: rgb(var(--chart-6));
+  --color-chart7: rgb(var(--chart-7));
+  --color-chart8: rgb(var(--chart-8));
+  --color-chart9: rgb(var(--chart-9));
+  --color-chart10: rgb(var(--chart-10));
+}
+
+@layer base {
+  /* Remove the 300 ms tap delay and double-tap zoom on interactive controls (mobile) */
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+}
+
+/* =============================================================================
+   Ledgerly design tokens — see docs/design-system.md for the full spec.
+   Colour, typography and spacing are centralized here as CSS variables mapped
+   into Tailwind (tailwind.config.ts). Never hard-code hex values in components.
+
+   Default (no class) = dark theme per the product spec. The Settings →
+   Appearance toggle adds `.light` on <html> and persists the choice in a
+   cookie. The accent is switchable via `data-accent` (teal | blue | violet).
+   ========================================================================== */
+
+/* CSS Color Scheme — explicit light/dark classes with system preference fallback */
+:root,
+html.dark {
+  --background: 10 10 10;
+  --surface: 18 18 18;
+  --surface-2: 26 26 26;
+  --surface-3: 36 36 36;
+  --foreground: 229 229 229;
+  --muted: 150 150 156;
+  --line: 46 46 50;
+  --on-accent: 10 10 10;
+  --amber: 255 196 0;
+  --focus: 77 141 255;
+  --success: 58 190 138;
+  --danger: 240 90 100;
+  --warning: 255 180 0;
+  --info: 96 150 255;
+  --chart-1: 90 168 170;
+  --chart-2: 0 102 255;
+  --chart-3: 124 92 255;
+  --chart-4: 255 180 0;
+  --chart-5: 16 138 92;
+  --chart-6: 200 45 55;
+  --chart-7: 180 105 0;
+  --chart-8: 37 99 235;
+  --chart-9: 58 190 138;
+  --chart-10: 240 90 100;
+}
+
+html.light {
+  --background: 250 250 250;
+  --surface: 255 255 255;
+  --surface-2: 244 244 246;
+  --surface-3: 235 235 238;
+  --foreground: 17 17 17;
+  --muted: 84 84 90;
+  --line: 229 229 229;
+  --on-accent: 10 10 10;
+  --amber: 255 180 0;
+  --focus: 0 102 255;
+  --success: 16 138 92;
+  --danger: 200 45 55;
+  --warning: 180 105 0;
+  --info: 37 99 235;
+  --chart-1: 90 168 170;
+  --chart-2: 0 102 255;
+  --chart-3: 124 92 255;
+  --chart-4: 255 180 0;
+  --chart-5: 16 138 92;
+  --chart-6: 200 45 55;
+  --chart-7: 180 105 0;
+  --chart-8: 37 99 235;
+  --chart-9: 58 190 138;
+  --chart-10: 240 90 100;
+}
+
+/* System preference fallback (when no explicit class) */
+@media (prefers-color-scheme: light) {
+  html:not(.light):not(.dark) {
+    --background: 250 250 250;
+    --surface: 255 255 255;
+    --surface-2: 244 244 246;
+    --surface-3: 235 235 238;
+    --foreground: 17 17 17;
+    --muted: 84 84 90;
+    --line: 229 229 229;
+    --on-accent: 10 10 10;
+    --amber: 255 180 0;
+    --focus: 0 102 255;
+    --success: 16 138 92;
+    --danger: 200 45 55;
+    --warning: 180 105 0;
+    --info: 37 99 235;
+    --chart-1: 90 168 170;
+    --chart-2: 0 102 255;
+    --chart-3: 124 92 255;
+    --chart-4: 255 180 0;
+    --chart-5: 16 138 92;
+    --chart-6: 200 45 55;
+    --chart-7: 180 105 0;
+    --chart-8: 37 99 235;
+    --chart-9: 58 190 138;
+    --chart-10: 240 90 100;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    --background: 10 10 10;
+    --surface: 18 18 18;
+    --surface-2: 26 26 26;
+    --surface-3: 36 36 36;
+    --foreground: 229 229 229;
+    --muted: 150 150 156;
+    --line: 46 46 50;
+    --on-accent: 10 10 10;
+    --amber: 255 196 0;
+    --focus: 77 141 255;
+    --success: 58 190 138;
+    --danger: 240 90 100;
+    --warning: 255 180 0;
+    --info: 96 150 255;
+    --chart-1: 90 168 170;
+    --chart-2: 0 102 255;
+    --chart-3: 124 92 255;
+    --chart-4: 255 180 0;
+    --chart-5: 16 138 92;
+    --chart-6: 200 45 55;
+    --chart-7: 180 105 0;
+    --chart-8: 37 99 235;
+    --chart-9: 58 190 138;
+    --chart-10: 240 90 100;
+  }
+}
+
+/* User-selectable accent colours (Settings → Appearance) */
+html[data-accent="teal"] {
+  --accent: 90 168 170;
+  --accent-strong: 64 148 150;
+}
+html[data-accent="blue"] {
+  --accent: 0 102 255;
+  --accent-strong: 0 82 210;
+}
+html[data-accent="violet"] {
+  --accent: 124 92 255;
+  --accent-strong: 100 66 224;
+}
+
+/* Focus ring — visible 3px focus everywhere, keyboard-only trigger, works in light/dark */
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus) 40%, transparent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Focus-visible ring color for light theme */
+html:not(.light):focus-visible {
+  outline-color: color-mix(in srgb, var(--focus) 40%, transparent);
+}
+
+/* Focus-visible ring color for dark theme */
+html[data-accent="blue"].light:focus-visible,
+html[data-accent="violet"].light:focus-visible {
+  outline-color: color-mix(in srgb, var(--focus) 40%, transparent);
+}
+
+/* Reduced-motion preferences (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessible skip link */
+.skip-link {
+  @apply sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded focus:bg-accent/90 focus:text-on-accent focus:px-3 focus:py-2;
+}
+
+/* Selection colour */
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+/* Accessible scrollbar for dense tables/panels */
+.thin-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--muted) / 0.35);
+  border-radius: 4px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Card lift on hover — subtle, accessible, respects reduced motion */
+.card:hover:not(:focus-visible) {
+  @apply shadow-md transition-shadow duration-200;
+}
+
+/* Focus-visible state on interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-inset ring-accent/40;
+}
+
+/* Reduced-motion preferences (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Selection colour */
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+/* Accessible scrollbar for dense tables/panels */
+.thin-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--muted) / 0.35);
+  border-radius: 4px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =============================================================================
+   Base layers
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  @apply bg-background text-foreground font-sans text-body antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  line-height: 1.6;
+}
+
+/* Prevent horizontal overflow inside main scroll containers */
+.no-hscroll {
+  overflow-x: clip;
+}
+
+/* =============================================================================
+   Component layers
+   ========================================================================== */
+
+@layer components {
+  /* Card — 1px border, 4px radius, 0–2dp shadow */
+  .card {
+    @apply rounded-md border border-line bg-surface shadow-sm;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply relative overflow-hidden rounded-sm bg-surface-2;
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--surface-2)) 0px,
+      rgb(var(--surface-3)) 40px,
+      rgb(var(--surface-2)) 80px
+    );
+    background-size: 600px 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* Skip link (a11y) */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded focus:bg-accent focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-on-accent;
+  }
+
+  /* Keep horizontal overflow impossible inside main scroll containers */
+  .no-hscroll {
+    overflow-x: clip;
+  }
+
+  /* Badge — compact inline label */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium;
+  }
+
+  /* Button base */
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-focus/60 focus-visible:outline-none;
+  }
+
+  /* Table row hover */
+  .table-row-hover {
+    @apply group-hover:bg-surface-2 transition-colors;
+  }
+}
+
+/* Respect reduced-motion preferences (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

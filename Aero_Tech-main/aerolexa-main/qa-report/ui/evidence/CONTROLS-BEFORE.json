@@ -1,0 +1,1986 @@
+{
+  "at": "2026-10-19T03:53:39.562Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "widths": {
+    "390": {
+      "closed": {
+        "asides": 1,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 2,
+        "navLabels": [
+          "Primary",
+          "Primary mobile"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 48,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 101,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 155,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 208,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 261,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 315,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 368,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 422,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 475,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 527,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 597,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 667,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 737,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 807,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 877,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 947,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1017,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1088,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1140,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1233,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1273,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Open menu",
+            "href": null,
+            "box": {
+              "x": 12,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Ledgerly home",
+            "href": "/",
+            "box": {
+              "x": 56,
+              "y": 13,
+              "w": 28,
+              "h": 30
+            }
+          },
+          {
+            "tag": "button",
+            "label": "Search",
+            "href": null,
+            "box": {
+              "x": 154,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 198,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 242,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 304,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 390,
+        "docClientWidth": 390,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      },
+      "open": {
+        "asides": 2,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 3,
+        "navLabels": [
+          "Primary",
+          "Primary",
+          "Primary mobile"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 80,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 133,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 187,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 240,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 293,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 347,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 400,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 454,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 507,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 559,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 629,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 699,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 769,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 839,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 909,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 979,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1049,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1120,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1172,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1265,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1305,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Open menu",
+            "href": null,
+            "box": {
+              "x": 12,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Ledgerly home",
+            "href": "/",
+            "box": {
+              "x": 56,
+              "y": 13,
+              "w": 28,
+              "h": 30
+            }
+          },
+          {
+            "tag": "button",
+            "label": "Search",
+            "href": null,
+            "box": {
+              "x": 154,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 198,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 242,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 304,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [
+          "Search projects, datasets, dashboards…"
+        ],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 390,
+        "docClientWidth": 390,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      }
+    },
+    "768": {
+      "closed": {
+        "asides": 1,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 1,
+        "navLabels": [
+          "Primary"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 48,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 101,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 155,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 208,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 261,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 315,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 368,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 422,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 475,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 527,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 597,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 667,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 737,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 807,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 877,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 947,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1017,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1088,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1140,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1233,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1273,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Open menu",
+            "href": null,
+            "box": {
+              "x": 20,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Ledgerly home",
+            "href": "/",
+            "box": {
+              "x": 64,
+              "y": 13,
+              "w": 28,
+              "h": 30
+            }
+          },
+          {
+            "tag": "button",
+            "label": "Search projects, datasets, reports…⌘K",
+            "href": null,
+            "box": {
+              "x": 272,
+              "y": 1,
+              "w": 288,
+              "h": 54
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 568,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 612,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 674,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 768,
+        "docClientWidth": 768,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      },
+      "open": {
+        "asides": 2,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 2,
+        "navLabels": [
+          "Primary",
+          "Primary"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 80,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 133,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 187,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 240,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 293,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 347,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 400,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 454,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 507,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 559,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 629,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 699,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 769,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 839,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 909,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 979,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1049,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1120,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1172,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1265,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1305,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Open menu",
+            "href": null,
+            "box": {
+              "x": 20,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Ledgerly home",
+            "href": "/",
+            "box": {
+              "x": 64,
+              "y": 13,
+              "w": 28,
+              "h": 30
+            }
+          },
+          {
+            "tag": "button",
+            "label": "Search projects, datasets, reports…⌘K",
+            "href": null,
+            "box": {
+              "x": 272,
+              "y": 1,
+              "w": 288,
+              "h": 54
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 568,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 612,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 674,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [
+          "Search projects, datasets, dashboards…"
+        ],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 768,
+        "docClientWidth": 768,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      }
+    },
+    "1440": {
+      "closed": {
+        "asides": 1,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 1,
+        "navLabels": [
+          "Primary"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 48,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 101,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 155,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 208,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 261,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 315,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 368,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 422,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 475,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 527,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 597,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 667,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 737,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 807,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 877,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 947,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1017,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1088,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1140,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1233,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1273,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Search projects, datasets, reports…⌘K",
+            "href": null,
+            "box": {
+              "x": 944,
+              "y": 1,
+              "w": 288,
+              "h": 54
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 1240,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 1284,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 1346,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 1440,
+        "docClientWidth": 1440,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      },
+      "open": {
+        "asides": 1,
+        "asideBox": {
+          "x": 0,
+          "y": 0,
+          "w": 256,
+          "h": 900
+        },
+        "asideDisplay": "block",
+        "navTotal": 1,
+        "navLabels": [
+          "Primary"
+        ],
+        "sidebarNavCount": 1,
+        "navLinks": [
+          {
+            "href": "/dashboard",
+            "label": "Home",
+            "current": "page",
+            "box": {
+              "x": 160,
+              "y": 80,
+              "w": 85,
+              "h": 32
+            }
+          },
+          {
+            "href": "/copilot",
+            "label": "Copilot",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 133,
+              "w": 92,
+              "h": 32
+            }
+          },
+          {
+            "href": "/projects",
+            "label": "Projects",
+            "current": null,
+            "box": {
+              "x": 146,
+              "y": 187,
+              "w": 99,
+              "h": 32
+            }
+          },
+          {
+            "href": "/analyses",
+            "label": "Analyses",
+            "current": null,
+            "box": {
+              "x": 140,
+              "y": 240,
+              "w": 105,
+              "h": 32
+            }
+          },
+          {
+            "href": "/dashboards",
+            "label": "Dashboards",
+            "current": null,
+            "box": {
+              "x": 154,
+              "y": 293,
+              "w": 124,
+              "h": 32
+            }
+          },
+          {
+            "href": "/reports",
+            "label": "Reports",
+            "current": null,
+            "box": {
+              "x": 148,
+              "y": 347,
+              "w": 97,
+              "h": 32
+            }
+          },
+          {
+            "href": "/presentations",
+            "label": "Presentations",
+            "current": null,
+            "box": {
+              "x": 166,
+              "y": 400,
+              "w": 134,
+              "h": 32
+            }
+          },
+          {
+            "href": "/notebooks",
+            "label": "Notebooks",
+            "current": null,
+            "box": {
+              "x": 145,
+              "y": 454,
+              "w": 115,
+              "h": 32
+            }
+          },
+          {
+            "href": "/models",
+            "label": "Models",
+            "current": null,
+            "box": {
+              "x": 152,
+              "y": 507,
+              "w": 93,
+              "h": 32
+            }
+          },
+          {
+            "href": "/advisor",
+            "label": "Business Advisor",
+            "current": null,
+            "box": {
+              "x": 188,
+              "y": 559,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/connectors",
+            "label": "Data Connectors",
+            "current": null,
+            "box": {
+              "x": 186,
+              "y": 629,
+              "w": 120,
+              "h": 52
+            }
+          },
+          {
+            "href": "/scheduled-reports",
+            "label": "Scheduled Reports",
+            "current": null,
+            "box": {
+              "x": 201,
+              "y": 699,
+              "w": 114,
+              "h": 52
+            }
+          },
+          {
+            "href": "/prompts",
+            "label": "Prompt Library",
+            "current": null,
+            "box": {
+              "x": 173,
+              "y": 769,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-compute",
+            "label": "CA Compute",
+            "current": null,
+            "box": {
+              "x": 158,
+              "y": 839,
+              "w": 105,
+              "h": 52
+            }
+          },
+          {
+            "href": "/ca-sources",
+            "label": "CA Sources",
+            "current": null,
+            "box": {
+              "x": 153,
+              "y": 909,
+              "w": 99,
+              "h": 52
+            }
+          },
+          {
+            "href": "/audit",
+            "label": "Audit Log",
+            "current": null,
+            "box": {
+              "x": 165,
+              "y": 979,
+              "w": 80,
+              "h": 52
+            }
+          },
+          {
+            "href": "/growth",
+            "label": "Growth Funnel",
+            "current": null,
+            "box": {
+              "x": 172,
+              "y": 1049,
+              "w": 93,
+              "h": 52
+            }
+          },
+          {
+            "href": "/settings?tab=deliverables",
+            "label": "Deliverables",
+            "current": null,
+            "box": {
+              "x": 157,
+              "y": 1120,
+              "w": 125,
+              "h": 32
+            }
+          },
+          {
+            "href": "/settings?tab=report-templates",
+            "label": "Report Templates",
+            "current": null,
+            "box": {
+              "x": 191,
+              "y": 1172,
+              "w": 112,
+              "h": 52
+            }
+          },
+          {
+            "href": "/search",
+            "label": "Search everything",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1265,
+              "w": 239,
+              "h": 36
+            }
+          },
+          {
+            "href": "/notifications",
+            "label": "Notifications",
+            "current": null,
+            "box": {
+              "x": 8,
+              "y": 1305,
+              "w": 239,
+              "h": 36
+            }
+          }
+        ],
+        "duplicateLabels": [],
+        "headerControls": [
+          {
+            "tag": "button",
+            "label": "Search projects, datasets, reports…⌘K",
+            "href": null,
+            "box": {
+              "x": 944,
+              "y": 1,
+              "w": 288,
+              "h": 54
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Notifications (0 unread)",
+            "href": "/notifications",
+            "box": {
+              "x": 1240,
+              "y": 10,
+              "w": 36,
+              "h": 36
+            }
+          },
+          {
+            "tag": "a",
+            "label": "Open settings",
+            "href": "/settings",
+            "box": {
+              "x": 1284,
+              "y": 12,
+              "w": 32,
+              "h": 32
+            }
+          },
+          {
+            "tag": "select",
+            "label": "Language",
+            "href": null,
+            "box": {
+              "x": 1346,
+              "y": 15,
+              "w": 74,
+              "h": 26
+            }
+          }
+        ],
+        "overlaps": [],
+        "sidebarInputs": [
+          "Search projects, datasets, dashboards…"
+        ],
+        "headerSearchCount": 1,
+        "groupHeadings": [],
+        "sidebarScrollWidth": 315,
+        "sidebarClientWidth": 255,
+        "docScrollWidth": 1440,
+        "docClientWidth": 1440,
+        "lang": "hi",
+        "dir": "ltr",
+        "localeValue": "hi",
+        "localeOptions": [
+          "English",
+          "हिन्दी",
+          "اردو"
+        ],
+        "visibleNavCount": 21
+      }
+    }
+  },
+  "reducedMotion": {
+    "transitionDuration": "1e-05s",
+    "transitionProperty": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Ledgerly",
+  "version": "0.6.1",
+  "identifier": "com.ledgerly.app",
+  "build": {
+    "frontendDist": "../../aerolexa-main/out",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ledgerly",
+        "width": 1280,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "maxWidth": 1920,
+        "maxHeight": 1080,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true,
+        "visible": true,
+        "focus": true,
+        "dragDropEnabled": true,
+
+        "transparent": false,
+        "alwaysOnTop": false,
+        "maximizable": true,
+        "minimizable": true,
+        "closable": true,
+        "skipTaskbar": false
+      }
+    ],
+    "trayIcon": null,
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' http://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://lucide.surf; worker-src 'self' blob:; frame-src 'self' http://localhost:*; object-src 'none';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "resources": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": null,
+      "wix": null,
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null,
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "compression": "lzma"
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": ["libgtk-3-dev", "libwebkit2gtk-4.1-dev", "libayatana-appindicator3-dev", "librsvg2-dev"],
+        "section": "devel"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+
+      "entitlements": null
+    },
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [],
+      "active": false
+    }
+  }
+}

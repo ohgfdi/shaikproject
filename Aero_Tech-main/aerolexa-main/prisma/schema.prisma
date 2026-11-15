@@ -1,0 +1,4043 @@
+// Ledgerly data model — reconstructed from the applied migrations
+// (prisma/migrations/*) so the generated client matches the SQLite
+// development database and the application code 1:1.
+//
+//   npm run switch:postgres  → flips this datasource to PostgreSQL
+//   npm run switch:sqlite    → back to SQLite
+//
+// Multi-tenancy today is one Workspace per account (1:1 with User), with
+// explicit ProjectMember sharing rows for collaboration. Workspace isolation
+// is enforced in lib/auth/guard.ts on every route (the prototype's RLS
+// equivalent).
+//
+// NOTE: DatasetVersion.label and DatasetVersion.createdById are nullable in
+// this schema (the code passes `?? null`) even though the original SQLite
+// migration declared them NOT NULL — every current caller provides a value,
+// and the PostgreSQL port relaxes the columns.
+
+// Prisma 7's `prisma-client` generator emits plain TypeScript into the repo
+// instead of a bundled client inside node_modules. `importFileExtension = "ts"`
+// is required because prisma/seed.ts runs under tsx, which cannot resolve the
+// `.js` specifiers the generator writes by default (see prisma/seed.ts).
+// The connection string now lives in prisma.config.ts, not on the datasource.
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model Workspace {
+  id       String  @id @default(cuid())
+  name     String
+  settings String? // JSON WorkspaceSettings (see lib/types.ts)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user               User?
+  projects           Project[]
+  activities         Activity[]
+  datasets           Dataset[]
+  analyses           Analysis[]
+  insights           Insight[]
+  dashboards         Dashboard[]
+  reports            Report[]
+  presentations      Presentation[]
+  notebooks          Notebook[]
+  modelVersions      ModelVersion[]
+  scheduledReports   ScheduledReport[]
+  scheduledNotebooks ScheduledNotebook[]
+  comments           Comment[]
+  prompts            Prompt[]
+  connectors         Connector[]
+  connectorSyncRuns  ConnectorSyncRun[]
+  dataAlerts         DataAlert[]
+  chats              Chat[]
+  joinMappings       ProjectJoinMapping[]
+  datasetVersions    DatasetVersion[]
+  analysisVersions   AnalysisVersion[]
+  notebookVersions   NotebookVersion[]
+  customMetrics      CustomMetric[]
+  apiKeys            UserApiKey[]
+  jobs               JobQueue[]
+  subscriptions      Subscription[]
+  invoices           Invoice[]
+  savedSearches      SavedSearch[]
+  searchQueryLogs    SearchQueryLog[]
+  feedback           Feedback[]
+  books              Book[]
+  caSources            CaSource[]
+  caIngestRuns         CaIngestRun[]
+  caDocumentSnapshots  CaDocumentSnapshot[]
+  statuteSources         StatuteSource[]
+  statuteNotifications   StatuteNotification[]
+  statutoryRules         StatutoryRule[]
+  statutoryRuleVersions  StatutoryRuleVersion[]
+  gstEntities          GstEntity[]
+  gstRegistrations     GstRegistration[]
+  rcmRegisterEntries   RcmRegisterEntry[]
+  gstNotices           GstNotice[]
+  clientDocumentRequests ClientDocumentRequest[]
+  gstNoticeResponses   GstNoticeResponse[]
+  noticeReconciliationArtifacts NoticeReconciliationArtifact[]
+  ewayBills            EwayBill[]
+  gstSuppliers         GstSupplier[]
+  gstSupplierOnboardings GstSupplierOnboarding[]
+  gstVendorPortalInvites GstVendorPortalInvite[]
+  gstVendorPortalSubmissions GstVendorPortalSubmission[]
+}
+
+// ---------------------------------------------------------------------------
+// Error tracking + customer feedback (Phase 5.2)
+//
+// Self-hosted by design. A hosted error tracker (Sentry et al.) would see
+// every stack frame and every URL — and for this app the URL IS a capability,
+// because /apps/<shareToken> and /embed/<token> grant unauthenticated access.
+// Errors are therefore stored locally, redacted and fingerprinted.
+//
+// Feedback is workspace-scoped so one tenant's diagnostics can never be read by
+// another. ErrorReport is intentionally NOT workspace-scoped: it is
+// operational data about the deployment (not a customer's content), and it
+// aggregates across the instance so an operator sees real frequency.
+// ---------------------------------------------------------------------------
+
+model ErrorReport {
+  id String @id @default(cuid())
+
+  // Stable hash of error name + top stack frames — the grouping key. Unique so
+  // a repeat occurrence updates `count` instead of inserting a new row.
+  fingerprint String @unique
+
+  name    String
+  message String
+  stack   String @default("")
+  // Request path with the query string STRIPPED (see lib/server/error-tracking.ts).
+  path    String @default("")
+
+  // Ties a report to a server log line without storing a session token.
+  requestId   String?
+  userId      String?
+  workspaceId String?
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  count       Int      @default(1)
+
+  // Operator triage: set once acknowledged, kept for the history.
+  resolvedAt DateTime?
+
+  @@index([lastSeenAt])
+  @@index([resolvedAt, lastSeenAt])
+}
+
+/// Customer feedback. `kind` discriminates a plain comment from a bug report
+/// and a feature request, so one inbox serves all three without three tables.
+model Feedback {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // feedback | bug | feature
+  kind String @default("feedback")
+
+  message String
+  // Optional structured context: route, browser, app version. Must never carry
+  // customer data — the API strips query strings before persisting it.
+  context String @default("{}") // JSON object
+
+  // Operator triage.
+  status     String  @default("open") // open | triaged | resolved | dismissed
+  resolution String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  @@index([workspaceId, status, createdAt])
+  @@index([kind, status])
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy: Organization (firm) → Engagement (per-client confidential silo)
+// ---------------------------------------------------------------------------
+//
+// A Ledgerly deployment can host one account per user (legacy Workspace, kept),
+// but a CA firm needs many clients under one firm identity with separation
+// between them. An Organization is the firm; each client is an Engagement.
+// Engagements are confidential silos: an org member only sees engagements
+// they are a member of (or an org-level AUDITOR who may read + audit all).
+//
+// The `Project` model remains the artefact container (datasets/analyses/
+// dashboards/…). An org-owned Project *is* an Engagement: `organizationId` is
+// set and access is derived from OrganizationMember + ProjectMember roles.
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  gstin     String?
+  owner     User?    @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerId   String?
+  settings  String? // JSON OrganizationSettings (lib/types.ts)
+  /// Last ISO date the weekly partner digest was sent for this firm.
+  partnerDigestLastSentOn String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members                     OrganizationMember[]
+  engagements                 Engagement[]
+  projects                    Project[]
+  activities                  Activity[]                   @relation("OrganizationActivity")
+  organizationReportTemplates OrganizationReportTemplate[]
+
+  @@index([name])
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("MEMBER") // OWNER | ADMIN | MEMBER | AUDITOR
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+// An Engagement is a per-client confidential silo under an Organization (the
+// firm). It groups the projects that serve one client. Org members can only
+// see engagements their organization owns, and within an engagement access is
+// the OrganizationMember role mapped through lib/server/members.ts.
+model Engagement {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  code               String? // short client code, e.g. "ACME-FY25"
+  gstin              String?
+  status             String       @default("ACTIVE") // ACTIVE | PAUSED | ARCHIVED
+  description        String?
+  // Jurisdiction-aware handling: which country's practice, retention and
+  // cross-border regime governs this client's data. Defaults to India ("IN").
+  // See lib/server/jurisdiction.ts for the registry and retention floors.
+  jurisdiction       String       @default("IN")
+  // Overall confidentiality label for the client silo; per-artifact labels
+  // (working papers) override it.
+  dataClassification String       @default("CONFIDENTIAL") // INTERNAL | CONFIDENTIAL | RESTRICTED
+  // Legal hold freezes erasure/purge regardless of any retention window (a
+  // live audit, investigation or dispute). `retentionUntil` is the earliest
+  // instant at which a routine purge may run; null = the jurisdiction default
+  // applies at the time it is evaluated (never a hard-coded far date).
+  legalHold          Boolean      @default(false)
+  retentionUntil     DateTime?
+  retainedById       String? // firm member who last set the retention/hold parameters
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  projects                        Project[]
+  caSources                       CaSource[]
+  members                         EngagementMember[]
+  workingPapers                   WorkingPaper[]
+  changeRequests                  EngagementChangeRequest[]
+  changeLogs                      EngagementChangeLog[]
+  consents                        ClientConsent[]
+  deliverableFormats              EngagementReportFormat[]
+  deliverableTemplates            EngagementReportTemplate[]
+  masterReportTemplates           OrganizationReportTemplate[]
+  engagementDeliverableVersions   EngagementDeliverableVersion[]
+  engagementDeliverableSignOffs   EngagementDeliverableSignOff[]
+  engagementDeliverableParts      EngagementDeliverablePart[]
+  engagementDeliverableRedactions EngagementDeliverableRedaction[]
+  portalTokens                    ClientPortalToken[]
+  portalUploads                   ClientPortalUpload[]
+  portalAccounts                  ClientPortalAccount[]
+  documentRequests                ClientDocumentRequest[]
+  complianceProfile               ClientComplianceProfile?
+  complianceStatuses              ClientComplianceStatus[]
+  filingRuns                      ComplianceFilingRun[]
+  practiceTimeEntries             PracticeTimeEntry[]
+  practiceInvoices                PracticeInvoice[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+/// A client-facing portal link for one engagement. The raw token is shown once
+/// at creation and never stored — only its SHA-256 hash is persisted, so a
+/// database leak does not hand out working links. A link can be revoked, always
+/// expires, and dies with its engagement (cascade).
+model ClientPortalToken {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  tokenHash      String     @unique
+  tokenPrefix    String // first characters, for the firm-side list only
+  label          String? // e.g. "CFO — Sharma Textiles"
+  createdById    String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime   @default(now())
+
+  uploads ClientPortalUpload[]
+
+  @@index([organizationId, engagementId])
+  @@index([engagementId, revokedAt])
+}
+
+/// A document uploaded by a client through the portal. The file lives in the
+/// storage driver under `portal/<org>/<engagement>/…`; only metadata is kept in
+/// the database, and the stored name is derived from a content hash rather than
+/// the client-supplied filename (no traversal, no collisions).
+/// A named client person who may sign in to their engagement portal.
+/// The link token proves "someone holding the link"; this account proves WHO
+/// approved a filing. It is invited by the firm, never self-registered.
+model ClientPortalAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  /// Normalised (lowercase, trimmed). Unique per engagement, not globally:
+  /// the same person may be a client of two different firms.
+  email          String
+  name           String?
+  createdById    String
+  revokedAt      DateTime?
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  loginTokens ClientPortalLoginToken[]
+
+  @@unique([engagementId, email])
+  @@index([organizationId])
+}
+
+/// One-time magic-link token for a client account. Only the SHA-256 hash is
+/// stored; the raw value lives in the emailed link and is consumed on click.
+model ClientPortalLoginToken {
+  id        String   @id @default(cuid())
+  accountId String
+  account   ClientPortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipHash    String?
+  /// Magic-link delivery outcome, so a firm can see whether an invite reached
+  /// the client without the public endpoint revealing account existence.
+  deliveryStatus String    @default("pending") // pending | sent | failed
+  deliveryError  String?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([accountId, expiresAt])
+}
+
+/// Durable outbound-mail queue for notifications (not portal invites, which
+/// send inline so the firm gets an immediate delivery verdict). The rendered
+/// body is stored so a retry sends exactly what was approved.
+model MailOutbox {
+  id             String    @id @default(cuid())
+  organizationId String?
+  toAddress      String
+  subject        String
+  body           String
+  status         String    @default("pending") // pending | sending | sent | failed
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5)
+  lastError      String?
+  nextAttemptAt  DateTime  @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, createdAt])
+}
+
+model ClientPortalUpload {
+  id             String             @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement         @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  tokenId        String?
+  token          ClientPortalToken? @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String
+  sha256         String
+  note           String?
+  category       String             @default("client-upload")
+  uploadedAt     DateTime           @default(now())
+
+  @@index([engagementId, uploadedAt])
+  @@index([organizationId])
+}
+
+/// Per-client registration profile that drives the statutory compliance
+/// calendar (entity kind, GST/TDS registration, audit/TP applicability, state).
+/// Stored as JSON so the due-date engine can evolve without a migration for
+/// every new flag; the calendar itself is deterministic and generated, never
+/// stored.
+model ClientComplianceProfile {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String     @unique
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  profile        String // JSON ClientComplianceProfileSeed
+  createdById    String
+  updatedById    String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId])
+}
+
+/// The firm's filing state for one generated obligation. Task ids are derived
+/// from the calendar, so regenerating the calendar keeps the recorded status.
+model ClientComplianceStatus {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  taskId         String
+  status         String // filed | waived
+  filedOn        String? // ISO date, client-reported filing date
+  reference      String? // acknowledgement / ARN / SRN
+  updatedById    String
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([engagementId, taskId])
+  @@index([organizationId, status])
+}
+
+/// Execution state for one generated statutory obligation. The calendar owns
+/// the due date; this row owns the work: who is preparing it, whether a second
+/// person reviewed it, whether the client approved it, when it was filed and
+/// what acknowledgement came back. Reaching `filed`/`acknowledged` writes the
+/// same ClientComplianceStatus the calendar reads, so there is one truth.
+model ComplianceFilingRun {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  taskId         String
+  title          String
+  authority      String
+  dueDate        String // ISO yyyy-mm-dd, copied from the generated obligation
+
+  // computed | prepared | reviewed | client-approved | filed | acknowledged
+  stage      String   @default("computed")
+  assigneeId String?
+  reviewerId String?
+
+  acknowledgementReference String? // ARN / SRN / portal acknowledgement
+  filedAt                  DateTime?
+  acknowledgedAt           DateTime?
+  blockedReason            String?
+
+  /// Client approval evidence. The portal approval used to exist only as a
+  /// stage change and an event note inside the firm's database; the client had
+  /// no artefact of what they approved. The receipt (run, engagement, actor,
+  /// time, note) plus its SHA-256 digest let both sides hold the same evidence.
+  clientApprovedAt      DateTime?
+  clientApprovalDigest  String?
+  clientApprovalReceipt Json?
+  /// unverified | verified | unverifiable | defective — set by reconciliation.
+  verificationStatus String    @default("unverified")
+  verifiedAt         DateTime?
+  verificationNote   String?
+
+  /// Immutable evidence of the latest gateway attempt: the exact canonical
+  /// payload, the portal receipt, a recomputed payload digest and the actor.
+  /// Written on submit (including rejected attempts), never edited afterwards.
+  proofBundle     Json?
+  /// SHA-256 of the canonical proof bundle — quick integrity check.
+  proofDigest     String?
+  proofCapturedAt DateTime?
+
+  createdById String
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events ComplianceFilingEvent[]
+
+  @@unique([engagementId, taskId])
+  @@index([organizationId, stage])
+  @@index([engagementId, stage])
+  @@index([assigneeId, stage])
+}
+
+/// Per-client live-filing promotion. Every client starts in shadow mode; a firm
+/// promotes a client only after reviewing the shadow plan and one controlled
+/// filing. The gate is enforced only when FILING_ROLLOUT_ENFORCED=true, so an
+/// existing deployment is not silently changed by this table's default.
+model FilingRollout {
+  id             String    @id @default(cuid())
+  organizationId String
+  engagementId   String    @unique
+  mode           String    @default("shadow") // shadow | live
+  note           String?
+  promotedById   String?
+  promotedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, mode])
+}
+
+/// Append-only trail of every filing transition (who moved it, from where, to
+/// where, and why). Never updated or deleted.
+model ComplianceFilingEvent {
+  id             String              @id @default(cuid())
+  runId          String
+  run            ComplianceFilingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  organizationId String
+  fromStage      String?
+  toStage        String
+  note           String?
+  actorId        String
+  createdAt      DateTime            @default(now())
+
+  @@index([runId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Engagement deliverable assembly (CA firm reports, certificates, schedules).
+//
+// This is the engagement-specific deliverable layer the app was missing: report
+// formats (Financials, Tax computation, 44AB/44ADA certificate, Notes, Schedules,
+// Management letter) per engagement, reusable templates with precedents,
+// versioned signed deliverables with a client-facing and reviewer-facing variant,
+// plus identifier redaction rules that are part of the signed record.
+// ---------------------------------------------------------------------------
+
+/// An engagement's report format/contract (what kinds of deliverable it can
+/// produce). One engagement can have several (e.g. financials + tax + 44AB).
+model EngagementReportFormat {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  code           String // FINANCIALS | PROFIT_LOSS | BALANCE_SHEET | NOTES | SCHEDULES | MGMT_LETTER | TAX_COMPUTATION | CERTIFICATE_44AB | CERTIFICATE_44ADA | CERTIFICATE_44AD | TAX_CONCLUSION | AUDIT_FINDINGS | MANAGING_AGENT_LETTER | LETTER_TO_CLIENT
+  label          String // human title shown in the UI
+  description    String? // what this deliverable is for
+  status         String     @default("ACTIVE") // ACTIVE | DRAFT | RETIRED
+  defaultVariant String     @default("CLIENT") // CLIENT | REVIEWER
+  clauses        String? // JSON Record<string, string> — statute / SA clause references this format speaks to
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  versions   EngagementDeliverableVersion[]
+  redactions EngagementDeliverableRedaction[]
+
+  @@unique([engagementId, code])
+  @@index([organizationId, engagementId])
+  @@index([engagementId, status])
+}
+
+/// A reusable template for one format, customizable per client/engagement.
+/// Clients/engagements can extend or override a template; precedent paragraphs
+/// are stored as the personalized variant (not the master).
+model EngagementReportTemplate {
+  id                   String     @id @default(cuid())
+  organizationId       String
+  engagementId         String
+  engagement           Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  formatCode           String
+  masterRef            String? // id of the org-level master template this derives from, if any
+  label                String // e.g. "ACME financials — FY25-26, modified"
+  description          String?
+  firmName             String     @default("^^FIRM_NAME^^") // placeholder resolved at assembly
+  firmAddress          String     @default("^^FIRM_ADDRESS^^")
+  signatoryName        String     @default("^^SIGNATORY_NAME^^")
+  signatoryDesignation String     @default("^^SIGNATORY_DESIGNATION^^")
+  dateLabel            String     @default("^^DATE_LABEL^^") // "as on 31 March 2026"
+  body                 String // JSON EngagementReportTemplateBody — headers, parts, precedents
+  notes                String? // engagement-specific notes-to-account pointers
+  effectiveFrom        String? // assessment year / period this template applies to
+  effectiveTo          String?
+  status               String     @default("ACTIVE")
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  versions EngagementDeliverableVersion[]
+
+  @@unique([engagementId, formatCode, label])
+  @@index([organizationId, engagementId, formatCode])
+  @@index([engagementId, status])
+}
+
+/// A signed/issued deliverable for an engagement. The row is the index record;
+/// the assembled content lives in EngagementDeliverableVersion rows. A version
+/// is immutable; a new revision creates a new version row and is independently
+/// signed off (so the audit evidence ties a specific version to a specific
+/// signatory and date).
+model EngagementDeliverableVersion {
+  id             String                    @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement                @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  formatCode     String
+  format         EngagementReportFormat    @relation(fields: [engagementId, formatCode], references: [engagementId, code], onDelete: Cascade)
+  templateId     String?
+  template       EngagementReportTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  revision       Int                       @default(1)
+  status         String                    @default("DRAFT") // DRAFT | IN_REVIEW | REVIEWED | SIGNED_OFF | ISSUED | WITHDRAWN | SUPERSEDED | ARCHIVED
+  variant        String                    @default("CLIENT") // CLIENT | REVIEWER
+  issuedAtLabel  String? // date string rendered on the document cover
+  filepath       String? // absolute path to the generated artifact on disk (HTML by default; PDF render optional via print)
+  bodyHash       String?
+  preparedById   String?
+  preparedAt     DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  signedOffById  String?
+  signedOffAt    DateTime?
+  signOffRole    String? // PARTNER | MANAGER
+  issuedById     String?
+  issuedAt       DateTime?
+  issuedFor      String? // engagement member / external signer ref when issued outside the firm
+  remarks        String?
+  // A REAL UDIN captured from the ICAI UDIN portal (21 uppercase alphanumeric
+  // characters). The app never mints this value. When no real UDIN is supplied
+  // the deliverable is issued as an internal copy and this stays null.
+  udin           String?
+  udinSource     String? // icai-udin-portal | dsc-based-generation | captured-manually
+  udinIssuedAt   DateTime? // when the real UDIN was recorded (= issuedAt)
+  // App-internal tracking id for the issued document. NOT an ICAI UDIN and
+  // never rendered as one.
+  documentReference String?
+  udinVerifiedById String?
+  udinVerifiedAt DateTime?
+  udinVerifyCount  Int                       @default(0)
+  content        String // JSON EngagementDeliverableContent
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  parts                           EngagementDeliverablePart[]
+  signoffs                        EngagementDeliverableSignOff[]
+  engagementDeliverableRedactions EngagementDeliverableRedaction[]
+
+  // A given revision may exist in both the CLIENT and REVIEWER variants, so the
+  // uniqueness is over the variant too; the non-unique index keeps revision
+  // lookups cheap.
+  @@unique([engagementId, formatCode, revision, variant])
+  @@index([engagementId, formatCode, revision])
+  @@index([organizationId, engagementId, formatCode, status])
+  @@index([engagementId, variant, status])
+  @@index([udin])
+}
+
+/// An append-only sign-off/approval on one deliverable version. Multiple
+/// approval steps can be recorded (e.g. review by senior, sign-off by partner).
+model EngagementDeliverableSignOff {
+  id             String                       @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement                   @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  versionId      String
+  version        EngagementDeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  step           String // REVIEW | APPROVAL | SIGN_OFF | ISSUANCE | WITHDRAWAL
+  role           String // PARTNER | MANAGER | REVIEWER | SENIOR
+  performedById  String
+  performedAt    DateTime                     @default(now())
+  note           String? // reviewer / signatory remark
+
+  @@index([versionId, step])
+  @@index([engagementId, performedById])
+}
+
+/// Immutable content revisions of a deliverable version. Every time the version
+/// is assembled (new template resolved, new precedents, redactions changed), a
+/// new EngagementDeliverablePart is appended rather than mutating the prior one.
+/// The digest is the hash of the assembled content at that point in time.
+model EngagementDeliverablePart {
+  id             String                       @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement                   @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  versionId      String
+  version        EngagementDeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  kind           String // PROOF | SCHEDULE | NOTE | CERTIFICATE | LETTER | COVER | GENERATOR_METADATA | WORKING_PAPER_TRACE
+  ref            String? // binder ref for working-paper traceability, e.g. B-200
+  heading        String
+  bodyMarkdown   String // markdown-ish body text; may include identifier tokens that get redacted for the client variant
+  attachments    String                       @default("[]") // JSON { name: string; ref?: string; kind: "attached"|"workingPaper"; }[]
+  source         String? // dataset | analysis | workingPaper | manual
+  sourceRef      String? // id of the source artifact if applicable
+  order          Int                          @default(0)
+  createdById    String?
+  createdAt      DateTime                     @default(now())
+
+  @@index([versionId, kind, order])
+  @@index([engagementId, source])
+}
+
+/// Redaction rules attached to a deliverable version so the client-facing
+/// and reviewer-facing variants can differ legitimately. Rows are append-only:
+/// a changed redaction creates a new version.
+model EngagementDeliverableRedaction {
+  id                       String                       @id @default(cuid())
+  organizationId           String
+  engagementId             String
+  engagement               Engagement                   @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  versionId                String
+  version                  EngagementDeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  // FULL | MASKED | OMITTED | NOT_REQUIRED
+  policy                   String                       @default("MASKED")
+  appliesTo                String // GSTIN | PAN | CIN | DIN | TAN | Aadhaar | bankAccountId | accountNumber | email | phone | all-taxpayer-identifiers | none
+  note                     String? // why this identifier is treated this way in this deliverable
+  effectiveForVariant      String                       @default("CLIENT") // CLIENT | REVIEWER | BOTH
+  createdAt                DateTime                     @default(now())
+  engagementReportFormat   EngagementReportFormat?      @relation(fields: [engagementReportFormatId], references: [id])
+  engagementReportFormatId String?
+
+  @@index([engagementId, versionId, appliesTo])
+}
+
+// ---------------------------------------------------------------------------
+// Org-level master report templates (firm-wide defaults).
+//
+// A master template is the firm's canonical starting point for one deliverable
+// format. Engagement templates set masterRef to derive from a master and then
+// customize (precedents, notes, signatory). Editing a master does NOT rewrite
+// existing deliverables — it only affects newly assembled ones that resolve
+// through that master.
+// ---------------------------------------------------------------------------
+
+/// A firm-wide master template for one deliverable format. This is the
+/// organization's canonical starting point for engagement templates to derive
+/// from. Engagement-level templates point at a master via `masterRef` and then
+/// override precedent paragraphs, notes, and signatory. Masters are read-heavy
+/// and rarely edited; when they ARE edited, existing deliverables are never
+/// rewritten — only new assemblies pick up the new master text.
+model OrganizationReportTemplate {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  engagements          Engagement[]
+  // FINANCIALS | PROFIT_LOSS | BALANCE_SHEET | NOTES | SCHEDULES | MGMT_LETTER
+  // | TAX_COMPUTATION | CERTIFICATE_44AB | CERTIFICATE_44ADA | CERTIFICATE_44AD
+  // | TAX_CONCLUSION | AUDIT_FINDINGS | MANAGING_AGENT_LETTER | LETTER_TO_CLIENT
+  formatCode           String
+  label                String // e.g. "ACME Standard — Audit Report under SA 700"
+  description          String?
+  // Firm identity placeholders resolved at assembly time. These are the
+  // master/canonical values; engagement templates override them.
+  firmName             String       @default("^^FIRM_NAME^^")
+  firmAddress          String       @default("^^FIRM_ADDRESS^^")
+  signatoryName        String       @default("^^SIGNATORY_NAME^^")
+  signatoryDesignation String       @default("^^SIGNATORY_DESIGNATION^^")
+  dateLabel            String       @default("^^DATE_LABEL^^")
+  // The template body: ordered parts (cover, reporting language, schedules,
+  // notes, certificate wording, appendices), each with a heading + body.
+  body                 String // JSON OrganizationReportTemplateBody
+  // Standard notes-to-accounts skeleton this master speaks to (pointer list,
+  // not full text — engagement templates fill the specifics).
+  notes                String? // JSON string[] — note titles this master expects
+  // Effective period for this master (assessment year / period label).
+  effectiveFrom        String?
+  effectiveTo          String?
+  status               String       @default("ACTIVE") // ACTIVE | DRAFT | RETIRED
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([organizationId, formatCode, label])
+  @@index([organizationId, formatCode])
+  @@index([organizationId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Engagement governance: practice access, working papers, change control.
+//
+// A CA firm needs more than firm-wide roles: access is per client engagement
+// ("this assistant works on Acme, not on Beta") and the role ladder is
+// PARTNER > MANAGER > REVIEWER ~ SENIOR > ASSISTANT with AUDITOR read-only.
+// Every change to client data or a working paper is recorded in an
+// append-only, hash-chained ledger so the audit trail is tamper-evident.
+// ---------------------------------------------------------------------------
+
+/// Per-engagement practice access. Precedence when resolving a caller's role
+/// on an engagement:
+///   1. explicit EngagementMember row (this table)
+///   2. the caller's firm-wide OrganizationMember role (mapped)
+///   3. an explicit ProjectMember row on the engagement's project
+model EngagementMember {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  userId         String
+  // PARTNER | MANAGER | REVIEWER | SENIOR | ASSISTANT | AUDITOR
+  practiceRole   String     @default("ASSISTANT")
+  assignedById   String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([engagementId, userId])
+  @@index([organizationId, engagementId])
+  @@index([userId])
+}
+
+/// A working paper in the engagement file (SA 230). The row is current state;
+/// every content edit appends an immutable WorkingPaperVersion. Review and
+/// sign-off are separate, and sign-off requires a partner/manager role, so a
+/// preparer can never sign off their own paper.
+model WorkingPaper {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  projectId      String?
+  indexRef       String // binder reference, e.g. "B-200"
+  title          String
+  section        String?
+  saReference    String? // e.g. "SA 500"
+  status         String     @default("DRAFT") // DRAFT | IN_REVIEW | REVIEWED | SIGNED_OFF | ARCHIVED
+  classification String     @default("CONFIDENTIAL") // INTERNAL | CONFIDENTIAL | RESTRICTED
+  version        Int        @default(0)
+  contentHash    String?
+  preparedById   String?
+  preparedAt     DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  signedOffById  String?
+  signedOffAt    DateTime?
+  signOffRole    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  versions WorkingPaperVersion[]
+
+  @@unique([engagementId, indexRef])
+  @@index([organizationId, engagementId, status])
+}
+
+/// Immutable snapshot of a working paper revision. Never updated or deleted.
+model WorkingPaperVersion {
+  id             String       @id @default(cuid())
+  workingPaperId String
+  workingPaper   WorkingPaper @relation(fields: [workingPaperId], references: [id], onDelete: Cascade)
+  version        Int
+  content        String // JSON snapshot (redaction-aware)
+  contentHash    String
+  changeSummary  String
+  preparedById   String
+  createdAt      DateTime     @default(now())
+
+  @@unique([workingPaperId, version])
+  @@index([workingPaperId, createdAt])
+}
+
+/// A request to change client data or a working paper. Mutable state machine
+/// with an explicit "why" (rationale) that must be present before submission,
+/// a required review, and a role-gated sign-off.
+model EngagementChangeRequest {
+  id                     String     @id @default(cuid())
+  organizationId         String
+  engagementId           String
+  engagement             Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  projectId              String?
+  title                  String
+  description            String?
+  rationale              String? // the "why" — required before submission
+  targetType             String // dataset | workingPaper | clientMaster | book | ...
+  targetId               String?
+  state                  String     @default("DRAFT") // DRAFT | REQUESTED | IN_REVIEW | CHANGES_REQUESTED | APPROVED | REJECTED | IMPLEMENTED | SUPERSEDED
+  assignedToPracticeRole String     @default("SENIOR")
+  signOffRequiredFor     String     @default("MANAGER")
+  reviewNote             String?
+  requestedById          String
+  requestedAt            DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  @@index([organizationId, engagementId, state])
+  @@index([engagementId, updatedAt])
+}
+
+/// Append-only, hash-chained change ledger for one engagement. Each entry
+/// stores the hash of the previous entry for the same engagement, so a
+/// deleted or edited row is detectable by verifyEngagementLedger(). Rows must
+/// never be updated or deleted.
+model EngagementChangeLog {
+  id                String     @id @default(cuid())
+  organizationId    String
+  engagementId      String
+  engagement        Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  seq               Int // 1-based, monotonic per engagement
+  changeRequestId   String?
+  actorId           String
+  actorPracticeRole String
+  action            String
+  targetType        String
+  targetId          String?
+  summary           String
+  rawSummary        String?
+  meta              String?
+  consentAware      Boolean    @default(true)
+  prevHash          String?
+  entryHash         String
+  createdAt         DateTime   @default(now())
+
+  @@unique([engagementId, seq])
+  @@index([organizationId, engagementId, createdAt])
+}
+
+/// Client (data-principal) consent captured at the engagement level: the firm
+/// is the data fiduciary and the client is the principal. Rows are proof and
+/// are never deleted; a withdrawal appends a new row that supersedes it.
+model ClientConsent {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  purpose        String // engagement | statutory-filing | cross-border-transfer | product-improvement
+  subjectRef     String // client contact / signatory role label (not the raw identity)
+  granted        Boolean    @default(true)
+  policyVersion  String
+  evidenceNote   String?
+  recordedById   String
+  expiresAt      DateTime?
+  createdAt      DateTime   @default(now())
+
+  @@index([organizationId, engagementId, purpose])
+}
+
+// ---------------------------------------------------------------------------
+// DPDP consent registry — itemized, versioned, revocable consent records.
+// Rows are never deleted (proof of consent/refusal), only superseded.
+// ---------------------------------------------------------------------------
+
+model ConsentRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose       String // service | product-improvement | marketing
+  granted       Boolean
+  policyVersion String
+  ipHash        String? // one-way hash of the request IP at consent time
+  createdAt     DateTime @default(now())
+
+  @@index([userId, purpose])
+}
+
+/// Durable compliance evidence that must OUTLIVE the data it records.
+///
+/// The DPDP right-to-erasure proof cannot live in `Activity`: Activity rows are
+/// workspace-scoped with `onDelete: Cascade`, and erasure deletes the personal
+/// workspace — so the proof row was being cascade-deleted by the very operation
+/// it was meant to document. This table therefore has NO relations (no FK, no
+/// cascade): `subjectId`/`organizationId` are plain pseudonymous strings. It is
+/// append-only and intentionally outside every workspace/tenant boundary.
+model ComplianceEvent {
+  id             String   @id @default(cuid())
+  kind           String // DPDP_ERASURE | CONSENT_WITHDRAWN | ...
+  subjectId      String? // the data principal (original user id, pre-anonymization)
+  organizationId String?
+  ipHash         String? // one-way hash of the request IP, never the raw IP
+  detail         String? // human-readable summary; never raw PII
+  createdAt      DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([subjectId])
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  name            String
+  passwordHash    String
+  // Phone/OTP auth (Band 3.1): optional — password auth keeps working. The
+  // phone is stored normalized E.164 (+91XXXXXXXXXX) and verified via OTP.
+  phoneNumber     String?    @unique
+  phoneVerifiedAt DateTime?
+  profileRole     String? // onboarding: Data Scientist, Consultant, …
+  goals           String? // JSON string[]
+  organization    String?
+  industry        String?
+  experience      String?
+  onboardedAt     DateTime?
+  emailVerifiedAt DateTime?
+  workspaceId     String?    @unique
+  /// DANGER: `onDelete: Cascade` means deleting a Workspace deletes its owning
+  /// User. eraseUser() therefore nulls this FK BEFORE deleting the workspace
+  /// (see lib/server/dpdp.ts). Any other workspace-deletion path must do the
+  /// same or it will silently destroy the account.
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Session revocation (SEC-7): bumped on password change/reset (and by an
+  // operator) to invalidate every outstanding session JWT at once — the token
+  // carries the version, and a mismatch rejects it server-side.
+  sessionVersion Int @default(1)
+  // TOTP MFA (RFC 6238). The seed is sealed with AES-256-GCM under AUTH_SECRET;
+  // the pending seed exists only between setup and the first successful code.
+  // Recovery codes are bcrypt hashes; `mfaLastUsedStep` makes each TOTP step
+  // single-use so a captured code cannot be replayed inside its window.
+  mfaSecret        String?
+  mfaPendingSecret String?
+  mfaEnabledAt     DateTime?
+  mfaRecoveryCodes String? // JSON string[] of bcrypt hashes
+  mfaLastUsedStep  Int?
+  isAdmin Boolean @default(false)
+  state          String? 
+  country       String? // Client country for compliance purposes
+
+  organizationMemberships OrganizationMember[]
+  ownedOrganizations      Organization[]       @relation("OrganizationOwner")
+
+  verificationTokens VerificationToken[]
+  consents           ConsentRecord[]
+  phoneOtps          PhoneOtp[]
+  dataAlerts         DataAlert[]
+  feedback           Feedback[]
+  ownedProjects      Project[]           @relation("ProjectOwner")
+  activities         Activity[]          @relation("ActivityActor")
+  datasets           Dataset[]
+  analyses           Analysis[]
+  dashboards         Dashboard[]
+  reports            Report[]
+  presentations      Presentation[]
+  notifications      Notification[]
+  notebooks          Notebook[]
+  modelVersions      ModelVersion[]
+  scheduledReports   ScheduledReport[]
+  scheduledNotebooks ScheduledNotebook[]
+  projectMemberships ProjectMember[]
+  comments           Comment[]
+  prompts            Prompt[]
+  chats              Chat[]
+  connectors         Connector[]
+  datasetVersions    DatasetVersion[]
+  analysisVersions   AnalysisVersion[]
+  notebookVersions   NotebookVersion[]
+  customMetrics      CustomMetric[]
+  apiKeys            UserApiKey[]
+  savedSearches      SavedSearch[]
+  searchQueryLogs    SearchQueryLog[]
+  statuteSources         StatuteSource[]
+  statuteRuleVersions    StatutoryRuleVersion[]
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // VERIFY_EMAIL | RESET_PASSWORD
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Public API: User API Keys
+// ---------------------------------------------------------------------------
+
+model UserApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name       String
+  keyHash    String    @unique // bcrypt hash of the API key
+  keyPrefix  String // first 8 chars for display (e.g., "ak_live_1a2b")
+  scopes     String    @default("[]") // JSON string[]: "datasets:read", "reports:read", "execute:dax", etc.
+  rateLimit  Int       @default(60) // requests per minute
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([keyPrefix])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  company        String?
+  industry       String?
+  status         String        @default("ACTIVE") // ACTIVE | DRAFT | COMPLETED | ARCHIVED
+  ownerId        String
+  owner          User          @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  // Engagement tenancy: an org-owned project IS an engagement (nullable keeps
+  // legacy single-tenant workspaces untouched).
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  // The engagement (client silo) this project belongs to. Set together with
+  // `organizationId`; organization is derivable from the engagement, but the
+  // denormalized copy keeps Activity/audit attribution cheap and indexable.
+  engagementId   String?
+  engagement     Engagement?   @relation(fields: [engagementId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  datasets           Dataset[]
+  analyses           Analysis[]
+  insights           Insight[]
+  dashboards         Dashboard[]
+  reports            Report[]
+  presentations      Presentation[]
+  notebooks          Notebook[]
+  modelVersions      ModelVersion[]
+  scheduledReports   ScheduledReport[]
+  scheduledNotebooks ScheduledNotebook[]
+  members            ProjectMember[]
+  comments           Comment[]
+  activities         Activity[]
+  joinMappings       ProjectJoinMapping[]
+  chats              Chat[]
+  customMetrics      CustomMetric[]
+
+  @@index([workspaceId])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("VIEWER") // OWNER | EDITOR | VIEWER
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Activity {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorId        String?
+  actor          User?         @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type           String
+  message        String
+  // Canonical filters for the audit trail: which object the event is about and
+  // which scheduler/import run it belongs to. Kept as real columns (not only
+  // inside `meta`) so scoped lookups stay indexed and cheap. Rows written
+  // before this column existed have NULL here and are answered by the same
+  // free-text `meta` fallback in the query helpers.
+  targetType     String?
+  targetId       String?
+  runId          String?
+  // Optional org-level activity (firm events without an engagement/project).
+  organizationId String?
+  organization   Organization? @relation("OrganizationActivity", fields: [organizationId], references: [id], onDelete: SetNull)
+  meta           String?
+  createdAt      DateTime      @default(now())
+
+  @@index([workspaceId, projectId])
+  @@index([workspaceId, createdAt])
+  @@index([targetType, targetId])
+  @@index([runId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Data & analytics artifacts
+// ---------------------------------------------------------------------------
+
+model Dataset {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  name         String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  rowCount     Int
+  columnCount  Int
+
+  isDemo Boolean @default(false)
+  status String  @default("READY") // PROCESSING | READY | ERROR
+
+  filePath   String? // raw uploaded file on disk
+  ndjsonPath String // normalized row-stream
+  error      String?
+
+  profile            String? // JSON DatasetProfile
+  columns            String // JSON ColumnDef[]
+  preview            String? // JSON first rows
+  qualityWarnings    String? // JSON string[]
+  transformSteps     String? // JSON PQStep[] — persisted Power Query applied steps (re-runnable, never mutates the source)
+  connectorWatermark String? // JSON { column, value, colType } — incremental-sync floor for connector-backed datasets
+  measures           String? // JSON { name → DAX expression } — persistent named measures (Power BI model measures)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  connectorId          String?
+  connector            Connector? @relation(fields: [connectorId], references: [id], onDelete: SetNull)
+  connectorSourceTable String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analyses          Analysis[]
+  insights          Insight[]
+  notebooks         Notebook[]
+  modelVersions     ModelVersion[]
+  analysisDatasets  AnalysisDataset[]
+  notebookDatasets  NotebookDataset[]
+  joinMappingsLeft  ProjectJoinMapping[] @relation("JoinMappingLeft")
+  joinMappingsRight ProjectJoinMapping[] @relation("JoinMappingRight")
+  derivedDatasets   DatasetProvenance[]  @relation("DerivedDataset")
+  sourceDatasets    DatasetProvenance[]  @relation("SourceDataset")
+  versions          DatasetVersion[]
+  syncRuns          ConnectorSyncRun[]
+  customMetrics     CustomMetric[]
+  dataAlerts        DataAlert[]
+
+  @@index([workspaceId, projectId])
+  @@index([connectorId])
+}
+
+model Analysis {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  datasetId String
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  datasets AnalysisDataset[]
+
+  kind   String // eda | trend | kpi | correlation | distribution | forecast | variance | segmentation | cohort | funnel
+  title  String
+  status String @default("READY")
+
+  config String // JSON AnalysisConfig
+  result String // JSON AnalysisResult
+
+  datasetVersionId String?
+  datasetVersion   DatasetVersion? @relation(fields: [datasetVersionId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  insights Insight[]
+  versions AnalysisVersion[]
+
+  @@index([workspaceId, projectId, datasetId])
+}
+
+model Insight {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  datasetId  String?
+  dataset    Dataset?  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  analysisId String?
+  analysis   Analysis? @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  title               String
+  severity            String // info | warning | critical
+  metric              String?
+  observedChange      String?
+  evidence            String // JSON string[]
+  possibleCause       String?
+  businessImplication String?
+  recommendedNextStep String?
+  confidence          String // calculated | inferred | recommendation
+  extra               String? // JSON
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, projectId])
+}
+
+model Dashboard {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String?
+  widgets     String // JSON DashboardWidget[]
+  pages       String? // JSON ReportPage[] (Power BI–style report pages; null = single legacy page in `widgets`)
+  bookmarks   String? // JSON ReportBookmark[] (named view states)
+  theme       String? // JSON ReportTheme (report-wide palette/format preset)
+
+  // Publishing (Hex-style data apps): workspace-authenticated by default;
+  // OWNER can opt in to a public view-only link keyed by shareToken.
+  accessMode  String    @default("workspace") // workspace | public
+  shareToken  String?   @unique
+  publishedAt DateTime?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, projectId])
+}
+
+model Report {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title    String
+  sections String // JSON ReportSection[]
+  version  Int    @default(1)
+
+  // Publishing: workspace-authenticated by default; OWNER can opt in to a
+  // public view-only link keyed by shareToken.
+  accessMode  String    @default("workspace") // workspace | public
+  shareToken  String?   @unique
+  publishedAt DateTime?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scheduledReports ScheduledReport[]
+
+  @@index([workspaceId, projectId])
+}
+
+model Presentation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title  String
+  slides String // JSON PresentationSlide[]
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, projectId])
+}
+
+model Notification {
+  id      String    @id @default(cuid())
+  userId  String
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type    String // anomaly | data-quality | analysis | report | dashboard | system
+  title   String
+  message String?
+  readAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+}
+
+// ---------------------------------------------------------------------------
+// Notebooks (cells persisted as a JSON document on the row)
+// ---------------------------------------------------------------------------
+
+model Notebook {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  datasetId        String?
+  dataset          Dataset?        @relation(fields: [datasetId], references: [id], onDelete: SetNull)
+  datasetVersionId String?
+  datasetVersion   DatasetVersion? @relation(fields: [datasetVersionId], references: [id], onDelete: SetNull)
+
+  title String @default("Untitled notebook")
+  cells String @default("[]") // JSON NotebookCell[]
+
+  // Publishing (Hex-style "data apps"): workspace-authenticated by default;
+  // OWNER can opt in to a public view-only link keyed by shareToken.
+  accessMode  String    @default("workspace") // workspace | public
+  shareToken  String?   @unique
+  publishedAt DateTime?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  datasets           NotebookDataset[]
+  versions           NotebookVersion[]
+  scheduledNotebooks ScheduledNotebook[]
+
+  @@index([workspaceId, projectId])
+}
+
+model NotebookVersion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notebookId  String
+  notebook    Notebook  @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+
+  version Int // 1-based, monotonic per notebook
+  result  String // JSON snapshot of cell state / output at this version
+  config  String // JSON
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, notebookId, createdAt])
+}
+
+model NotebookDataset {
+  notebookId String
+  notebook   Notebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  datasetId  String
+  dataset    Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([notebookId, datasetId])
+  @@index([datasetId])
+}
+
+// ---------------------------------------------------------------------------
+// Multi-dataset joins & provenance
+// ---------------------------------------------------------------------------
+
+model AnalysisDataset {
+  analysisId String
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  datasetId  String
+  dataset    Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([analysisId, datasetId])
+  @@index([datasetId])
+}
+
+model CaSource {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // Engagement-scoped source: a CA source belongs to ONE client engagement so
+  // client data is segregated by engagement, not just by workspace.
+  engagementId String?
+  engagement   Engagement? @relation(fields: [engagementId], references: [id], onDelete: SetNull)
+  // Which source system the canonical layer knows how to map (tally-vouchers,
+  // bank-statement, gst-invoices, tds-challan, payroll, einvoice, …).
+  sourceKind   String
+  // Human-readable source label (file name / system name) persisted with the
+  // source and used as provenance.attachment on every document produced from it.
+  sourceLabel  String
+  // Current saved mapping profile (the reusable "column X means canonical field Y"
+  // artifact). Saved once per source and reused across repeat syncs.
+  profile      String // JSON CaMappingProfile
+  // Columns the source exposed the last time it was pulled/parsed, in order.
+  // Used to validate a saved mapping still fits the source before applying it.
+  sourceColumns String   // JSON string[]
+  // A short, stable handle a reviewer cites in working papers (e.g. "Tally Day
+  // Book — Mar-26").
+  displayName  String?
+  // Sync bookkeeping for repeat syncs: how many successful ingest runs have
+  // been recorded against this source.
+  syncCount    Int      @default(0)
+  // When the source was last successfully ingested.
+  lastIngestedAt DateTime?
+  // Last error message from a failed ingest (cleared on next success).
+  lastError    String?
+  // Hash of the canonicalised documents from the most recent successful ingest,
+  // so repeat syncs can quickly detect "nothing changed" without re-canonicalising.
+  documentFingerprint String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  runs         CaIngestRun[]
+  documents    CaDocumentSnapshot[]
+
+  @@index([workspaceId])
+  @@index([engagementId])
+  @@index([sourceKind])
+}
+
+model CaMappingProfile {
+  id           String   @id @default(cuid())
+  // The canonical source kind this profile targets (tally-vouchers, bank-statement,
+  // gst-invoices, …). One profile per source kind per firm practice.
+  sourceKind   String
+  // Human-readable name (e.g. "HDFC SB CSV — Apr-26").
+  name         String
+  // Human-readable source label attached to rows during ingestion for provenance.
+  sourceLabel  String
+  // The columns the source file/parser exposed at mapping time, in order.
+  sourceColumns String   // JSON string[]
+  // How each canonical field is produced from the source columns.
+  mapping      String   // JSON CaMapping
+  // When this profile was first used (ISO datetime) — for "last used" UX.
+  firstUsedAt  String
+  // Optional reviewer note: why these columns map this way.
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([sourceKind, name])
+}
+
+model CaIngestRun {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  caSourceId  String
+  caSource    CaSource @relation(fields: [caSourceId], references: [id], onDelete: Cascade)
+  // Sync version for this run: a short monotonic label the firm can cite
+  // (e.g. "3") so a report can say "JRNAL 123 from bank-statement file
+  // SB-2026-06.csv, sync 3".
+  syncVersion String
+  // What triggered this run: manual, schedule, or reingest.
+  triggeredBy String   // manual | schedule | reingest
+  // Status of the run.
+  status      String   @default("RUNNING") // RUNNING | SUCCESS | ERROR
+  // How many source rows were canonicalised in this run.
+  rowCount    Int?
+  // How many distinct canonical documents were produced (deduped by fingerprint).
+  documentCount Int?
+  // Transform report from the canonicalisation step (mapped / skipped / warnings).
+  report      String?  // JSON CaTransformReport
+  // Reconciliation summary when this ingest compared against a prior source
+  // (e.g. books vs bank). Null for a first ingest.
+  reconciliation String? // JSON CaReconcileResult
+  // Error message when status = ERROR.
+  error       String?
+  // When the run started.
+  startedAt   DateTime @default(now())
+  // When the run finished (status = SUCCESS | ERROR).
+  finishedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, caSourceId])
+  @@index([caSourceId, status])
+  @@index([startedAt])
+
+  documents   CaDocumentSnapshot[]
+}
+
+model CaDocumentSnapshot {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  caSourceId  String
+  caSource    CaSource @relation(fields: [caSourceId], references: [id], onDelete: Cascade)
+  // The ingest run that produced this snapshot.
+  runId       String
+  run         CaIngestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  // Canonical document produced from the source row.
+  document    String   // JSON CaDocument
+  // Stable fingerprint used for dedup across repeat syncs (identity, not row index).
+  fingerprint String
+  // Source row index within the pulled/parsed table (1-based) for traceability.
+  rowIndex    Int
+  createdAt   DateTime @default(now())
+
+  @@unique([caSourceId, runId, fingerprint])
+  @@index([workspaceId, caSourceId])
+  @@index([fingerprint])
+}
+
+model ProjectJoinMapping {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  leftDatasetId String
+  leftDataset   Dataset @relation("JoinMappingLeft", fields: [leftDatasetId], references: [id], onDelete: Cascade)
+  leftColumn    String
+  leftType      String
+
+  rightDatasetId String
+  rightDataset   Dataset @relation("JoinMappingRight", fields: [rightDatasetId], references: [id], onDelete: Cascade)
+  rightColumn    String
+  rightType      String
+
+  warnings  String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, projectId])
+}
+
+model DatasetProvenance {
+  derivedDatasetId String
+  derivedDataset   Dataset @relation("DerivedDataset", fields: [derivedDatasetId], references: [id], onDelete: Cascade)
+  sourceDatasetId  String
+  sourceDataset    Dataset @relation("SourceDataset", fields: [sourceDatasetId], references: [id], onDelete: Cascade)
+
+  query     String?
+  createdAt DateTime @default(now())
+
+  @@id([derivedDatasetId, sourceDatasetId])
+  @@index([sourceDatasetId])
+}
+
+// ---------------------------------------------------------------------------
+// Model training artifacts
+// ---------------------------------------------------------------------------
+
+model ModelVersion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  datasetId String
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  name         String
+  task         String // classification | regression | clustering
+  targetColumn String?
+  features     String  @default("[]") // JSON string[]
+  metrics      String // JSON ModelMetrics
+  params       String  @default("{}") // JSON hyperparameters
+
+  version      Int
+  status       String  @default("READY") // TRAINING | READY | ERROR | CANDIDATE | CHAMPION | RETIRED
+  error        String?
+  artifactPath String?
+
+  // MLOps promotion audit trail (lib/engine/mlops.ts gate semantics).
+  promotedAt   DateTime?
+  promotedBy   String?
+  note         String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, projectId, datasetId])
+}
+
+// ---------------------------------------------------------------------------
+// Durable job queue (Band 2.4) — resumable background jobs with retries/backoff.
+// A job row survives worker crashes: a stuck `running` job with an expired
+// lease is re-claimed and re-run; `attempts`/`maxAttempts` drive exponential
+// backoff (lib/server/queue.ts defaultRetryBackoff).
+// ---------------------------------------------------------------------------
+
+model JobQueue {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  kind     String // scheduled-report | scheduled-notebook | connector-sync
+  payload  String @default("{}") // JSON job arguments (e.g. scheduleId)
+  status   String @default("pending") // pending | running | done | failed | dead
+  priority Int    @default(0) // lower runs first
+
+  runAt       DateTime  @default(now()) // earliest time the job may run
+  leaseUntil  DateTime? // claimed until this instant (crash recovery)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  lastError   String?
+  finishedAt  DateTime?
+
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, runAt])
+  @@index([workspaceId, status])
+}
+
+// Cross-replica relay for multi-replica deployments (no external broker).
+// Yjs updates are commutative + idempotent, so at-least-once delivery through
+// this log converges — replicas that just applied an update locally replay it
+// from here and replicas that missed it apply it on their next poll.
+model CollaborativeUpdate {
+  id         BigInt   @id @default(autoincrement())
+  notebookId String
+  replicaId  String // publishing replica (excluded from its own relay reads)
+  payload    String // base64 Yjs update
+  createdAt  DateTime @default(now())
+
+  @@index([notebookId, id])
+}
+
+// ---------------------------------------------------------------------------
+// Scheduled reports
+// ---------------------------------------------------------------------------
+
+model ScheduledReport {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportId    String?
+  report      Report?   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  name       String
+  cron       String // 5-field cron, validated at insert
+  recipients String @default("[]") // JSON string[]
+
+  enabled Boolean @default(true)
+
+  lastRunAt        DateTime?
+  lastRunStatus    String? // ok | error
+  lastRunMessage   String?
+  lastRunOutputUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, enabled])
+}
+
+model ScheduledNotebook {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notebookId  String
+  notebook    Notebook  @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+
+  name       String
+  cron       String // 5-field cron, validated at insert
+  recipients String @default("[]") // JSON string[]
+
+  enabled Boolean @default(true)
+
+  lastRunAt        DateTime?
+  lastRunStatus    String? // ok | error
+  lastRunMessage   String?
+  lastRunOutputUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, enabled])
+}
+
+// ---------------------------------------------------------------------------
+// External data connectors
+// ---------------------------------------------------------------------------
+
+model Connector {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  kind   String @default("postgres") // postgres | snowflake | bigquery | sheets | rest
+  name   String
+  config String // JSON — encrypted at rest (lib/server/connectors/crypto.ts)
+
+  status       String    @default("untested") // untested | ok | error
+  lastTestedAt DateTime?
+  lastError    String?
+
+  syncEnabled Boolean   @default(false)
+  syncCron    String?
+  lastSyncAt  DateTime?
+
+  // Push-based refresh: a per-connector secret for HMAC-verifying inbound
+  // webhooks (e.g. a Shopify order webhook → "pull now"). Null = disabled.
+  webhookSecret String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  datasets Dataset[]
+  syncRuns ConnectorSyncRun[]
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Data alerts (KPI thresholds, anomalies, staleness)
+// ---------------------------------------------------------------------------
+
+model DataAlert {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  datasetId   String
+  dataset     Dataset   @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  name       String
+  enabled    Boolean @default(true)
+  // threshold | anomaly | staleness — config JSON shape per kind (lib/engine/alerts.ts)
+  ruleKind   String
+  ruleConfig String // JSON — validated by isAlertRuleConfig()
+  columnName String? // watched column (null for staleness)
+  severity   String  @default("warning") // info | warning | critical
+
+  // Cooldown: never re-fire within this window unless resolved first.
+  cooldownMinutes Int       @default(240)
+  lastFiredAt     DateTime?
+  lastResolvedAt  DateTime?
+  // firing | resolved | never — drives fired→resolved transitions
+  lastOutcome     String    @default("never")
+  lastValue       Float?
+  lastMessage     String?
+  // Rolling history of computed aggregate values [{t, v}] — the anomaly
+  // baseline. Capped at 90 points by the evaluator.
+  valueHistory    String    @default("[]")
+
+  // Delivery channels (email always; WhatsApp when the workspace has a
+  // verified phone and the instance has WHATSAPP_ENABLED=true).
+  notifyEmail    Boolean @default(true)
+  notifyWhatsapp Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([datasetId])
+}
+
+model ConnectorSyncRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  datasetId   String
+  dataset     Dataset   @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  tableName    String // schema.table pulled
+  status       String  @default("RUNNING") // RUNNING | SUCCESS | ERROR
+  rowCount     Int?
+  changeLog    String? // JSON ConnectorChangeLog
+  error        String?
+  snapshotPath String?
+  triggeredBy  String  @default("manual") // manual | schedule
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([workspaceId, connectorId, createdAt])
+  @@index([datasetId])
+}
+
+// ---------------------------------------------------------------------------
+// Versioning (immutable snapshots)
+// ---------------------------------------------------------------------------
+
+model DatasetVersion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  datasetId   String
+  dataset     Dataset   @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  version Int // 1-based, monotonic per dataset
+  label   String? // e.g. "import", "sync", "column ops"
+  source  String  @default("upload") // upload | sync | column-ops | materialize
+
+  rowCount    Int
+  columnCount Int
+  ndjsonPath  String // data/versions/<id>.ndjson — immutable snapshot
+
+  columns         String  @default("[]") // JSON ColumnDef[] at this version
+  profile         String? // JSON DatasetProfile at this version
+  qualityWarnings String? // JSON string[]
+  changeLog       String? // JSON diff vs previous version
+
+  previousVersionId String?
+  previousVersion   DatasetVersion?  @relation("DatasetVersionChain", fields: [previousVersionId], references: [id], onDelete: SetNull)
+  nextVersions      DatasetVersion[] @relation("DatasetVersionChain")
+
+  analyses         Analysis[]
+  analysisVersions AnalysisVersion[]
+  notebooks        Notebook[]
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([datasetId, version])
+  @@index([workspaceId, datasetId, createdAt])
+}
+
+model AnalysisVersion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  analysisId  String
+  analysis    Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  version          Int // 1-based, monotonic per analysis
+  datasetVersionId String?
+  datasetVersion   DatasetVersion? @relation(fields: [datasetVersionId], references: [id], onDelete: SetNull)
+  kind             String          @default("eda")
+  title            String          @default("")
+
+  result  String // JSON AnalysisResult
+  config  String // JSON AnalysisConfig
+  metrics String @default("[]") // JSON VersionMetric[]
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([analysisId, version])
+  @@index([workspaceId, analysisId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+model Comment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  targetType String // analysis | dashboard | report | presentation | insight | notebook
+  targetId   String
+  parentId   String?
+  parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentThread")
+
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, targetType, targetId])
+  @@index([workspaceId, projectId])
+}
+
+// ---------------------------------------------------------------------------
+// Prompt library
+// ---------------------------------------------------------------------------
+
+model Prompt {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+  template          String
+  variables         String  @default("[]") // JSON string[]
+  chain             String  @default("[]") // JSON string[]
+  isAdvisorTemplate Boolean @default(false)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Copilot chat threads (persisted conversation history)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Phone/OTP auth (Band 3.1) — short-lived one-time codes for passwordless
+// sign-in on the phone number attached to an account. Codes are stored HASHED
+// (bcrypt), expire in 5 minutes, allow ≤5 verification attempts, and rows are
+// deleted once consumed or expired — no OTP material outlives its purpose.
+// ---------------------------------------------------------------------------
+
+model PhoneOtp {
+  id          String    @id @default(cuid())
+  phone       String // normalized E.164 the code was sent to
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     String    @default("LOGIN") // LOGIN | LINK_PHONE
+  codeHash    String // bcrypt hash — the raw code is never stored
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  ipHash      String? // one-way hash of the request IP (consent-proof style)
+  createdAt   DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@index([userId])
+}
+
+model Chat {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title     String  @default("New chat")
+  webSearch Boolean @default(true)
+  model     String? // "provider:model" the thread last answered with
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([workspaceId, userId, updatedAt])
+}
+
+model ChatMessage {
+  id     String @id @default(cuid())
+  chatId String
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  role    String // user | assistant
+  content String
+  sources String? // JSON ChatSource[] when the assistant cited live web results
+
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Monetization (Band 4.2): Plan → Subscription → Invoice.
+//
+// A Plan is the purchasable product (Free/Pro/Firm) with prices in paise
+// (INR minor units — never floats). A Subscription binds a workspace to a
+// plan with period bounds. Invoices record each charge with an idempotent
+// provider reference. Two payment rails, honestly labelled:
+//   - razorpay : checkout order created server-side; payment verified via
+//                HMAC signature (webhook + client callback both checked)
+//   - manual   : offline transfer (NEFT/UPI) — invoice flips to PAID only
+//                when an operator records the payment reference
+// No plan gates any engine — billing is honest bookkeeping, not a meter that
+// silently degrades computed results.
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id          String  @id
+  // "free" | "pro" | "firm"
+  name        String
+  description String?
+  amountPaise Int     @default(0) // 0 = free plan
+  currency    String  @default("INR")
+  interval    String  @default("month") // month | year
+  features    String  @default("[]") // JSON string[] shown on the pricing panel
+  isActive    Boolean @default(true)
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  planId      String
+  plan        Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  status             String    @default("active") // active | past_due | canceled
+  interval           String    @default("month")
+  // Current billing period (null on the free plan = no expiry)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+
+  // Phase 5.1: a trial is a PAID entitlement on a timer. It gets its own
+  // column rather than being inferred from currentPeriodEnd because a lapsed
+  // trial must stop granting Pro, whereas a genuinely paid subscription that
+  // is merely late must not be downgraded by a local clock check. The two are
+  // indistinguishable if you only have a period end. See lib/server/trial.ts.
+  trialEndsAt DateTime?
+
+  canceledAt DateTime?
+
+  // Provider linkage — razorpaySubscriptionId when the recurring rail is on
+  provider               String? // "razorpay" | "manual"
+  providerSubscriptionId String?
+
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  number            String    @unique // human-readable: ARLX-2026-000001
+  amountPaise       Int
+  currency          String    @default("INR")
+  status            String    @default("due") // due | paid | void
+  // Payment rail actually used for this invoice
+  paymentMethod     String    @default("manual") // manual | razorpay
+  // Razorpay linkage + idempotent webhook key
+  razorpayOrderId   String?   @unique
+  razorpayPaymentId String?
+  paidAt            DateTime?
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+}
+
+model WebhookEvent {
+  // Razorpay webhook idempotency: every delivered event id is recorded once;
+  // replays are acknowledged but never re-applied.
+  id          String   @id // provider event id
+  provider    String
+  type        String
+  processedAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Search upgrades: saved searches + query analytics.
+//
+// A SavedSearch is a reproducible (query, type facet, sort) triple the user
+// can re-run from the /search page or the ⌘K palette — stored as normalized
+// JSON (lib/search/facets.ts) so it renders with the same ranking code.
+// SearchQueryLog is the analytics floor: one row per executed search with
+// its hit count. Zero-hit queries are the "users searched, found nothing"
+// signal; aggregation is pure (aggregateSearchAnalytics).
+// ---------------------------------------------------------------------------
+
+model SavedSearch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name   String // user-editable label; defaults to the query
+  query  String
+  filter String // JSON { type: string|null, sort: "relevance"|"recent" }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([workspaceId, userId, updatedAt])
+}
+
+model SearchQueryLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  query    String
+  hitCount Int
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Semantic Layer: Custom Metric Definitions (DAX-based)
+// ---------------------------------------------------------------------------
+
+model CustomMetric {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  datasetId String?
+  dataset   Dataset? @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  name          String
+  description   String?
+  daxExpression String
+  format        String  @default("number") // number | currency | percentage
+  tags          String  @default("[]") // JSON string[]
+
+  isBuiltin Boolean @default(false)
+  isGlobal  Boolean @default(false) // true = available across all datasets in workspace
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, datasetId])
+  @@index([workspaceId, projectId])
+}
+
+// ---------------------------------------------------------------------------
+// Books workspace (CA firm work — Phase B)
+//
+// A persisted double-entry book of accounts. `lib/engine/accounting.ts` owns
+// the arithmetic (debits must equal credits, integer minor units); these models
+// own the storage. Every voucher stores the signed minor-unit amounts on its
+// lines, with positive = debit and negative = credit, so the invariant can be
+// re-checked from the database at any time.
+//
+// Books are workspace-scoped: a CA firm's other clients can never read one
+// client's ledger.
+// ---------------------------------------------------------------------------
+
+/// A set of books for one entity (a client, or the firm's own accounts).
+model Book {
+  id                String     @id @default(cuid())
+  workspaceId       String
+  organizationId    String?  // Links to Organization (for multi-tenant CA firms)
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name              String
+  legalName         String?
+  gstin             String?
+  pan               String?
+  entityType        String   @default("company") // company | llp | firm | individual
+  booksFrom         String?  // ISO yyyy-mm-dd opening date
+  fiscalYearEnd     String   @default("03-31")
+  isDemo            Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  accounts              BookAccount[]
+  vouchers              BookVoucher[]
+  gstInvoices           GstInvoice[]
+  bankFeeds             BankFeed[]
+  bankMatchRules        BankMatchRule[]
+  expenseRules          ExpenseRule[]
+  adjustmentJournals    AdjustmentJournal[]
+  auditEntries          BookAuditEntry[]
+  fixedAssets           FixedAsset[]
+  vehicles              Vehicle[]
+  inventoryItems        InventoryItem[]
+  inventoryMovements    InventoryMovement[]
+  payrollEmployees      PayrollEmployee[]
+  payrollSalaryStructures PayrollSalaryStructure[]
+  payrollRuns           PayrollRun[]
+  tdsEntries            TdsEntry[]
+  closingEntries        ClosingEntry[]
+  carryForwards         CarryForward[]
+  coaMappings           CoaMapping[]
+  gstEntities           GstEntity[]
+  gstRegistrations      GstRegistration[]
+  rcmRegisterEntries    RcmRegisterEntry[]
+  gstNotices            GstNotice[]
+  noticeReconciliationArtifacts NoticeReconciliationArtifact[]
+  ewayBills             EwayBill[]
+  gstSuppliers          GstSupplier[]
+  gstFilingCampaigns    GstFilingCampaign[]
+  documentRequests      ClientDocumentRequest[]
+
+  fiscalPeriodLocks     FiscalPeriodLock[]
+  subledgerPostings     SubledgerPosting[]
+
+  @@index([workspaceId])
+}
+
+/// Fiscal period lock records. Business accounting data, not subject personal data.
+model FiscalPeriodLock {
+  id             String    @id @default(cuid())
+  bookId         String
+  book           Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  period         String
+  lockedAt       DateTime @default(now())
+  lockedById     String
+  reason         String?
+
+  @@unique([bookId, period])
+  @@index([bookId])
+}
+
+/// Subledger posting records. Accounting data, not subject personal data.
+model SubledgerPosting {
+  id                String    @id @default(cuid())
+  bookId            String
+  book              Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  sourceType        String
+  sourceId          String
+  voucherId         String  @unique
+  voucher           BookVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  postedAt          DateTime @default(now())
+  postedById        String?
+
+  @@unique([bookId, sourceType, sourceId])
+  @@index([bookId])
+  @@index([voucherId])
+}
+
+/// One account in the chart of accounts. `code` is unique within a book.
+model BookAccount {
+  id     String @id @default(cuid())
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  code           String
+  name           String
+  type           String // asset | liability | equity | income | expense
+  category       String
+  description    String?
+  /**
+   * Opening balance in MINOR UNITS (paise), journal sign: positive = debit.
+   */
+  openingBalance Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines                 BookVoucherLine[]
+  adjustmentJournalLines AdjustmentJournalLine[]
+  closingEntryLines     ClosingEntryLine[]
+  carryForwardLines     CarryForwardLine[]
+
+  @@unique([bookId, code])
+  @@index([bookId])
+}
+
+/// A journal voucher. Lines are stored on `BookVoucherLine`.
+model BookVoucher {
+  id                String      @id @default(cuid())
+  bookId            String
+  organizationId    String?   // Links to Organization (for multi-tenant CA firms)
+  book              Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  number            String
+  date              String    // ISO yyyy-mm-dd
+  narration         String
+  reference         String?
+  voucherType       String    @default("journal") // journal | payment | receipt | sales | purchase | contra | credit-note | debit-note
+  status            String    @default("posted") // posted | unposted | draft
+  postedAt          DateTime? // ISO timestamp when voucher was posted
+  totalDebit        Int?      // Total debit amount (minor units)
+  totalCredit       Int?      // Total credit amount (minor units)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  lines             BookVoucherLine[]
+  payrollRuns       PayrollRun[]
+  tdsEntries        TdsEntry[]
+  subledgerPostings SubledgerPosting[]
+
+  @@unique([bookId, number])
+  @@index([bookId, date])
+}
+
+/// A single line of a voucher: signed minor units, positive = debit.
+model BookVoucherLine {
+  id        String      @id @default(cuid())
+  voucherId String
+  voucher   BookVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  accountId String
+  account   BookAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  amount    Int
+  narration String?
+
+  @@index([voucherId])
+  @@index([accountId])
+}
+
+// ---------------------------------------------------------------------------
+// CA Bookkeeping — Extended Registers & Workflows
+// ---------------------------------------------------------------------------
+
+/// GST Invoice Register — persistent outward/inward supply ledger with ITC
+/// matching against 2A/2B over time. One book (client entity) can have many
+/// invoices; the register supports GSTR-1/3B computation and reconciliation.
+model GstInvoice {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // Core invoice identity
+  invoiceNumber    String
+  invoiceDate      String     // ISO yyyy-mm-dd
+  invoiceType      String     // b2b | b2c | export | sezwop | deemed | credit-note | debit-note
+  supplyType       String     // intra | inter
+  placeOfSupply    String
+
+  // Party details
+  supplierGstin    String?
+  supplierName     String?
+  recipientGstin   String?
+  recipientName    String?
+  recipientState   String?
+
+  // Taxable values & tax (minor units = paise)
+  taxableValue     Int        @default(0)
+  cgstAmount       Int        @default(0)
+  sgstAmount       Int        @default(0)
+  igstAmount       Int        @default(0)
+  cessAmount       Int        @default(0)
+
+  // ITC eligibility & classification
+  itcEligibility   String     @default("eligible") // eligible | ineligible | blocked | reversed | partial
+  itcHeading       String?    // e.g. "Capital goods", "Input service", "Capital goods reversal"
+  rcm              Boolean    @default(false)
+
+  // 2A/2B matching (filled when auto-matched or manually reconciled)
+  matched2a2b      Boolean    @default(false)
+  matchedAt        DateTime?
+  matchedById      String?
+  gstr2aRef        String?    // GSTR-2A/2B reference for the matched record
+  mismatchReason   String?
+
+  // E-invoice / IRN
+  irn              String?
+  irnDate          String?
+  ackNumber        String?
+  ackDate          String?
+
+  // Source & workflow
+  source           String     @default("manual") // manual | tally | gst-portal | gsp | api
+  status           String     @default("draft")  // draft | validated | posted | cancelled | amended
+  period           String     // yyyy-mm (for GSTR-1/3B bucketing)
+  reference        String?    // voucher number, challan, etc.
+
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  createdById      String?
+  updatedById      String?
+
+  @@unique([bookId, invoiceNumber])
+  @@index([bookId, invoiceDate])
+  @@index([bookId, period])
+  @@index([bookId, recipientGstin])
+  @@index([bookId, supplierGstin])
+  @@index([bookId, matched2a2b])
+  @@index([bookId, itcEligibility])
+}
+
+/// GST filing campaign — a scheduled/prepared return (GSTR-1/3B/9) for a book+
+/// GSTIN. Mirrors the FilingCampaign shape in the gst-filing route: the runbook
+/// files against the IT portal later, so acknowledgement fields (ack, IRN) and
+/// the signing method are tracked here rather than re-derived from invoices.
+model GstFilingCampaign {
+  id            String @id @default(cuid())
+  bookId        String
+  book          Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  gstin         String
+  formType      String @default("gstr-3b") // gstr-1 | gstr-3b | gstr-9
+  period        String // yyyy-mm (yyyy-mm-dd due dates are on the campaign itself)
+  dueDate       String // ISO yyyy-mm-dd
+  signingMethod String @default("evc") // dsc | evc | etm
+  status        String @default("draft") // draft | prepared | filed | rejected | error
+
+  ackNumber     String?
+  ackDate       String? // ISO yyyy-mm-dd acknowledgement date
+  irn           String?
+  filedById     String?
+  filedAt       String? // ISO yyyy-mm-ddThh:mm:ssZ
+  notes         String?
+  createdById   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([bookId, status])
+  @@index([bookId, formType, period])
+  @@index([bookId, gstin])
+}
+
+/// Bank Feed — imported bank statements with auto-matching rules and
+/// reconciliation status. One book can have many bank accounts (each a feed).
+model BankFeed {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  accountName     String       // e.g. "HDFC Current A/c 0042"
+  accountNumber   String       // last 4 digits or masked
+  bankName        String
+  ifsc            String?
+  feedType        String       @default("manual") // manual | open-banking | api | statement-upload
+
+  // Statement meta
+  statementFrom   String       // ISO yyyy-mm-dd
+  statementTo     String       // ISO yyyy-mm-dd
+  openingBalance  Int          @default(0)   // minor units, bank sign convention
+  closingBalance  Int          @default(0)
+
+  // Import tracking
+  sourceFileHash  String?      // SHA-256 of uploaded file for deduplication
+  importedAt      DateTime     @default(now())
+  importedById    String
+
+  // Reconciliation status
+  reconciled      Boolean      @default(false)
+  reconciledAt    DateTime?
+  reconciledById  String?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  transactions    BankTransaction[]
+
+  @@index([bookId, accountNumber])
+  @@index([bookId, reconciled])
+}
+
+/// A single row from a bank statement (credits positive, debits negative in bank convention)
+model BankTransaction {
+  id             String       @id @default(cuid())
+  feedId         String
+  feed           BankFeed     @relation(fields: [feedId], references: [id], onDelete: Cascade)
+
+  date           String       // ISO yyyy-mm-dd
+  narration      String
+  amount         Int          // minor units, bank convention: positive = credit to account
+  reference      String?      // cheque no, UTR, etc.
+  valueDate      String?
+
+  // Auto-matching
+  matchStatus    String       @default("unmatched") // unmatched | suggested | confirmed | ignored
+  matchedVoucherId String?    // BookVoucher.id when matched
+  matchScore     Int?         // 0-100 confidence
+  matchRuleId    String?      // BankMatchRule.id if rule-based
+
+  // Manual override
+  overrideById   String?
+  overrideAt     DateTime?
+  overrideNote   String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([feedId, date])
+  @@index([feedId, matchStatus])
+  @@index([feedId, matchedVoucherId])
+}
+
+/// Bank Matching Rule — user-defined rules to auto-match bank transactions to vouchers
+model BankMatchRule {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  name         String
+  description  String?
+
+  // Conditions (all must match)
+  minAmount    Int?       // minor units, absolute
+  maxAmount    Int?
+  amountTolerance Int     @default(0) // minor units
+  narrationContains String? // case-insensitive substring
+  referencePattern String? // regex
+  dateWindowDays Int      @default(3) // statement date within X days of voucher date
+  voucherTypes String     @default("[]") // JSON array of voucher types e.g. ["payment", "receipt"]
+
+  // Action
+  autoConfirm  Boolean    @default(false)
+
+  active       Boolean    @default(true)
+  priority     Int        @default(100)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String
+
+  @@index([bookId, active])
+}
+
+/// Expense Classification Rule — maps narration/party/account to expense heads
+model ExpenseRule {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  name         String
+  description  String?
+
+  // Match conditions
+  accountCodePattern String?   // regex on BookAccount.code
+  narrationPattern  String?    // case-insensitive substring on voucher narration
+  partyGstinPattern String?    // regex on counterparty GSTIN
+  amountMin      Int?
+  amountMax      Int?
+  voucherTypes   String     @default("[]") // JSON array of voucher types
+
+  // Classification result
+  expenseHead    String       // target account code or category
+  taxTreatment   String?      // e.g. "business", "personal", "blocked"
+  gstRate        Int?         // if applicable
+  itcEligibility String?      // eligible | ineligible | partial
+
+  active       Boolean    @default(true)
+  priority     Int        @default(100)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String
+
+  @@index([bookId, active])
+}
+
+/// Adjustment Journal — period-end adjustments with reversing entry support
+model AdjustmentJournal {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  number       String     // e.g. "ADJ-2025-001"
+  date         String     // ISO yyyy-mm-dd (effective date)
+  narration    String
+  reference    String?    // workpaper ref, approval note
+
+  adjustmentType String   // accrual | deferral | depreciation | provision | revaluation | other
+  reverses     Boolean    @default(false)
+  reverseDate  String?    // ISO yyyy-mm-dd when reversing entry should post
+  reversedFromId String?  // AdjustmentJournal.id of the original if this is a reversal
+
+  // Lines (same sign convention as BookVoucher: positive = debit)
+  lines        AdjustmentJournalLine[]
+
+  // Workflow
+  status       String     @default("draft") // draft | approved | posted | reversed
+  approvedById String?
+  approvedAt   DateTime?
+  postedById   String?
+  postedAt     DateTime?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String
+
+  @@unique([bookId, number])
+  @@index([bookId, date])
+  @@index([bookId, status])
+  @@index([bookId, adjustmentType])
+}
+
+/// Single line of an adjustment journal
+model AdjustmentJournalLine {
+  id              String            @id @default(cuid())
+  journalId       String
+  journal         AdjustmentJournal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  accountId       String
+  account         BookAccount       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  amount          Int              // minor units, positive = debit
+  narration       String?
+
+  @@index([journalId])
+  @@index([accountId])
+}
+
+/// Book Audit Trail — immutable log of every change to books data
+model BookAuditEntry {
+  id               String   @id @default(cuid())
+  bookId           String
+  book             Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  entityType       String     // BookVoucher | BookAccount | GstInvoice | BankFeed | BankTransaction | AdjustmentJournal | FixedAsset | Vehicle | InventoryItem | PayrollRun | TdsEntry
+  entityId         String
+  action           String     // create | update | delete | post | unpost | match | unmatch | approve | reverse
+  fieldChanges     String?    // JSON of { field: { old, new } }
+  before           String?    // JSON snapshot before
+  after            String?    // JSON snapshot after
+  prevHash       String?
+  hash           String?
+
+  actorId          String
+  actorName        String?
+  ipAddress        String?
+  userAgent        String?
+
+  createdAt        DateTime   @default(now())
+
+  @@index([bookId, entityType, entityId])
+  @@index([bookId, actorId])
+  @@index([bookId, createdAt])
+}
+
+/// Fixed Asset Register — persisted assets with dual depreciation (Companies Act + IT)
+model FixedAsset {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  assetCode    String   // unique within book, e.g. "FA-001"
+  name         String
+  description  String?
+
+  // Acquisition
+  cost         Int      @default(0)        // minor units
+  acquisitionDate String
+  putToUseDate String
+  invoiceRef   String?    // GST invoice number or purchase voucher
+
+  // Classification
+  bookClass    String     // Companies Act useful life class (from COMPANIES_ACT_USEFUL_LIVES)
+  taxBlock     String     // Income Tax block id (from INCOME_TAX_BLOCK_RATES)
+  location     String?
+  custodian    String?
+
+  // Depreciation state (brought forward)
+  openingBookDepreciation Int @default(0) // minor units
+
+  // Disposal
+  disposed     Boolean    @default(false)
+  disposalDate String?
+  disposalProceeds Int    @default(0)
+  disposalGainLoss Int    @default(0)   // book gain/loss (signed)
+  disposalTaxEffect Int     @default(0) // u/s 50 effect (signed)
+
+  // Additional depreciation (32(1)(iia))
+  eligibleAddlDepreciation Boolean @default(false)
+  addlDepreciationRate Int?         // percentage
+
+  // Workflow
+  status       String     @default("active") // active | disposed | transferred | impaired
+  fy           String     // financial year "2025-26"
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String
+  updatedById  String?
+
+  // Inverse relation
+  vehicles Vehicle[]
+
+  @@unique([bookId, assetCode])
+  @@index([bookId, fy])
+  @@index([bookId, status])
+}
+
+/// Vehicle Register — subset of fixed assets with vehicle-specific fields
+model Vehicle {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  assetId      String?  // link to FixedAsset if also tracked there
+  asset        FixedAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  vehicleCode  String   // unique within book
+  registrationNumber String
+  chassisNumber String?
+  engineNumber  String?
+
+  vehicleType  String   // car | truck | two-wheeler | bus | other
+  make         String
+  model        String
+  yearOfMfr    Int?
+
+  // Ownership
+  ownershipType String   @default("owned") // owned | leased | hired
+  lessorName   String?
+  leaseExpiry  String?
+
+  // Insurance & Compliance
+  insuranceExpiry String?
+  fitnessExpiry   String?
+  permitExpiry    String?
+  pucExpiry       String?
+
+  // Usage
+  currentOdometer Int?
+  avgMonthlyKms   Int?
+
+  // Tax
+  gstInputClaimed Boolean  @default(false)
+  gstInputAmount  Int      @default(0)
+
+  status       String     @default("active") // active | sold | scrapped | transferred
+  fy           String
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdById  String
+
+  @@unique([bookId, vehicleCode])
+  @@unique([bookId, registrationNumber])
+  @@index([bookId, fy])
+}
+
+/// Inventory Register — item master + stock ledger
+model InventoryItem {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  itemCode     String   // unique within book
+  name         String
+  description  String?
+  hsnCode      String?
+  unit         String   @default("PCS") // PCS | MTR | KG | LTR | BOX | SET
+
+  // Tax
+  gstRate      Int      @default(18)
+  cessRate     Int      @default(0)
+  itcEligible  Boolean  @default(true)
+
+  // Stock tracking
+  openingQty   Int      @default(0)    // base units (minor for qty)
+  openingValue Int      @default(0)    // minor units
+  openingDate  String?  // when opening stock taken
+
+  // Reorder
+  reorderLevel Int?
+  maxLevel     Int?
+  leadTimeDays Int?
+
+  // Valuation
+  valuationMethod String  @default("fifo") // fifo | wavg | lifo | specific
+
+  // Workflow
+  active       Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  // Inverse relation
+  movements InventoryMovement[]
+
+  @@unique([bookId, itemCode])
+  @@index([bookId, hsnCode])
+  @@index([bookId, active])
+}
+
+/// Inventory Movement — every stock change (purchase, sale, adjustment, transfer)
+model InventoryMovement {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  itemId       String
+  item         InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  date         String   // ISO yyyy-mm-dd
+  movementType String   // purchase | sale | return | adjustment | transfer-in | transfer-out | manufacture | consumption
+  qty          Int      // signed: positive = in, negative = out
+  rate         Int      // minor units per unit (cost for in, sale price for out)
+  amount       Int      // minor units (qty * rate)
+  narration    String?
+  reference    String?  // voucher, delivery challan, GRN
+
+  // Batch/lot for specific valuation
+  batchNumber  String?
+  expiryDate   String?
+
+  createdAt    DateTime @default(now())
+  createdById  String
+
+  @@index([bookId, itemId, date])
+  @@index([bookId, movementType])
+  @@index([bookId, reference])
+}
+
+/// Payroll — Employee Master
+model PayrollEmployee {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  employeeCode String   // unique within book
+  name         String
+  pan          String?
+  uan          String?  // Universal Account Number (PF)
+  esiNumber    String?
+  aadhaar      String?  // masked
+
+  // Personal
+  dateOfBirth  String?
+  dateOfJoining String
+  dateOfLeaving String?
+  gender       String?
+  category     String?  // general | sc | st | obc | ews
+
+  // Salary Structure (monthly, minor units)
+  basic        Int      @default(0)
+  da           Int      @default(0)
+  hra          Int      @default(0)
+  specialAllowance Int  @default(0)
+  otherAllowances Int  @default(0)
+  conveyance   Int      @default(0)
+  medical      Int      @default(0)
+
+  // Statutory
+  pfApplicable   Boolean @default(true)
+  esiApplicable  Boolean @default(true)
+  ptApplicable   Boolean @default(true)
+  lwfApplicable  Boolean @default(false)
+  voluntaryPf    Int     @default(0) // VPF
+  npsContribution Int   @default(0)
+
+  // Bank
+  bankAccount   String?
+  ifsc          String?
+
+  // Workflow
+  status        String   @default("active") // active | resigned | terminated | on-leave
+  department    String?
+  designation   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+
+  // Inverse relations
+  salaryStructures    PayrollSalaryStructure[]
+  payrollRunEmployees PayrollRunEmployee[]
+
+  @@unique([bookId, employeeCode])
+  @@unique([bookId, pan])
+  @@index([bookId, status])
+}
+
+/// Payroll Salary Structure — versioned salary template per employee
+model PayrollSalaryStructure {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     PayrollEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  effectiveFrom String  // ISO yyyy-mm-dd
+  effectiveTo   String? // null = current
+
+  // Components (monthly, minor units)
+  basic         Int @default(0)
+  da            Int @default(0)
+  hra           Int @default(0)
+  specialAllowance Int @default(0)
+  otherAllowances Int @default(0)
+  conveyance    Int @default(0)
+  medical       Int @default(0)
+
+  // Deductions (monthly, minor units)
+  pfEmployee    Int @default(0)
+  pfEmployer    Int @default(0)
+  eps           Int @default(0)
+  edli          Int @default(0)
+  pfAdmin       Int @default(0)
+  esiEmployee   Int @default(0)
+  esiEmployer   Int @default(0)
+  professionalTax Int @default(0)
+  lwf           Int @default(0)
+  tds           Int @default(0)
+  otherDeductions Int @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+
+  @@unique([employeeId, effectiveFrom])
+  @@index([bookId, effectiveFrom])
+}
+
+/// Payroll Run — monthly payroll processing
+model PayrollRun {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  period       String   // yyyy-mm
+  runDate      String   // ISO yyyy-mm-dd
+  status       String   @default("draft") // draft | approved | paid | locked
+
+  // State for state-specific calculations (professional tax, etc.)
+  state        String   @default("Maharashtra")
+
+  // Summary (minor units)
+  totalGross       Int @default(0)
+  totalDeductions  Int @default(0)
+  totalNet         Int @default(0)
+  totalEmployerCost Int @default(0)
+
+  // Statutory ceilings used (for audit trail)
+  pfWageCeiling   Int
+  esiWageCeiling  Int
+  ptMonthly       Int
+
+  // Journal link
+  voucherId       String?
+  voucher         BookVoucher? @relation(fields: [voucherId], references: [id])
+
+  // Workflow
+  approvedById    String?
+  approvedAt      DateTime?
+  paidById        String?
+  paidAt          DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+
+  employees       PayrollRunEmployee[]
+
+  @@unique([bookId, period])
+  @@index([bookId, status])
+}
+
+/// Employee row in a payroll run
+model PayrollRunEmployee {
+  id           String   @id @default(cuid())
+  runId        String
+  run          PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     PayrollEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Salary components for this run (minor units)
+  basic         Int @default(0)
+  da            Int @default(0)
+  hra           Int @default(0)
+  specialAllowance Int @default(0)
+  otherAllowances Int @default(0)
+  conveyance    Int @default(0)
+  medical       Int @default(0)
+  bonus         Int @default(0)
+  grossSalary   Int @default(0)
+
+  // Deductions
+  pfEmployee    Int @default(0)
+  pfEmployer    Int @default(0)
+  eps           Int @default(0)
+  edli          Int @default(0)
+  pfAdmin       Int @default(0)
+  esiEmployee   Int @default(0)
+  esiEmployer   Int @default(0)
+  professionalTax Int @default(0)
+  lwf           Int @default(0)
+  tds           Int @default(0)
+  voluntaryPf   Int @default(0)
+  nps           Int @default(0)
+  otherDeductions Int @default(0)
+  totalDeductions Int @default(0)
+
+  netPay        Int @default(0)
+  employerCost  Int @default(0)
+
+  // Statutory details
+  pfWages       Int @default(0)
+  esiWages      Int @default(0)
+  daysWorked    Int @default(0)
+  lopDays       Int @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([runId, employeeId])
+  @@index([runId])
+}
+
+/// TDS Entry — tax deducted at source with challan tracking
+model TdsEntry {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // Challan details
+  challanNumber String  // BSR code + challan serial
+  bsrCode       String
+  challanDate   String  // ISO yyyy-mm-dd
+  challanAmount Int     // minor units
+
+  // Deductor (the book entity)
+  deductorTan   String
+  deductorName  String
+  deductorGstin String?
+
+  // Deductee
+  deducteePan   String
+  deducteeName  String
+  deducteeGstin String?
+  deducteeType  String  // company | firm | individual | huf | other
+
+  // Section & Amounts
+  section       String  // 192 | 194A | 194C | 194H | 194I | 194J | 194Q | etc.
+  natureOfPayment String
+  grossAmount   Int     @default(0) // minor units
+  tdsAmount     Int     @default(0)
+  surcharge     Int     @default(0)
+  cess          Int     @default(0)
+  totalTax      Int     @default(0)
+
+  // Period
+  quarter       String  // Q1 | Q2 | Q3 | Q4
+  fy            String  // "2025-26"
+
+  // Status & Filing
+  status        String  @default("deducted") // deducted | deposited | filed | corrected
+  depositedAt   DateTime?
+  filedAt       DateTime?
+  form26Q_27Q   String? // which form this goes to
+
+  // Voucher link
+  voucherId     String?
+  voucher       BookVoucher? @relation(fields: [voucherId], references: [id])
+
+  // Correction
+  originalEntryId String? // TdsEntry.id if this is a correction
+  correctionReason String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+
+  @@index([bookId, fy, quarter])
+  @@index([bookId, deducteePan])
+  @@index([bookId, section])
+  @@index([bookId, status])
+}
+
+/// Closing Entry — period-end closing journals
+model ClosingEntry {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  number       String   // e.g. "CLS-2025-001"
+  date         String   // ISO yyyy-mm-dd (last day of period)
+  narration    String
+  period       String   // "2025-26" or "2025-03"
+
+  closingType  String   // revenue | expense | depreciation | provision | tax | other
+  status       String   @default("draft") // draft | approved | posted
+
+  lines        ClosingEntryLine[]
+
+  approvedById String?
+  approvedAt   DateTime?
+  postedById   String?
+  postedAt     DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  @@unique([bookId, number])
+  @@index([bookId, period])
+  @@index([bookId, closingType])
+}
+
+model ClosingEntryLine {
+  id           String @id @default(cuid())
+  entryId      String
+  entry        ClosingEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId    String
+  account      BookAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  amount       Int    // minor units, positive = debit
+  narration    String?
+
+  @@index([entryId])
+}
+
+/// Carry Forward — opening balance transfer from prior FY
+model CarryForward {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  fromFy       String   // "2024-25"
+  toFy         String   // "2025-26"
+  transferDate String   // ISO yyyy-mm-dd
+
+  // Account balances carried (minor units, signed: positive = debit balance)
+  lines        CarryForwardLine[]
+
+  // Workflow
+  status       String   @default("draft") // draft | validated | posted
+  validatedById String?
+  validatedAt  DateTime?
+  postedById   String?
+  postedAt     DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  @@unique([bookId, fromFy, toFy])
+  @@index([bookId, fromFy])
+}
+
+model CarryForwardLine {
+  id           String @id @default(cuid())
+  carryId      String
+  carry        CarryForward @relation(fields: [carryId], references: [id], onDelete: Cascade)
+  accountId    String
+  account      BookAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  balance      Int    // minor units, signed (debit normal = positive)
+  // Computed from ledger as of fromFy end date
+  verified     Boolean @default(false)
+
+  @@index([carryId])
+}
+
+/// Chart of Accounts Mapping — maps external software codes to internal codes
+model CoaMapping {
+  id           String   @id @default(cuid())
+  bookId       String
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  externalSoftware String // tally | zoho | quickbooks | busy | marginal | custom
+  externalCode String
+  externalName String?
+  internalCode String   // BookAccount.code
+  internalName String?
+
+  // Transformation hints
+  accountType  String?  // asset | liability | equity | income | expense
+  category     String?
+  gstTreatment String?  // taxable | exempt | nil | export
+
+  active       Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+
+  @@unique([bookId, externalSoftware, externalCode])
+  @@index([bookId, externalSoftware])
+}
+
+// ---------------------------------------------------------------------------
+// GST Practice OS — Extended Models
+// ---------------------------------------------------------------------------
+
+/// Multi-GSTIN Entity — represents a legal entity with multiple GSTINs across states
+model GstEntity {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bookId      String?
+  book        Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  entityName  String
+  pan         String   @unique
+  entityType  String   // company | llp | partnership | proprietorship | huf | trust | other
+  primaryGstin String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  gstinRegistrations GstRegistration[]
+  @@index([workspaceId])
+  @@index([pan])
+}
+
+/// Individual GSTIN registration under an entity
+model GstRegistration {
+  id             String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  entityId       String
+  entity         GstEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  bookId         String?
+  book           Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  gstin          String   @unique
+  legalName      String
+  tradeName      String?
+  stateCode      String
+  stateName      String
+  registrationType String  // regular | composition | tcs-collector | tds-deductor | non-resident | casual | isd
+  status         String    // active | suspended | cancelled | pending-verification
+  registrationDate String
+  cancellationDate String?
+  constitution   String    // proprietorship | partnership | company | llp | huf | trust | government | other
+  address        String    // JSON
+  authorizedSignatories String // JSON
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([entityId])
+  @@index([stateCode])
+  @@index([status])
+}
+
+/// RCM Register Entry — tracks RCM liability and ITC eligibility per supply
+model RcmRegisterEntry {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bookId          String
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  period          String   // yyyy-mm
+  supplyCategory  String   // gta | legal-service | sponsorship | etc.
+  supplierGstin   String?
+  supplierName    String
+  recipientGstin  String
+  recipientName   String
+  placeOfSupply   String
+  taxableValue    Int
+  hsnSac          String
+  invoiceNumber   String
+  invoiceDate     String
+  isImportOfService Boolean @default(false)
+  isEcom          Boolean  @default(false)
+  ecomGstin       String?
+
+  // Calculated tax
+  igst            Int      @default(0)
+  cgst            Int      @default(0)
+  sgst            Int      @default(0)
+  cess            Int      @default(0)
+
+  // ITC eligibility
+  itcStatus       String   // eligible-after-payment | blocked-s17-5 | ineligible-personal | pending-payment
+  itcReason       String
+  blockedSection  String?
+  claimableIgst   Int      @default(0)
+  claimableCgst   Int      @default(0)
+  claimableSgst   Int      @default(0)
+  claimableCess   Int      @default(0)
+
+  // Payment
+  paymentStatus   String   // unpaid | paid-cash | paid-itc | partial
+  paymentDate     String?
+  paymentRef      String?
+  gstr3bReported  Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+
+  @@index([workspaceId, period])
+  @@index([bookId, period])
+  @@index([bookId, supplyCategory])
+  @@index([bookId, paymentStatus])
+}
+
+/// Notice/Scrutiny Response Workflow
+model GstNotice {
+  id                  String   @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bookId              String?
+  book                Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  noticeNumber        String
+  noticeDate          String
+  noticeType          String   // asmt-10 | asmt-14 | drc-01 | drc-03 | cmp-08 | adt-01 | etc.
+  authorityLevel      String   // proper-officer | jc | ac | dc | commissioner | aat | high-court | supreme-court
+  authorityName       String
+  authorityJurisdiction String
+  gstin               String
+  entityName          String
+  period              String?
+  financialYear       String?
+  subject             String
+  description         String
+  sections            String   // JSON array
+  rules               String   // JSON array
+  demandedTax         Int      @default(0)
+  demandedInterest    Int      @default(0)
+  demandedPenalty     Int      @default(0)
+  responseDueDate     String
+  status              String   // received | under-review | response-drafting | response-filed | personal-hearing | order-received | appeal-filed | closed | escalated
+  assignedTo          String?
+  priority            String   // low | medium | high | critical
+  tags                String   // JSON array
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  responses           GstNoticeResponse[]
+  linkedArtifacts     NoticeReconciliationArtifact[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, gstin])
+  @@index([responseDueDate])
+}
+
+model GstNoticeResponse {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  noticeId        String
+  notice          GstNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  responseNumber  String
+  responseDate    String
+  responseType    String   // reply | clarification | payment | appeal | rectification | hearing-request
+  draftedBy       String
+  reviewedBy      String?
+  approvedBy      String?
+  status          String   // draft | reviewed | approved | filed | withdrawn
+  content         String   // JSON: facts, legalArguments, evidenceReferences, computations, prayers
+  attachments     String   // JSON array
+  filedDate       String?
+  filingMode      String   // portal | physical | email
+  acknowledgmentRef String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([noticeId])
+  @@index([status])
+}
+
+/// Reconciliation artifact linked to a notice for evidence-backed response
+model NoticeReconciliationArtifact {
+  id              String   @id @default(cuid())
+  noticeId        String
+  notice          GstNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  artifactType    String   // gstr-2b-recon | gstr-1-3b-recon | supplier-recon | rcm-recon | export-lut | e-way-bill | itc-reversal
+  period          String
+  entityId        String
+  bookId          String?
+  book            Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  summary         String   // JSON: totalMismatches, totalTaxImpact, keyFindings
+  details         String   // JSON: invoices, blockedItc, missingInvoices, rateMismatches, etc.
+  generatedAt     DateTime
+  generatedBy     String
+
+  createdAt       DateTime @default(now())
+
+  @@index([noticeId])
+  @@index([artifactType, period])
+}
+
+/// E-Way Bill Register
+model EwayBill {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bookId          String
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  ewayBillNo      String   @unique
+  ewayBillDate    String
+  validUpto       String
+  ewayBillType    String   // outward | inward | return | job-work | exhibition | own-use | skd-ckd | other
+  status          String   // generated | valid | expired | cancelled | rejected | verified
+
+  // Source document
+  docType         String   // INV | BIL | CHL | CRN | DBN | OTH
+  docNo           String
+  docDate         String
+  docValue        Int
+
+  // Parties
+  supplierGstin   String
+  recipientGstin  String
+
+  // Transport
+  distance        Int
+  vehicleNo       String?
+  transportMode   String   // road | rail | air | ship
+
+  // Validity
+  daysValid       Int
+
+  // Linkage
+  linkedInvoiceId String?
+  linkedInvoiceNumber String?
+
+  // Multi-vehicle
+  isMultiVehicle  Boolean  @default(false)
+  parentEwayBillNo String?
+  childEwayBillNos String   // JSON array
+
+  // Verification
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  verificationRemarks String?
+
+  // Cancellation
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancellationReason String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+
+  @@index([workspaceId, ewayBillDate])
+  @@index([workspaceId, status])
+  @@index([bookId, ewayBillDate])
+  @@index([bookId, status])
+  @@index([bookId, supplierGstin])
+  @@index([bookId, recipientGstin])
+  @@index([bookId, linkedInvoiceId])
+}
+
+/// Supplier Master with Continuous Monitoring
+model GstSupplier {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  bookId          String?
+  book            Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  // Core identification
+  gstin           String
+  pan             String
+  legalName       String
+  tradeName       String?
+
+  // Address
+  address         String   // JSON
+
+  // Registration
+  registrationType String  // regular | composition | tcs-collector | tds-deductor | non-resident | casual | isd | unknown
+  constitution    String   // proprietorship | partnership | company | llp | huf | trust | government | other
+  registrationDate String
+  cancellationDate String?
+
+  // Business
+  category        String   // goods | services | capital-goods | job-work | transport | professional | other
+  primaryHsnSac   String
+  businessDescription String?
+
+  // Banking
+  bankAccounts    String   // JSON array
+
+  // Contacts
+  contacts        String   // JSON array
+  authorizedSignatories String // JSON array
+
+  // Compliance
+  status          String   // active | inactive | blocked | pending-verification | suspended | cancelled
+  complianceRating String  // A | B | C | D | unrated
+  riskScore       Int      @default(0)
+  lastValidatedAt DateTime
+  lastFilingStatus String  // JSON
+
+  // Monitoring
+  monitoringEnabled Boolean @default(true)
+  monitoringFrequency String // daily | weekly | monthly
+  alerts          String   // JSON array
+
+  // Metadata
+  onboardedAt     DateTime @default(now())
+  onboardedBy     String
+  updatedAt       DateTime @updatedAt
+  updatedBy       String
+
+  // Inverse relations
+  onboardingWorkflows GstSupplierOnboarding[]
+  vendorPortalInvites GstVendorPortalInvite[]
+  vendorPortalSubmissions GstVendorPortalSubmission[]
+
+  @@unique([workspaceId, gstin])
+  @@unique([workspaceId, pan])
+  @@index([workspaceId, status])
+  @@index([workspaceId, complianceRating])
+}
+
+/// Supplier Onboarding Workflow
+model GstSupplierOnboarding {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  supplierId      String
+  supplier        GstSupplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  currentStep     Int      @default(1)
+  status          String   // initiated | in-progress | pending-approval | completed | rejected
+  steps           String   // JSON array of step statuses
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  approvedBy      String?
+  rejectedBy      String?
+  rejectionReason String?
+
+  @@index([workspaceId, status])
+  @@index([supplierId])
+}
+
+/// Vendor Portal Invitation
+model GstVendorPortalInvite {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  supplierId      String
+  supplier        GstSupplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  email           String
+  token           String   @unique
+  expiresAt       DateTime
+  sentAt          DateTime @default(now())
+  acceptedAt      DateTime?
+  status          String   // sent | accepted | expired | revoked
+
+  @@index([workspaceId, status])
+  @@index([supplierId])
+}
+
+/// Vendor Portal Submission
+model GstVendorPortalSubmission {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  supplierId      String
+  supplier        GstSupplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  submittedBy     String
+  submittedAt     DateTime @default(now())
+  fieldsUpdated   String   // JSON array
+  data            String   // JSON
+  status          String   // pending-review | approved | rejected
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+
+  @@index([workspaceId, status])
+  @@index([supplierId])
+}
+
+// ---------------------------------------------------------------------------
+// Statute & notification rule registry (filing-grade rule provenance)
+//
+// The compute engines can take any rate table; what they could not show is
+// WHERE a number came from, WHO published it, WHEN it took effect and WHAT it
+// replaced. These four models are that layer:
+//
+//   StatuteSource        an authority feed/document the firm ingests from
+//   StatuteNotification  one published item, deduped by content hash
+//   StatutoryRule        a catalogue slot ("cess", "tds-section-rate", ...)
+//   StatutoryRuleVersion one value of a slot with an effective window, a
+//                        citation, the notification it came from and the
+//                        version it supersedes
+//
+// Nothing is auto-published: an ingested notification produces DRAFT versions
+// that a reviewer confirms (lib/server/statutes.ts). A published version is
+// immutable — a change is a NEW version that supersedes the previous one, which
+// is what makes the audit trail reproducible.
+// ---------------------------------------------------------------------------
+
+model StatuteSource {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Stable key used by the parser and for dedupe (e.g. "cbdt-notifications").
+  key       String
+  name      String
+  /// cbdt | cbic | mca | rbi | epfo | gst-council | state | other
+  authority String
+  /// Public feed/document URL consumed by the ingester (SSRF-guarded fetch).
+  url       String
+  /// json | rss | html
+  format    String  @default("json")
+  kind      String  @default("notification")
+  active    Boolean @default(true)
+  /// Advisory check cadence. Nothing depends on it being a valid cron.
+  checkCron String?
+
+  lastCheckedAt DateTime?
+  lastStatus    String?
+  lastError     String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications StatuteNotification[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+model StatuteNotification {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceId    String
+  source      StatuteSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  /// The authority's own identifier, when the feed provides one.
+  externalId    String?
+  title         String
+  url           String
+  authority     String
+  kind          String
+  publishedAt   String?
+  /// Dates PROPOSED from the text; a reviewer confirms before publishing.
+  effectiveFrom String?
+  effectiveTo   String?
+  excerpt       String
+  /// SHA-256 of the canonical content — dedupe + change detection.
+  contentHash   String
+  /// JSON array of catalogue slots the parser matched.
+  impactedRuleKeys String
+  /// JSON array of reviewer warnings (no date found, no slot matched, ...).
+  warnings String @default("[]")
+  /// new | reviewing | applied | ignored
+  status   String @default("new")
+
+  fetchedAt DateTime  @default(now())
+  appliedAt DateTime?
+
+  versions StatutoryRuleVersion[]
+
+  @@unique([workspaceId, sourceId, contentHash])
+  @@index([workspaceId, status])
+  @@index([sourceId])
+}
+
+model StatutoryRule {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Catalogue slot key (RULE_CATALOG in lib/engine/statutes.ts).
+  key         String
+  label       String
+  unit        String
+  authority   String
+  description String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions StatutoryRuleVersion[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+model StatutoryRuleVersion {
+  id          String          @id @default(cuid())
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ruleId      String
+  rule        StatutoryRule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  version Int
+  /// Assessment year ("2026-27") or null = any year.
+  ay          String?
+  /// JSON arrays; empty = "any" (that is what makes specificity ranking work).
+  entityTypes String  @default("[]")
+  states      String  @default("[]")
+  /// central | state
+  scope       String  @default("central")
+  unit        String
+  /// JSON array of { upTo, rate, label? } — integers only, no float drift.
+  rows        String
+  valueSummary String
+  citation     String
+  /// Inclusive start of the effective window (yyyy-mm-dd).
+  effectiveFrom String
+  /// Exclusive end of the effective window, or null = in force until superseded.
+  effectiveTo   String?
+  /// draft | published | superseded
+  status String @default("draft")
+
+  notificationId String?
+  notification   StatuteNotification? @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+  /// The version this one replaces (immutability chain).
+  supersedesId String?
+  supersedes   StatutoryRuleVersion?  @relation("RuleVersionChain", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy StatutoryRuleVersion[] @relation("RuleVersionChain")
+  /// SHA-256 of the canonical content (tamper + duplicate detection).
+  contentHash  String
+
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+  publishedById String?
+  publishedBy   User?     @relation(fields: [publishedById], references: [id], onDelete: SetNull)
+  notes         String?
+
+  @@unique([workspaceId, ruleId, version])
+  @@index([workspaceId, ruleId])
+  @@index([ruleId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Export Compliance — LUT (Letter of Undertaking) & Shipping Bills
+// ---------------------------------------------------------------------------
+
+model LutApplication {
+  id               String   @id @default(cuid())
+  bookId           String
+  gstin            String
+  fy               String
+  applicationType  String // LUT | BOND
+  amount           Int      @default(0) // minor units
+  dateOfIssue      String
+  validUpto        String
+  status           String   @default("DRAFT") // DRAFT|SUBMITTED|APPROVED|REJECTED|EXPIRED|CANCELLED
+  reasonForRejection String?
+  submittedById    String?
+  approvedById     String?
+  approvedAt       String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([bookId, gstin, fy, applicationType])
+  @@index([gstin, fy])
+  @@index([bookId, status])
+}
+
+model ShippingBill {
+  id                  String   @id @default(cuid())
+  bookId              String
+  invoiceId           String
+  gstin               String
+  fy                  String
+  exportInvoiceNumber String
+  shippingBillNumber  String
+  dateOfExport        String
+  portOfExport        String
+  billOfLading        String?
+  status              String   @default("PENDING") // PENDING|APPROVED|REJECTED|PROCESSED
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([bookId, shippingBillNumber])
+  @@index([bookId, invoiceId])
+  @@index([gstin, fy])
+}
+
+// ---------------------------------------------------------------------------
+// Books assistant (Phase 2) — append-only run/call log
+// ---------------------------------------------------------------------------
+// Inputs are scrubbed identifiers only; tool outputs are stored as a short
+// summary plus a SHA-256 hash, never as a second copy of client financial data.
+// Rows are written once and updated only to record completion/usage; no delete
+// API exists. The retention sweep removes runs older than the configured
+// window (default 90 days).
+
+model AssistantRun {
+  id             String   @id @default(cuid())
+  requestId      String   @unique
+  idempotencyKey String?
+  userId         String
+  workspaceId    String
+  organizationId String?
+  bookId         String?
+  question       String // scrubbed and truncated before insert
+  status         String   @default("running") // running | completed | verification_failed | failed | aborted | limit
+  answer         String?
+  verification   String? // JSON: ok, failures, checked counts
+  toolCallCount  Int      @default(0)
+  inputTokens    Int      @default(0)
+  outputTokens   Int      @default(0)
+  costUsd        Float?
+  latencyMs      Int      @default(0)
+  errorCode      String?
+  promptVersion  String   @default("phase2-v1")
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  toolCalls AssistantToolCall[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([createdAt])
+}
+
+model AssistantToolCall {
+  id            String   @id @default(cuid())
+  runId         String
+  run           AssistantRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  seq           Int
+  toolName      String
+  resultId      String
+  inputJson     String
+  outputSummary String
+  outputHash    String
+  ok            Boolean
+  errorCode     String?
+  latencyMs     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@unique([runId, seq])
+  @@index([runId])
+  @@index([toolName, createdAt])
+}
+
+model AssistantOrganizationSetting {
+  organizationId String   @id
+  enabled        Boolean  @default(false)
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+/// A document the firm has asked a client for — the "chasing" side of document
+/// collection. `reminderCount`/`lastRemindedAt` are the audit trail of follow-up,
+/// and `dueDate` is what makes an overdue request visible instead of a memory.
+model ClientDocumentRequest {
+  id            String   @id @default(cuid())
+  // Legacy workspace-scoped requests keep their workspace; engagement-scoped
+  // requests (created from the client portal panel) are keyed by engagement and
+  // cascade with it.
+  workspaceId   String?
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  engagementId  String?
+  engagement    Engagement? @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  bookId        String?
+  book          Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  clientName    String
+  clientEmail   String?
+  title         String
+  category      String   // engagement-letter | financial-statement | gst-record | kyc | …
+  period        String?  // yyyy-mm or FY label
+  dueDate       String   // ISO yyyy-mm-dd
+  status        String   @default("requested") // requested | received | waived
+  notes         String?
+
+  requestedById String
+  lastRemindedAt DateTime?
+  reminderCount  Int      @default(0)
+  receivedAt     DateTime?
+  // Set when the client uploads through the portal in answer to this request.
+  fulfilledByUploadId String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, dueDate])
+  @@index([engagementId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Practice economics — billable time and client invoices.
+//
+// Time is logged against an engagement (and optionally a filing run), valued in
+// paise at the rate that applied when it was recorded, and frozen into a
+// PracticeInvoice when the firm bills it. This is deliberately separate from
+// the subscription `Invoice` model (which bills the firm's own Ledgerly plan):
+// a client invoice must never be confused with the SaaS receipt.
+// ---------------------------------------------------------------------------
+
+model PracticeTimeEntry {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  /// Optional link to the filing run this time was spent on.
+  taskId         String?
+  userId         String
+  workDate       String // yyyy-mm-dd
+  minutes        Int
+  ratePerHourMinor Int
+  billable       Boolean    @default(true)
+  narrative      String?
+  /// Set when the entry is frozen into an invoice; null = unbilled WIP.
+  invoiceId      String?
+  invoice        PracticeInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId, workDate])
+  @@index([engagementId, invoiceId])
+  @@index([userId, workDate])
+}
+
+model PracticeInvoice {
+  id             String     @id @default(cuid())
+  organizationId String
+  engagementId   String
+  engagement     Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  number         String     @unique
+  currency       String     @default("INR")
+  subtotalMinor  Int
+  taxMinor       Int
+  totalMinor     Int
+  /// issued | paid | void
+  status         String     @default("issued")
+  issuedOn       String // yyyy-mm-dd
+  dueDate        String // yyyy-mm-dd
+  notes          String?
+  /// Settlement record. paidOn is the date the money was received; the
+  /// reference is the UTR/Razorpay payment id, never a customer-supplied note.
+  paidOn           String?
+  paymentReference String?
+  paymentMethod    String? // manual | razorpay | upi | bank-transfer
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String?
+  voidedOn          String?
+  voidReason        String?
+  createdById    String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  entries PracticeTimeEntry[]
+
+  @@index([organizationId, status])
+  @@index([engagementId, issuedOn])
+}

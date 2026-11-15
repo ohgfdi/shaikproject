@@ -1,0 +1,14 @@
+{
+  "id": "NC1-HTTP",
+  "area": "harness",
+  "feature": "HTTP assertion negative control",
+  "steps": [],
+  "actual": {
+    "status": 404,
+    "expectedByControl": 200
+  },
+  "state": "FAIL_AS_EXPECTED",
+  "evidence_level": "E3",
+  "facts": [],
+  "defects": []
+}

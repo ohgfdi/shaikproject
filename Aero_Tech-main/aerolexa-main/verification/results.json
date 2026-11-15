@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-19T01:26:17.342Z",
+  "app": "aerolexa (Aero_Tech-main/aerolexa-main)",
+  "build": {
+    "status": "pass",
+    "note": "next build clean; budgets: 68 routes within baseline +20kB"
+  },
+  "phase2_styling": {
+    "routes": 34,
+    "styled": 32,
+    "crittersRegression": 0
+  },
+  "phase3_tests": {
+    "suites": 8,
+    "tests": 85,
+    "failed": 0,
+    "result": "pass"
+  },
+  "phase4_security": {
+    "headers": [
+      "CSP",
+      "HSTS",
+      "nosniff",
+      "frame",
+      "referrer",
+      "permissions"
+    ],
+    "cookieFlags": {
+      "httpOnly": true,
+      "sameSite": true,
+      "secure": true
+    },
+    "injection": [
+      405,
+      200,
+      200
+    ],
+    "npmAudit": "0 vulnerabilities"
+  },
+  "phase5_perf": {
+    "routes": 6,
+    "medianTTFB": 16,
+    "worst": 76,
+    "all200": true
+  },
+  "verdict": "PASS"
+}

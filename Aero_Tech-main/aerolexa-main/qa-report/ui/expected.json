@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "written_at": "2026-10-19T03:40:00Z",
+    "written_before_code_changes": true,
+    "base_commit": "083413fcdbc4ec4922afb40dbd9a8d803287f2f4",
+    "branch": "ui/ca-exposure",
+    "rule": "No expectation below may be edited after observing a result. Corrections must be appended to corrections[] with a date and reason.",
+    "corrections": [
+      {
+        "at": "2026-10-19T04:05:00Z",
+        "check": "C20",
+        "change": "Fixture is 4 GSTR-2B rows and 4 purchase rows: 2 matched-eligible, 1 amount-mismatch, 1 in-2b-only, 1 in-books-only (5 reconciled invoices).",
+        "reason": "Recorded BEFORE the fixture or the check was first run: the original line described a 4+4 fixture whose counts did not correspond to any concrete row set. The corrected counts pin the exact fixture now used, which is embedded verbatim in qa-report/ui/checks/itc-oracle.mjs and in the in-page example."
+      },
+      {
+        "at": "2026-10-19T04:05:00Z",
+        "check": "C20",
+        "change": "Independent oracle asserts counts, per-invoice verdicts, Table 4(C)=4(A)-4(B) per head, and that the books-only invoice's tax never enters 4(A).",
+        "reason": "Recorded BEFORE the check first ran. Also recorded: the end-to-end part of C20 covers the API and the delivered page's rendering of the same figures; it is separate from the browser check run, which is recorded as C20b with the same expectation."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "area": "sidebar",
+      "title": "Exactly one sidebar navigation landmark",
+      "expected": "count(nav[aria-label='Primary'] inside aside) == 1 at 1440 and 768; mobile drawer adds exactly one while open and zero after close",
+      "before_expected": "FAIL: desktop aside is not hidden below lg, so the drawer mounts a second Primary nav on top of it (D1)",
+      "evidence": "evidence/C01-nav-landmarks.json"
+    },
+    {
+      "id": "C02",
+      "area": "sidebar",
+      "title": "Zero duplicate visible sidebar labels",
+      "expected": "For every sidebar item label, occurrences among visible sidebar label nodes == 1 at 1440, 768, 390 (expanded and collapsed)",
+      "before_expected": "FAIL: each item renders a <summary> label row plus an <a> label row (D1)",
+      "evidence": "before/sidebar-dom.html, evidence/C02-duplicates.json"
+    },
+    {
+      "id": "C03",
+      "area": "sidebar",
+      "title": "Sidebar widths and collapse persistence",
+      "expected": "expanded offsetWidth 256px +/- 1; collapsed 72px +/- 1; state survives reload via localStorage; empty storage renders expanded with no exception",
+      "before_expected": "FAIL: fixed w-64 with no collapsed state; no persistence; 240px content padding mismatches 256px sidebar",
+      "evidence": "evidence/C03-widths.json"
+    },
+    {
+      "id": "C04",
+      "area": "sidebar",
+      "title": "No sidebar or page horizontal overflow",
+      "expected": "sidebar.scrollWidth <= sidebar.clientWidth and documentElement.scrollWidth <= clientWidth at 1440, 768, 390, 320",
+      "before_expected": "FAIL: long labels ('Presentations', 'Business Advisor') exceed the 256px rail and the page overlaps (D3)",
+      "evidence": "evidence/C04-overflow.json"
+    },
+    {
+      "id": "C05",
+      "area": "sidebar",
+      "title": "No overlapping bounding boxes in the shell",
+      "expected": "Pairwise intersection area == 0 among sidebar items, header controls, header search, and sidebar search region at 1440, 768, 390",
+      "before_expected": "FAIL: the second sidebar search box is absolutely positioned over the nav; sidebar (256px) and main padding (240px) overlap (D2)",
+      "evidence": "evidence/C05-overlap.json"
+    },
+    {
+      "id": "C06",
+      "area": "sidebar",
+      "title": "Grouped navigation with real section headings",
+      "expected": "Sidebar renders >= 4 visible uppercase group headings; every heading names a group that contains at least one existing route; no invented group",
+      "before_expected": "FAIL: flat list, one undifferentiated nav, no group headings",
+      "evidence": "evidence/C06-groups.json"
+    },
+    {
+      "id": "C07",
+      "area": "sidebar",
+      "title": "Collapsed state is icons-only with accessible names",
+      "expected": "In collapsed state every nav row shows exactly one 20px icon, no visible label text, and every control has an accessible name; hover/focus shows a tooltip",
+      "before_expected": "FAIL: no collapsed state exists",
+      "evidence": "after/sidebar-collapsed-1440.png, evidence/C07-collapsed.json"
+    },
+    {
+      "id": "C08",
+      "area": "mobile",
+      "title": "Mobile drawer behavior",
+      "expected": "At 390px: hamburger opens drawer with overlay; Tab cycles inside drawer; Escape closes; selecting a route closes; background is inert; aria-expanded reflects state",
+      "before_expected": "FAIL: drawer is `lg:hidden`, the desktop aside stays visible underneath, no focus trap (D1/D6)",
+      "evidence": "evidence/C08-drawer.json"
+    },
+    {
+      "id": "C09",
+      "area": "header",
+      "title": "One global search and complete header controls",
+      "expected": "Header contains exactly one search control (opens Cmd/Ctrl+K command palette), one notifications link, one language control, one profile menu; no search input inside the sidebar",
+      "before_expected": "FAIL: sidebar search duplicates the header search; no profile menu on desktop; language control renders a native select (D2)",
+      "evidence": "evidence/C09-header.json"
+    },
+    {
+      "id": "C10",
+      "area": "i18n",
+      "title": "Language switcher is honest",
+      "expected": "Default locale is English (html lang='en'); any non-English option is labelled as partial coverage; choosing it changes translated strings and persists across reload; no option is present that has zero translated strings",
+      "before_expected": "FAIL: DEFAULT_LOCALE='hi' while all page copy is English (D4)",
+      "evidence": "evidence/C10-i18n.json"
+    },
+    {
+      "id": "C11",
+      "area": "a11y",
+      "title": "WCAG AA contrast in the active theme",
+      "expected": "All sidebar/header text >= 4.5:1 against its background; active indicator and focus ring >= 3:1",
+      "before_expected": "UNKNOWN: measured in BEFORE; text-muted on surface expected near threshold",
+      "evidence": "evidence/C11-contrast.json"
+    },
+    {
+      "id": "C12",
+      "area": "a11y",
+      "title": "Keyboard path and ARIA state",
+      "expected": "Tab reaches brand, nav items, collapse toggle, header controls in DOM order; a visible focus ring is computed for each; active item has aria-current='page'; group toggles have aria-expanded",
+      "before_expected": "FAIL: nav uses summary/a with no keyboard contract; aria-current only on the duplicate anchor",
+      "evidence": "evidence/C12-keyboard.json"
+    },
+    {
+      "id": "C13",
+      "area": "routing",
+      "title": "Every nav link is live and renders content",
+      "expected": "Every href in the rendered nav returns HTTP 200 at 1440/768/390 (authenticated) and main#main-content has > 100 characters of text; zero 404 or blank",
+      "before_expected": "FAIL: nav contains /settings?tab=deliverables and similar which may 200; /ca-sources is present but below an unscrollable fold (D5/D6)",
+      "evidence": "evidence/C13-routes.json"
+    },
+    {
+      "id": "C14",
+      "area": "runtime",
+      "title": "Zero console errors and zero hydration warnings",
+      "expected": "On load and after each interaction: 0 console errors, 0 'Hydration failed'/'did not match' warnings, 0 pageerrors",
+      "before_expected": "UNKNOWN: recorded in BEFORE; any error must be explained before it is called fixed",
+      "evidence": "evidence/C14-console.json"
+    },
+    {
+      "id": "C15",
+      "area": "a11y",
+      "title": "axe-core serious/critical violations",
+      "expected": "0 serious and 0 critical violations on /dashboard, /books, /ca-sources",
+      "before_expected": "FAIL expected: duplicate landmarks and unlabeled interactive controls",
+      "evidence": "evidence/C15-axe.json"
+    },
+    {
+      "id": "C16",
+      "area": "runtime",
+      "title": "No failed network requests",
+      "expected": "No request status >= 400 for documents, CSS, JS chunks, fonts, or /duckdb/* assets on the checked pages",
+      "before_expected": "UNKNOWN: recorded in BEFORE",
+      "evidence": "evidence/C16-network.json"
+    },
+    {
+      "id": "C17",
+      "area": "routing",
+      "title": "Route inventory reconciliation",
+      "expected": "Every nav href maps to an existing app/**/page.tsx route (query strings ignored); zero nav hrefs without a page",
+      "before_expected": "PASS expected: all current nav hrefs exist, but live pages /books, /statutes, /ca-compute are absent from nav",
+      "evidence": "evidence/C17-inventory.json"
+    },
+    {
+      "id": "C18",
+      "area": "ca",
+      "title": "CA capabilities reachable from navigation",
+      "expected": "/books, /ca-sources, /ca-compute, /compliance (new), /statutes each have exactly one nav entry under a CA-relevant group and are reachable in one click from /dashboard",
+      "before_expected": "FAIL: /books and /statutes have no nav entry; CA Compute/Sources are buried in a flat, unscrollable list (D5)",
+      "evidence": "evidence/C18-ca-nav.json"
+    },
+    {
+      "id": "C19",
+      "area": "dashboard",
+      "title": "Dashboard leads with CA-firm workflow",
+      "expected": "First content block contains: client books count/list, upcoming GST filing deadlines or 'none recorded', reconciliation/filing status, recent imports, exceptions; all values from DB or honest empty states; no sample numbers",
+      "before_expected": "FAIL: dashboard leads with generic Projects/Datasets/Insights KPIs",
+      "evidence": "after/dashboard-1440.png, evidence/C19-dashboard.json"
+    },
+    {
+      "id": "C20",
+      "area": "ca",
+      "title": "ITC reconciliation fixture against an independent oracle",
+      "expected": "POST /api/gst/itc-recon with 4 two-B rows and 4 purchase rows returns matched=2, mismatched=1, missing-in-2B=1, missing-in-books=0, and Table 4 values computed independently in the test script; UI displays the same totals",
+      "before_expected": "NOT BUILT as a UI: backend only, used inside /books (BACKEND-ONLY reachable only via unhidden URL)",
+      "evidence": "evidence/C20-itc-oracle.json"
+    },
+    {
+      "id": "C21",
+      "area": "ca",
+      "title": "Capability inventory consistent with UI",
+      "expected": "Every CAPABILITIES.md row marked LIVE has a nav path and a page that loads with 200; every NOT BUILT row appears in docs/BACKLOG.md and has no nav entry",
+      "before_expected": "FAIL: inventory does not exist",
+      "evidence": "evidence/C21-capabilities.json"
+    },
+    {
+      "id": "C22",
+      "area": "a11y",
+      "title": "prefers-reduced-motion respected",
+      "expected": "With reduced motion emulated, sidebar width/transform transition duration computes to 0s",
+      "before_expected": "FAIL: transition-all duration-200 with no reduced-motion guard",
+      "evidence": "evidence/C22-motion.json"
+    },
+    {
+      "id": "C23",
+      "area": "responsive",
+      "title": "320px viewport integrity",
+      "expected": "No horizontal page scroll, no clipped primary action, nav reachable",
+      "before_expected": "FAIL expected: fixed 256px sidebar plus 240px padding leaves < 80px content at 320px",
+      "evidence": "after/320-*.png, evidence/C23-320.json"
+    },
+    {
+      "id": "C24",
+      "area": "resilience",
+      "title": "Very long client/label names",
+      "expected": "A 120-character client name and a long nav label truncate with ellipsis, expose the full value via title/aria-label, and never widen the sidebar",
+      "before_expected": "FAIL: anchor labels have no truncate class",
+      "evidence": "evidence/C24-longnames.json"
+    },
+    {
+      "id": "C25",
+      "area": "resilience",
+      "title": "200% zoom / 720px effective width",
+      "expected": "No overlap or clipped controls at 200% zoom emulation, drawer navigation works",
+      "before_expected": "UNKNOWN",
+      "evidence": "evidence/C25-zoom.json"
+    },
+    {
+      "id": "C26",
+      "area": "resilience",
+      "title": "SSR content with JavaScript disabled",
+      "expected": "Sidebar brand, group headings and nav links are present in the server HTML with JavaScript disabled",
+      "before_expected": "FAIL: brand row absent from the desktop sidebar; nav is client-rendered but SSR should still emit it",
+      "evidence": "evidence/C26-nojs.json"
+    },
+    {
+      "id": "C27",
+      "area": "build",
+      "title": "Lint, typecheck, build, bundle budget",
+      "expected": "npm run lint and npm run typecheck exit 0 with no new errors vs BEFORE; npm run build exits 0 and check-bundle-budgets reports no budget regression",
+      "before_expected": "PASS expected (recorded baseline)",
+      "evidence": "evidence/C27-build.txt"
+    },
+    {
+      "id": "C28",
+      "area": "runtime",
+      "title": "Development-only handles absent",
+      "expected": "No sidebar search overlay remains, no dead buttons, every visible button either navigates, submits, or opens a labelled control",
+      "before_expected": "FAIL: 'Toggle sidebar'/'Collapse' buttons do not collapse the desktop rail",
+      "evidence": "evidence/C28-deadbuttons.json"
+    }
+  ]
+}

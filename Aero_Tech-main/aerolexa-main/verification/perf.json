@@ -1,0 +1,46 @@
+{
+  "summary": {
+    "routes": 6,
+    "medianTTFB": 16,
+    "worst": 76,
+    "all200": true
+  },
+  "rows": [
+    {
+      "route": "/",
+      "status": 200,
+      "p50": 76,
+      "max": 151
+    },
+    {
+      "route": "/signup",
+      "status": 200,
+      "p50": 13,
+      "max": 16
+    },
+    {
+      "route": "/login",
+      "status": 200,
+      "p50": 16,
+      "max": 18
+    },
+    {
+      "route": "/dashboard",
+      "status": 200,
+      "p50": 15,
+      "max": 16
+    },
+    {
+      "route": "/datasets",
+      "status": 200,
+      "p50": 16,
+      "max": 18
+    },
+    {
+      "route": "/templates",
+      "status": 200,
+      "p50": 14,
+      "max": 15
+    }
+  ]
+}

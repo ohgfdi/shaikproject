@@ -1,0 +1,237 @@
+{
+  "mode": "prod",
+  "baseUrl": "http://127.0.0.1:3000",
+  "at": "2026-10-19T05:08:26.524Z",
+  "counts": {
+    "PASS": 23,
+    "FAIL": 3
+  },
+  "results": [
+    {
+      "id": "C01",
+      "expected_ref": "expected.json#C01",
+      "actual": "PASS — one sidebar nav landmark at 1440 and 768 in both states; zero on mobile with the drawer closed",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C02",
+      "expected_ref": "expected.json#C02",
+      "actual": "PASS — 0 duplicate labels; sidebar links per sample: 1440:21, 768:21, 390:0",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C03",
+      "expected_ref": "expected.json#C03",
+      "actual": "FAIL — expanded 256, collapsed 72, empty 256, afterToggle 256, afterReload 72, stored 1",
+      "state": "FAIL",
+      "evidence_path": "after/dashboard-1440-collapsed.png",
+      "runs": 2
+    },
+    {
+      "id": "C04",
+      "expected_ref": "expected.json#C04",
+      "actual": "PASS — no sidebar or page overflow at 1440/768/390/320 in both states",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-320-expanded.png",
+      "runs": 1
+    },
+    {
+      "id": "C05",
+      "expected_ref": "expected.json#C05",
+      "actual": "PASS — 0 pairwise overlaps among sidebar rows and header controls",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C06",
+      "expected_ref": "expected.json#C06",
+      "actual": "PASS — groups: Workspace | Client work | Compliance | Extended | Settings",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-1440-expanded.png",
+      "runs": 1
+    },
+    {
+      "id": "C07",
+      "expected_ref": "expected.json#C07",
+      "actual": "PASS — 21 collapsed links, 21 icons, 21 tooltips, 0 unnamed, tooltip visible on hover",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-1440-collapsed.png",
+      "runs": 1
+    },
+    {
+      "id": "C08",
+      "expected_ref": "expected.json#C08",
+      "actual": "PASS — aria-expanded false→true, background inert, focus stayed inside over 12 Tabs, Escape closed, route change closed and navigated to http://127.0.0.1:3000/books",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-390-drawer.png",
+      "runs": 1
+    },
+    {
+      "id": "C09",
+      "expected_ref": "expected.json#C09",
+      "actual": "PASS — 1 search control (Search (opens command palette)), notifications, 1 language control, profile menu, 0 sidebar inputs. Header: Search (opens command palette) / Notifications (0 unread) / Language / Account menu",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-1440-expanded.png",
+      "runs": 1
+    },
+    {
+      "id": "C10",
+      "expected_ref": "expected.json#C10",
+      "actual": "PASS — default en/en, options labelled: English, हिन्दी (partial), اردو (partial); switching persisted (lang hi after reload)",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C11",
+      "expected_ref": "expected.json#C11",
+      "actual": "PASS — 28 text samples, minimum ratio 6.37",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C12",
+      "expected_ref": "expected.json#C12",
+      "actual": "PASS — 14 Tab stops, all with a visible focus ring, sidebar reached, exactly one aria-current=page (Projects)",
+      "state": "PASS",
+      "evidence_path": "evidence/keyboard-order.json",
+      "runs": 1
+    },
+    {
+      "id": "C13",
+      "expected_ref": "expected.json#C13",
+      "actual": "PASS — 63 route loads, all HTTP 200 with a non-empty main region (min 126 chars)",
+      "state": "PASS",
+      "evidence_path": "evidence/routes.json",
+      "runs": 1
+    },
+    {
+      "id": "C14",
+      "expected_ref": "expected.json#C14",
+      "actual": "PASS — 0 console errors, 0 hydration warnings across /dashboard, /gst-recon, /books, /ca-sources",
+      "state": "PASS",
+      "evidence_path": "evidence/console-errors.json",
+      "runs": 1
+    },
+    {
+      "id": "C16",
+      "expected_ref": "expected.json#C16",
+      "actual": "PASS — no request returned status >= 400 on the sampled pages",
+      "state": "PASS",
+      "evidence_path": "evidence/console-errors.json",
+      "runs": 1
+    },
+    {
+      "id": "C15",
+      "expected_ref": "expected.json#C15",
+      "actual": "FAIL — [{\"href\":\"/dashboard\",\"violations\":[{\"id\":\"scrollable-region-focusable\",\"impact\":\"serious\",\"nodes\":1,\"targets\":[\"ol\"],\"summary\":\"Fix any of the following:\\n  Element should have focusable content\\n  Element should be focusable\"}]},{\"href\":\"/books\",\"violations\":[]},{\"href\":\"/ca-sources\",\"violations\":[]}]",
+      "state": "FAIL",
+      "evidence_path": "evidence/axe.json",
+      "runs": 1
+    },
+    {
+      "id": "C17",
+      "expected_ref": "expected.json#C17",
+      "actual": "PASS — 21 nav hrefs all map to an app/ page; 53 pages on disk",
+      "state": "PASS",
+      "evidence_path": "evidence/inventory.json",
+      "runs": 1
+    },
+    {
+      "id": "C18",
+      "expected_ref": "expected.json#C18",
+      "actual": "PASS — /books, /ca-sources, /ca-compute, /gst-recon, /statutes each have one nav entry under groups [Workspace, Client work, Compliance, Extended, Settings]",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-1440-expanded.png",
+      "runs": 1
+    },
+    {
+      "id": "C19",
+      "expected_ref": "expected.json#C19",
+      "actual": "PASS — first section \"Firm work queue\"; blocks: clients, filings due, recent imports, exceptions",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-1440-workqueue.png",
+      "runs": 1
+    },
+    {
+      "id": "C20b",
+      "expected_ref": "expected.json#C20 (correction 1: end-to-end UI part)",
+      "actual": "PASS — empty + invalid input both reported, example reconciles to 2 matched / 1 mismatch / 1 in-2B-only / 1 in-books-only, 3 exceptions, Table 4 rendered, 0 console errors",
+      "state": "PASS",
+      "evidence_path": "after/gst-recon-results-1440.png",
+      "runs": 2
+    },
+    {
+      "id": "C22",
+      "expected_ref": "expected.json#C22",
+      "actual": "PASS — transitions suppressed under prefers-reduced-motion (aside 1e-05s, content 1e-05s)",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    },
+    {
+      "id": "C23",
+      "expected_ref": "expected.json#C23",
+      "actual": "PASS — no page scroll (320/320), hamburger visible, drawer opens, 0 desktop asides",
+      "state": "PASS",
+      "evidence_path": "after/dashboard-320-drawer.png",
+      "runs": 1
+    },
+    {
+      "id": "C24",
+      "expected_ref": "expected.json#C24",
+      "actual": "PASS — 120-char label truncated with ellipsis; sidebar stayed 256px; client list rendered",
+      "state": "PASS",
+      "evidence_path": "after/long-label-1440.png",
+      "runs": 1
+    },
+    {
+      "id": "C25",
+      "expected_ref": "expected.json#C25",
+      "actual": "FAIL — {\"doc\":[720,720],\"overlaps\":0,\"asides\":0,\"hamburger\":false,\"drawer\":true}",
+      "state": "FAIL",
+      "evidence_path": "after/zoom200-720.png",
+      "runs": 1
+    },
+    {
+      "id": "C26",
+      "expected_ref": "expected.json#C26",
+      "actual": "PASS — server HTML contains {\"brand\":true,\"groups\":true,\"navLinks\":true,\"ariaNav\":true}",
+      "state": "PASS",
+      "evidence_path": "after/nojs-1440.png",
+      "runs": 1
+    },
+    {
+      "id": "C28",
+      "expected_ref": "expected.json#C28",
+      "actual": "PASS — 28 shell controls, all named; no leftover toggle/search controls",
+      "state": "PASS",
+      "evidence_path": "evidence/verify-run.json",
+      "runs": 1
+    }
+  ],
+  "screenshots": [
+    "after/dashboard-1440-expanded.png",
+    "after/dashboard-1440-collapsed.png",
+    "after/dashboard-768-expanded.png",
+    "after/dashboard-768-collapsed.png",
+    "after/dashboard-390-expanded.png",
+    "after/dashboard-390-collapsed.png",
+    "after/dashboard-320-expanded.png",
+    "after/dashboard-390-drawer.png",
+    "after/dashboard-1440-workqueue.png",
+    "after/gst-recon-errors-1440.png",
+    "after/gst-recon-results-1440.png",
+    "after/dashboard-320-drawer.png",
+    "after/long-label-1440.png",
+    "after/zoom200-720.png",
+    "after/nojs-1440.png"
+  ],
+  "notes": []
+}

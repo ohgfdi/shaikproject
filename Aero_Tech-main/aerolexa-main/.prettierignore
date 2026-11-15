@@ -1,0 +1,25 @@
+node_modules
+.next
+data
+test-results
+playwright-report
+coverage
+out
+package-lock.json
+prisma/migrations
+next-env.d.ts
+aerolexa-*.tar.gz
+aerolexa-*.zip
+.env
+.env.*
+!.env.example
+# Vendored bundles and large static datasets: not hand-written, and reformatting
+# them only inflates the bytes the browser downloads (the Swagger UI bundle
+# alone doubles in size).
+public/vendor
+public/geo
+# Captured test/audit evidence: these are byte-level snapshots of a run, so
+# formatting them would rewrite the record they exist to preserve.
+qa-report/evidence
+qa-report/ui/evidence
+verification/*.json

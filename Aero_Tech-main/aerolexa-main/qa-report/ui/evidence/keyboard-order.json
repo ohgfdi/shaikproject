@@ -1,0 +1,86 @@
+[
+  {
+    "label": "Skip to main content",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": false
+  },
+  {
+    "label": "Ledgerly — home",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Primary",
+    "tag": "NAV",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Home",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Copilot",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Projects",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Analyses",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Dashboards",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Reports",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Presentations",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Client Books",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Client Imports",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "Tax Computations",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  },
+  {
+    "label": "GST Reconciliation",
+    "tag": "A",
+    "focusVisible": true,
+    "insideSidebar": true
+  }
+]

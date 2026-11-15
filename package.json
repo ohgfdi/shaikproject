@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "freebuff": "^0.2.30",
+    "opencode-ai": "^1.18.32",
+    "postgresql": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "prisma": "^7.10.1",
+    "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261002.1": true
+  }
+}

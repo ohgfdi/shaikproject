@@ -1,0 +1,68 @@
+name: ZAP baseline scan
+
+# DAST against a real boot of the app (the README honestly notes no DAST
+# scanner is bundled; this workflow closes that gap on every demand run and
+# weekly schedule). The scan targets the SQLite-profile container — the same
+# shape an evaluator deploys — plus the Postgres profile is scanned by
+# changing the compose profile below.
+#
+# The baseline scan fails the job only on explicitly flagged-failure alerts
+# (ZAP_FAIL_COUNT); tune with `zap-baseline.py -c zap-rules.conf` once a
+# baseline is understood. Alert TRENDS are the signal — a new alert after a
+# dependency bump deserves eyes before that bump ships.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC — weekly enough for a DAST pass
+
+concurrency:
+  group: zap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Boot the app (Docker compose, SQLite profile)
+        run: |
+          # AUTH_SECRET must be 32+ hex-ish chars; compose default is dev-only.
+          export AUTH_SECRET="zap-scan-secret-0123456789abcdef0123456789abcdef"
+          docker compose up --build -d
+          # Wait for the app's own readiness probe before scanning.
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health > /dev/null; then
+              echo "app is ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "app never became healthy"; docker compose logs --tail 100; exit 1
+
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "http://localhost:3000"
+          cmd_options: "-a -I -r zap-report.html -w zap-warnings.md"
+          # Fail on HIGH-severity alerts only at first (Medium noise like
+          # missing CSP on static assets is triaged once a baseline exists).
+          fail_action: true
+          allow_issue_writing: false
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: |
+            zap-report.html
+            zap-warnings.md
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans

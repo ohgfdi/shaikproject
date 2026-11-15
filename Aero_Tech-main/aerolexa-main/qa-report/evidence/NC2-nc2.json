@@ -1,0 +1,15 @@
+{
+  "id": "NC2-STYLING",
+  "area": "harness",
+  "feature": "styling detector negative control",
+  "steps": [],
+  "actual": {
+    "stylesheets": 0,
+    "bodyFont": "\"Times New Roman\"",
+    "defaultBg": "rgba(0, 0, 0, 0)"
+  },
+  "state": "FAIL_AS_EXPECTED",
+  "evidence_level": "E3",
+  "facts": [],
+  "defects": []
+}
