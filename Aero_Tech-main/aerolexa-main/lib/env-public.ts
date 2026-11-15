@@ -34,6 +34,13 @@ const publicSchema = z.object({
   // install/dev time), the SQL Lab runs queries in-browser with DuckDB-wasm;
   // the server API is the automatic fallback. False disables the browser path.
   NEXT_PUBLIC_DUCKDB_ENABLED: bool(true),
+  // Supabase (Postgres/Storage/Realtime). Both are OPTIONAL: with them unset
+  // the app behaves exactly as before and lib/supabase/* reports "not
+  // configured" instead of failing boot. Only the publishable anon key belongs
+  // here — it is inlined into the client bundle. The service-role key is
+  // server-only (lib/env.ts).
+  NEXT_PUBLIC_SUPABASE_URL: z.string().optional().default(""),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional().default(""),
 });
 
 export type PublicEnv = z.infer<typeof publicSchema>;
@@ -47,6 +54,8 @@ export function loadPublicEnv(): PublicEnv {
       NEXT_PUBLIC_APP_URL: "http://localhost:3000",
       NEXT_PUBLIC_PYODIDE_URL: "",
       NEXT_PUBLIC_DUCKDB_ENABLED: true,
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
     };
   }
 }

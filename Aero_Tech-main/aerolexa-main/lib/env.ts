@@ -386,6 +386,15 @@ const serverSchemaBase = z.object({
   EMBEDDING_MODEL: z.string().optional().default(""),
   EMBEDDING_BASE_URL: z.string().optional().default(""),
   EMBEDDING_API_KEY: z.string().optional().default(""),
+  // -------------------------------------------------------------------------
+  // Supabase (optional). The URL and anon key are public and live in
+  // lib/env-public.ts; only the service-role key belongs here. It bypasses Row
+  // Level Security, so it MUST stay server-side and must never be inlined into
+  // a client bundle or written to a log. Empty (the default) means no
+  // privileged Supabase client exists — lib/supabase/server.ts then throws a
+  // readable error rather than silently acting as an anonymous user.
+  // -------------------------------------------------------------------------
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
   // In tests we point at a scratch DB without a .env file
   NODE_ENV: z.string().default("development"),
 });

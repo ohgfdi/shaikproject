@@ -52,6 +52,13 @@ export default defineConfig({
     // including `prisma generate`, which runs from postinstall and from the
     // Dockerfile builder stage where no DATABASE_URL exists. `prisma generate`
     // never needs the URL, so it must not be required to resolve one.
-    url: datasourceUrl(process.env.DATABASE_URL ?? ""),
+    //
+    // DIRECT_URL takes precedence for every CLI command. The application runtime
+    // uses a transaction-mode pooler (Supabase Supavisor, port 6543), which is
+    // the wrong place to hold the advisory locks and long DDL transactions that
+    // `prisma migrate` needs; migrations therefore go over the direct/session
+    // connection (port 5432). DIRECT_URL is optional: local SQLite and any
+    // single-URL Postgres deployment fall back to DATABASE_URL unchanged.
+    url: datasourceUrl(process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? ""),
   },
 });
