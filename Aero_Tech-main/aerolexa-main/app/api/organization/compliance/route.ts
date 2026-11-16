@@ -12,6 +12,7 @@ import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive
 import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
 import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
 import { interpretQuery, generateInsight, InsightType, InsightConfidence, Insight, ChartConfig, InsightAction } from "@/lib/ai/natural-language-insight";
+import { linearTrendForecast, exponentialSmoothing, ForecastResult, ForecastMethod, ForecastPoint } from "@/lib/ai/predictive-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -238,6 +239,37 @@ export async function GET(request: Request) {
         };
         const insight = generateInsight(type, extracted, contextData);
         return new Response(JSON.stringify(insight), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "predict:forecast") {
+        const metricId = searchParams.get("metricId") || "metrics_001";
+        const metricName = searchParams.get("metricName") || "Revenue";
+        const historicalStr = searchParams.get("historical") || "120,135,130,145,150,160,155,170,165,180";
+        const historicalValues = historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v));
+        const forecastPoints = parseInt(searchParams.get("horizon") || "5", 10);
+        const method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
+
+        const result = linearTrendForecast(historicalValues, forecastPoints);
+        result.metricName = metricName;
+        result.metricId = metricId;
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "predict:methods") {
+        return new Response(JSON.stringify({
+          methods: [
+            { key: "simple_moving_average", name: "Simple Moving Average", description: "Average of recent periods" },
+            { key: "exponential_smoothing", name: "Exponential Smoothing", description: "Weighted average favoring recent values" },
+            { key: "linear_trend", name: "Linear Trend", description: "Straight-line projection" },
+            { key: "seasonal_decomposition", name: "Seasonal Decomposition", description: "Captures seasonal patterns" }
+          ],
+        }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
