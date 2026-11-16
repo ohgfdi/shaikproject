@@ -4,6 +4,8 @@ import { ok, toErrorResponse } from "@/lib/server/api";
 import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
 import { mapOrgRoleToProjectRole } from "@/lib/server/members";
 import { runSoxCheck } from "@/lib/compliance/sox";
+import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
+import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,26 @@ export async function GET(request: Request) {
       if (action === "sox") {
         return new Response(
           JSON.stringify(runSoxCheck()),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (action === "soc2") {
+        return new Response(
+          JSON.stringify(runSoc2Assessment()),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (action === "gdpr") {
+        return new Response(
+          JSON.stringify(runGdprAssessment()),
           {
             status: 200,
             headers: { "Content-Type": "application/json" },
