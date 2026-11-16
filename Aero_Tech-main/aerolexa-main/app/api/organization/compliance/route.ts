@@ -11,6 +11,7 @@ import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } f
 import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
 import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
 import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
+import { interpretQuery, generateInsight, InsightType, InsightConfidence, Insight, ChartConfig, InsightAction } from "@/lib/ai/natural-language-insight";
 
 export const dynamic = "force-dynamic";
 
@@ -212,6 +213,31 @@ export async function GET(request: Request) {
             }).filter((e) => e.metricId) || [];
         const stats = getAnomalyStats(events);
         return new Response(JSON.stringify({ events, stats }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "nl:interpret") {
+        const query = searchParams.get("query") || "Show me trends";
+        const interpretation = interpretQuery(query);
+        return new Response(JSON.stringify({ interpretation }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "nl:generate") {
+        const type = (searchParams.get("type") || "trend") as InsightType;
+        const query = searchParams.get("query") || "Show me trends";
+        const extracted = interpretQuery(query);
+        const contextData = {
+          totalCustomers: 1247,
+          monthlyRevenue: 450000,
+          activeExperiments: 3,
+        };
+        const insight = generateInsight(type, extracted, contextData);
+        return new Response(JSON.stringify(insight), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
