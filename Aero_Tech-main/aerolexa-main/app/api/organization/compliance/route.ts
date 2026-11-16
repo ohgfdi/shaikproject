@@ -8,6 +8,7 @@ import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
 import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
 import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
+import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,30 @@ export async function GET(request: Request) {
           metadata: {},
         };
         return new Response(JSON.stringify(profile), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:recommendations") {
+        const metricId = searchParams.get("metricId") || "metrics_001";
+        const metricName = searchParams.get("metricName") || "Revenue";
+        const currentValue = parseFloat(searchParams.get("currentValue") || "0");
+        const trend = (searchParams.get("trend") || "up") as "up" | "down" | "stable";
+        const recommendations = generateRecommendations(metricId, metricName, currentValue, trend);
+        return new Response(JSON.stringify({ recommendations }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:metric") {
+        const metricId = searchParams.get("metricId") || "metrics_001";
+        const metricName = searchParams.get("metricName") || "Revenue";
+        const currentValue = parseFloat(searchParams.get("currentValue") || "0");
+        const trend = (searchParams.get("trend") || "up") as "up" | "down" | "stable";
+        const summary = getMetricSummary(metricId, metricName, currentValue, trend);
+        return new Response(JSON.stringify(summary), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
