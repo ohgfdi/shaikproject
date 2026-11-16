@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.6.1",
   "private": true,
-  "description": "Ledgerly — from raw data to boardroom decisions. Data-driven analytics workspace for CA firms, consultants & SMBs.",
+  "description": "Ledgerly \u2014 from raw data to boardroom decisions. Data-driven analytics workspace for CA firms, consultants & SMBs.",
   "license": "MIT",
   "engines": {
     "node": ">=18.18.0"
@@ -62,7 +62,8 @@
     "bench:duckdb": "jest --runInBand --testPathPatterns='__tests__/unit/duckdb-benchmark'",
     "verify:worker": "node scripts/verify-training-worker.mjs",
     "audit": "npm audit --omit=dev",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "compliance:report": "node scripts/compliance-report.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",

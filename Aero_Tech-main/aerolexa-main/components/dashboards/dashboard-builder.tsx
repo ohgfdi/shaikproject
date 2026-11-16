@@ -1711,8 +1711,42 @@ function ChoroplethWidget({
   title: string;
 }) {
   const data = spec.categories.map((region, i) => ({ region, value: spec.values[i] ?? 0 }));
-  return <ChoroplethMap title={title} metricLabel="Value" data={data} scope={scope} height={260} />;
-}
+  return (
+    <ChoroplethMap
+      title={title}
+      metricLabel="Value"
+      data={data}
+      scope={scope}
+      height={260}
+      onRegionClick={(region) => {
+        // Select this region as a cross-filter
+        const widget = spec?.widgetId
+          ? widgetsLive.current.find((w) => w.id === spec.widgetId)
+          : widgetsLive.current.find((w) => w.title === title);
+        if (widget?.type === "chart") {
+          const { column } = widgetCategories(widget);
+          if (column) {
+            onTileClick(widget, region);
+          }
+        }
+      }}
+      onDrillClick={(region) => {
+        // Shift-click drill-through to detail page
+        const widget = spec?.widgetId
+          ? widgetsLive.current.find((w) => w.id === spec.widgetId)
+          : widgetsLive.current.find((w) => w.title === title);
+        if (widget?.type === "chart" && widget.datasetId) {
+          const drill = drillThroughUrl({
+            datasetId: widget.datasetId,
+            filters: [{ column: widget.slicer?.column ?? "", value: region }],
+            sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
+          });
+          setDrillUrl(drill);
+          setDrill({ column: widget.slicer?.column ?? "", value: region, totalRows: 0 });
+        }
+      }}
+    />
+
 
 function SourceRow({ title, subtitle, onPick }: { title: string; subtitle: string; onPick: () => void }) {
   return (

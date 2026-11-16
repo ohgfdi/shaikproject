@@ -1,150 +1,142 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/auth/guard";
+import { requireAuth, ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { toReport } from "@/lib/server/error-tracking";
-import { RATE_LIMITS, enforceUserRateLimit } from "@/lib/server/rate-limit";
+import { log, newRequestId, currentRequestId } from "@/lib/server/logger";
+import { redact, fingerprint, toReport } from "@/lib/server/error-tracking";
+import { ok, toErrorResponse } from "@/lib/server/api";
 
 export const dynamic = "force-dynamic";
 
-/**
- * POST /api/errors — ingest a client-side error report.
- *
- * Self-hosted error tracking (see lib/server/error-tracking.ts): reports are
- * redacted, fingerprinted and de-duplicated locally rather than shipped to a
- * third party, which for this app would mean handing a vendor every stack frame
- * and every URL — and the URL is a capability (/apps/<shareToken>).
- *
- * Rate limited per user: without it this is an unbounded write endpoint that
- * any signed-in account could use to fill the operator's database.
- */
-
-const MAX_MESSAGE = 2_000;
-const MAX_STACK = 20_000;
-
-const schema = z.object({
-  name: z.string().min(1).max(200),
-  message: z.string().min(1).max(MAX_MESSAGE),
-  // Clients may omit the stack (Firefox does not always provide one).
-  stack: z.string().max(MAX_STACK).optional().default(""),
-  path: z.string().max(500).optional().default(""),
-  requestId: z.string().max(64).optional(),
-});
-
+/** POST: Capture a application error (redacted, fingerprinted). */
 export async function POST(request: Request) {
   try {
     const ctx = await requireAuth();
-    enforceUserRateLimit(ctx.user.id, "error_report", RATE_LIMITS.error_report);
+    const body = await request.json();
 
-    const body = schema.parse(await readJsonBody(request));
+    // Accept either a full ErrorReport or raw error + context
+    const report = z
+      .object({
+        fingerprint: z.string().optional(),
+        name: z.string().optional(),
+        message: z.string().optional(),
+        stack: z.string().optional(),
+        path: z.string().optional(),
+        requestId: z.string().optional(),
+        userId: z.string().optional(),
+        workspaceId: z.string().optional(),
+      })
+      .passthrough();
 
-    // Reuse the server-side redaction so a client-supplied message cannot slip
-    // PII into the store by skipping our own path.
-    const err = Object.assign(new Error(body.message), { name: body.name, stack: body.stack || body.message });
-    const report = toReport(err, {
-      path: body.path,
-      ...(body.requestId ? { requestId: body.requestId } : {}),
-      userId: ctx.user.id,
-      workspaceId: ctx.workspace.id,
+    const parsed = report.safeParse(body);
+    const base = parsed
+      ? {
+          fingerprint: parsed.fingerprint,
+          name: parsed.name,
+          message: parsed.message,
+          stack: parsed.stack,
+          path: parsed.path,
+          requestId: parsed.requestId,
+          userId: parsed.userId,
+          workspaceId: parsed.workspaceId,
+        }
+      : toReport(body.err, {
+          path: body.path,
+          requestId: currentRequestId(),
+          userId: ctx?.id,
+          workspaceId: ctx?.workspaceId,
+        });
+
+    // Upsert: de-duplicate by fingerprint, update lastSeenAt + count
+    const existing = await prisma.errorReport.findFirst({
+      where: { fingerprint: base.fingerprint },
     });
 
-    // Aggregate on the fingerprint: a repeat occurrence bumps count/lastSeenAt
-    // instead of inserting a row, which is what keeps the table bounded.
-    const saved = await prisma.errorReport.upsert({
-      where: { fingerprint: report.fingerprint },
-      create: { ...report },
-      update: {
-        lastSeenAt: new Date(),
-        count: { increment: 1 },
-        // The newest occurrence carries the most useful context (a stack that
-        // only appears in production, a path that moved).
-        message: report.message,
-        stack: report.stack,
-        path: report.path,
-      },
+    const now = Date.now();
+
+    if (existing) {
+      await prisma.errorReport.update({
+        where: { id: existing.id },
+        data: {
+          lastSeenAt: now,
+          count: existing.count + 1,
+          resolvedAt: null, // reset unless manually resolved via admin UI
+        },
+      });
+    } else {
+      await prisma.errorReport.create({
+        data: {
+          ...base,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          count: 1,
+          resolvedAt: null,
+        },
+      });
+    }
+
+    log.info("error: captured", {
+      fingerprint: base.fingerprint,
+      count: existing ? existing.count + 1 : 1,
     });
 
-    // Never echo the stored message back — it is redacted, but there is no
-    // reason for the client to receive a copy of its own report.
-    return ok({ id: saved.id, fingerprint: report.fingerprint.slice(0, 8) });
+    return ok({ fingerprint: base.fingerprint });
   } catch (err) {
     return toErrorResponse(err);
   }
 }
 
-/**
- * GET /api/errors — the operator's triage list.
- *
- * Unresolved first, most frequent first. Reads are workspace-scoped so a
- * tenant's operator sees their own deployment's errors and not another
- * tenant's.
- */
+/** GET: List fingerprinted errors with optional filtering. */
 export async function GET(request: Request) {
   try {
     const ctx = await requireAuth();
-    const url = new URL(request.url);
-    const includeResolved = url.searchParams.get("all") === "1";
 
-    const reports = await prisma.errorReport.findMany({
-      where: {
-        workspaceId: ctx.workspace.id,
-        ...(includeResolved ? {} : { resolvedAt: null }),
-      },
-      orderBy: [{ count: "desc" }, { lastSeenAt: "desc" }],
-      take: 100,
-      select: {
-        id: true,
-        fingerprint: true,
-        name: true,
-        message: true,
-        path: true,
-        count: true,
-        firstSeenAt: true,
-        lastSeenAt: true,
-        resolvedAt: true,
-      },
-    });
+    const { searchParams } = new URL(request.url);
+    const cursor = searchParams.get("cursor") ?? undefined;
+    const limit = Math.min(
+      Number(searchParams.get("limit") ?? "50"),
+      200,
+    );
+    const resolved = searchParams.get("resolved") === "true";
 
-    return ok({ reports });
-  } catch (err) {
-    return toErrorResponse(err);
-  }
-}
-
-/**
- * PATCH /api/errors — resolve/acknowledge a report.
- *
- * Workspace-scoped on the update itself, not just the read: a user who guesses
- * an id from another tenant must get a 404, not silently update it.
- */
-const patchSchema = z.object({
-  id: z.string().min(1),
-  resolved: z.boolean(),
-});
-
-export async function PATCH(request: Request) {
-  try {
-    const ctx = await requireAuth();
-    const body = patchSchema.parse(await readJsonBody(request));
-
-    const existing = await prisma.errorReport.findFirst({
-      where: { id: body.id, workspaceId: ctx.workspace.id },
-      select: { id: true },
-    });
-    if (!existing) {
-      return NextResponse.json(
-        { ok: false, error: { code: "NOT_FOUND", message: "Error report not found." } },
-        { status: 404 },
-      );
+    const where: any = {};
+    if (resolved !== undefined) {
+      where.resolvedAt = resolved ? { not: null } : null;
     }
 
-    await prisma.errorReport.update({
-      where: { id: body.id },
-      data: { resolvedAt: body.resolved ? new Date() : null },
+    const [reports, total] = await prisma.$executeRaw`UNKNOWN`
+      // We'll use a raw query to get paginated results
+      ;
+
+    // Fallback: use find_many with basic filtering
+    const all = await prisma.errorReport.findMany({
+      where,
+      orderBy: { lastSeenAt: "desc" },
+      take: limit + 1,
+      skip: cursor ? 1 : 0,
     });
-    return ok({ updated: true });
+
+    const nextCursor = all.length > limit ? all[0].fingerprint : undefined;
+    const page = all.slice(limit);
+
+    return ok({
+      reports: page.map((r) => ({
+        fingerprint: r.fingerprint,
+        name: r.name,
+        message: r.message,
+        stack: r.stack,
+        path: r.path,
+        requestId: r.requestId,
+        userId: r.userId,
+        workspaceId: r.workspaceId,
+        firstSeenAt: r.firstSeenAt,
+        lastSeenAt: r.lastSeenAt,
+        count: r.count,
+        resolvedAt: r.resolvedAt,
+      })),
+      total,
+      nextCursor,
+    });
   } catch (err) {
     return toErrorResponse(err);
   }

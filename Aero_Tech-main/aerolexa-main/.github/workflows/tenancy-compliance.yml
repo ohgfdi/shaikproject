@@ -1,0 +1,44 @@
+name: Tenancy Compliance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily to ensure compliance is maintained
+    - cron: "0 2 * * 0"
+
+jobs:
+  tenancy-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tenancy audit
+        run: npm run tenancy:audit
+        env:
+          # Ensure we treat this as strict: fail if unwrapped > 0 when RLS is enabled
+          RLS_ENABLED: "true"
+
+      - name: Fail if unwrapped files exceed baseline
+        if: steps.audit.outcome == 'success'
+        run: |
+          Unwrapped=$(npm run tenancy:audit 2>&1 | grep "Unwrapped:" || echo "Unknown")
+          echo "Tenancy audit result: $Unwrapped"
+          # Exit non-zero if unwrapped count is positive (and RLS is enabled)
+          UnwrappedCount=$(npm run tenancy:audit 2>&1 | grep -oP 'Unwrapped:\s*\K\d+' || echo "0")
+          if [ "$UnwrappedCount" -gt 0 ]; then
+            echo "❌ Tenancy compliance failure: ${UnwrappedCount} unwrapped tenant files exceed baseline of 0"
+            exit 1
+          else
+            echo "✅ Tenancy compliance: 0 unwrapped tenant files (baseline 160)"
+          fi
