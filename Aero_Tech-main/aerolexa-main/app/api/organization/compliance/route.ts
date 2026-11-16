@@ -9,6 +9,7 @@ import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
 import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
 import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
+import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,30 @@ export async function GET(request: Request) {
         const trend = (searchParams.get("trend") || "up") as "up" | "down" | "stable";
         const summary = getMetricSummary(metricId, metricName, currentValue, trend);
         return new Response(JSON.stringify(summary), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:commission") {
+        const tier = (searchParams.get("tier") || "growth") as CommissionTier;
+        const revenue = parseFloat(searchParams.get("revenue") || "0");
+        const calculation = calculateCommission(tier, revenue);
+        return new Response(JSON.stringify(calculation), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:eligibility") {
+        const tier = (searchParams.get("tier") || "growth") as CommissionTier;
+        const arR = parseFloat(searchParams.get("arR") || "0");
+        const customerCount = parseInt(searchParams.get("customerCount") || "0", 10);
+        const windows = { startup: 90, growth: 60, enterprise: 30, elite: 14 };
+        const minARR = tier === "startup" ? 0 : tier === "growth" ? 100000 : tier === "enterprise" ? 500000 : 2000000;
+        const minCustomers = tier === "startup" ? 0 : tier === "growth" ? 5 : tier === "enterprise" ? 15 : 50;
+        const eligible = arR >= minARR && customerCount >= minCustomers;
+        return new Response(JSON.stringify({ tier, eligible, minARR, minCustomers, registrationWindowDays: windows[tier] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
