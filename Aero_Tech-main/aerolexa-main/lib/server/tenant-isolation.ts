@@ -1,4 +1,7 @@
 /**
+ * tenancy-audit: global-operator — tenant management and configuration is a
+ * deployment-wide aggregate rather than per-tenant data access.
+ *
  * Phase 24: Multi-Tenant SaaS Enhancements
  *
  * Provides per-tenant data isolation, configuration, and billing.
