@@ -7,6 +7,7 @@ import { runSoxCheck } from "@/lib/compliance/sox";
 import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
 import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
+import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,54 @@ export async function GET(request: Request) {
         const scope = searchParams.get("scope") as "own" | "team" | "organization" | "all" || "own";
         const result = getEffectivePermissions(role, scope);
         return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:tiers") {
+        return new Response(JSON.stringify(getPartnerTiers()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:eligible") {
+        const tier = (searchParams.get("tier") || "startup") as PartnerTier;
+        const arR = parseFloat(searchParams.get("arR") || "0");
+        const customerCount = parseInt(searchParams.get("customerCount") || "0", 10);
+        const tierDef = PARTNER_TIER_DEFINITIONS[tier];
+        const eligible = arR >= tierDef.requiredARR && customerCount >= tierDef.requiredCustomers;
+        return new Response(JSON.stringify({ tier, eligible, requiredARR: tierDef.requiredARR, requiredCustomers: tierDef.requiredCustomers }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "partner:profile") {
+        const companyName = searchParams.get("companyName") || "";
+        const tier = (searchParams.get("tier") || "startup") as PartnerTier;
+        const status = searchParams.get("status") || "pending";
+        const profile: PartnerProfile = {
+          id: "partner_" + Date.now(),
+          companyName,
+          tier,
+          status: status as PartnerStatus,
+          arR: parseFloat(searchParams.get("arR") || "0"),
+          customerCount: parseInt(searchParams.get("customerCount") || "0", 10),
+          annualRevenue: parseFloat(searchParams.get("annualRevenue") || "0"),
+          contactName: searchParams.get("contactName") || "",
+          contactEmail: searchParams.get("contactEmail") || "",
+          country: searchParams.get("country") || "",
+          website: searchParams.get("website") || undefined,
+          integrationStatus: searchParams.get("integrationStatus") as any || undefined,
+          registeredDeals: parseInt(searchParams.get("registeredDeals") || "0", 10),
+          closedDeals: parseInt(searchParams.get("closedDeals") || "0", 10),
+          totalEarnings: parseFloat(searchParams.get("totalEarnings") || "0"),
+          lastActivityDate: new Date(),
+          metadata: {},
+        };
+        return new Response(JSON.stringify(profile), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
