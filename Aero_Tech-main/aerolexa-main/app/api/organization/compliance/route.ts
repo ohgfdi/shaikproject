@@ -10,6 +10,7 @@ import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/l
 import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
 import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
 import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
+import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
 
 export const dynamic = "force-dynamic";
 
@@ -173,6 +174,44 @@ export async function GET(request: Request) {
         const minCustomers = tier === "startup" ? 0 : tier === "growth" ? 5 : tier === "enterprise" ? 15 : 50;
         const eligible = arR >= minARR && customerCount >= minCustomers;
         return new Response(JSON.stringify({ tier, eligible, minARR, minCustomers, registrationWindowDays: windows[tier] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "anomaly:detect") {
+        const metricId = searchParams.get("metricId") || "metrics_001";
+        const metricName = searchParams.get("metricName") || "Revenue";
+        const currentValue = parseFloat(searchParams.get("currentValue") || "0");
+        const historicalStr = searchParams.get("historical");
+        const historicalValues = historicalStr
+          ? historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))
+          : [];
+        const upperStr = searchParams.get("upperThreshold");
+        const lowerStr = searchParams.get("lowerThreshold");
+        const upperThreshold = upperStr ? parseFloat(upperStr) : Infinity;
+        const lowerThreshold = lowerStr ? parseFloat(lowerStr) : -Infinity;
+
+        const anomalies = detectAnomalies(metricId, metricName, currentValue, historicalValues, {
+          upper: upperThreshold,
+          lower: lowerThreshold,
+        });
+        const stats = getAnomalyStats(anomalies);
+        return new Response(JSON.stringify({ anomalies, stats }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "anomaly:stats") {
+        const eventsStr = searchParams.get("events");
+        const events = eventsStr
+          ? eventsStr.split(";").map((e: string) => {
+              const [id, metricId, metricName, type, severity, current, expected, devPct, detected, status] = e.split("|");
+              return { id, metricId, metricName, type: type as AnomalyType, severity: severity as AnomalySeverity, currentValue: parseFloat(current), expectedValue: parseFloat(expected), deviationPercentage: parseFloat(devPct), detectedAt: new Date(detected), status: status as "active" | "resolved" | "dismissed" };
+            }).filter((e) => e.metricId) || [];
+        const stats = getAnomalyStats(events);
+        return new Response(JSON.stringify({ events, stats }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
