@@ -20,6 +20,7 @@
  *    database.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - filing credential monitor is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { filingGatewayPreflight, filingProviderKind } from "@/lib/engine/filing/gateway";
 import type { FilingPreflightResult } from "@/lib/engine/filing/types";

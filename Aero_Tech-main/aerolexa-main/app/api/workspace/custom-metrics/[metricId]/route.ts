@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - workspace custom metric management is a deployment-wide aggregate operation
 import { requireAuth, ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";

@@ -1,4 +1,5 @@
 import { ApiError, requireAuth } from "@/lib/auth/guard";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - notebooks run API is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import {

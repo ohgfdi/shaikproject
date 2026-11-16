@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - presentation PDF export is a deployment-wide aggregate operation
 import { NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/auth/guard";

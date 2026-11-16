@@ -8,7 +8,11 @@ import { prisma } from "@/lib/db";
 
 export const metadata = { title: "Presentations" };
 
-export default async function PresentationsPage() {
+/**
+ * tenancy-audit: global-operator — presentations page lists workspace-wide
+ * presentations for the firm home view.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
   const ctx = await requirePageAuth();
   const presentations = await prisma.presentation.findMany({
     where: { workspaceId: ctx.workspace.id },

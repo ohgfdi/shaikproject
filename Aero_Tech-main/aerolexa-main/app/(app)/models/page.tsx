@@ -3,18 +3,20 @@ import { BrainCircuit } from "lucide-react";
 import { ArtifactGrid } from "@/components/layout/artifact-grid";
 import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Models" };
 
 export default async function ModelsPage() {
   const ctx = await requirePageAuth();
-  const models = await prisma.modelVersion.findMany({
-    where: { workspaceId: ctx.workspace.id },
-    orderBy: { createdAt: "desc" },
-    include: { project: { select: { id: true, name: true } } },
-    take: 200,
-  });
+  const models = await withTenantDb(ctx, (db)
+    db.modelVersion.findMany({
+      where: { workspaceId: ctx.workspace.id },
+      orderBy: { createdAt: "desc" },
+      include: { project: { select: { id: true, name: true } } },
+      take: 200,
+    }),
+  );
 
   return (
     <div>

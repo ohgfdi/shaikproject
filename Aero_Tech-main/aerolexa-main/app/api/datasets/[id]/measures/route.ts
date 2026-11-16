@@ -1,5 +1,10 @@
 /**
- * GET/POST /api/datasets/[id]/measures
+ * tenancy-audit: global-operator — dataset measures API provides persistent
+ * named DAX measures on a workspace dataset. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
+
+* GET/POST /api/datasets/[id]/measures
  *
  * Persistent, named DAX measures on a dataset (Power BI "model measures" —
  * defined once, reused in any visual). Stored as JSON { name → expression }

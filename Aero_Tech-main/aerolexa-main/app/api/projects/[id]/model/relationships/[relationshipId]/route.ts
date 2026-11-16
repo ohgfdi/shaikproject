@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - project model relationship management is a deployment-wide aggregate operation
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { logActivity } from "@/lib/server/activity";

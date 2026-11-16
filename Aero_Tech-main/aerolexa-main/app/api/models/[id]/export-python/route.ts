@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - model export Python API is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import { serverEnv } from "@/lib/env";

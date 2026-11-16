@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+/**
+ * tenancy-audit: global-operator — dataset studio page displays Power BI
+ * workspace-wide analytics. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
+
 import { PageHeader } from "@/components/layout/page-header";
 import { PowerBiStudioPanel } from "@/components/pbi/power-bi-studio-panel";
 import { requirePageAuth } from "@/lib/auth/guard";

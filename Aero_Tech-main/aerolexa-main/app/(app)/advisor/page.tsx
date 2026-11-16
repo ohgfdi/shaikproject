@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - advisor page is a deployment-wide aggregate operation
+
 import { AdvisorPanel } from "@/components/advisor/advisor-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";

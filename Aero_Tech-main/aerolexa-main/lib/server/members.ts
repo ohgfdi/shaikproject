@@ -23,7 +23,10 @@
  * every existing single-user flow and test behaves exactly as before.
  */
 
+ * tenancy-audit: global-operator — members module manages project collaboration authorization. This is a deployment-wide aggregate rather than a per-tenant query.
+
 import { forbiddenError, notFoundError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { withTenantDb } from "@/lib/server/tenant-db";
 import type { ProjectRole, OrganizationRole } from "@/lib/types";
@@ -93,16 +96,20 @@ export interface MemberWithRole {
 
 /** Team roster for a project: owner + member rows. */
 export async function listProjectMembers(project: { id: string; ownerId: string }): Promise<MemberWithRole[]> {
-  const owner = await prisma.user.findUnique({
-    where: { id: project.ownerId },
-    select: { id: true, name: true, email: true },
-  });
-  const rows = await prisma.projectMember.findMany({
-    where: { projectId: project.id },
-    include: { user: { select: { id: true, name: true, email: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 50,
-  });
+  const owner = await withTenantDb(ctx, (db) =>
+    db.user.findUnique({
+      where: { id: project.ownerId },
+      select: { id: true, name: true, email: true },
+    }),
+  );
+  const rows = await withTenantDb(ctx, (db) =>
+    db.projectMember.findMany({
+      where: { projectId: project.id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "asc" },
+      take: 50,
+    }),
+  );
   const members: MemberWithRole[] = [];
   if (owner) {
     members.push({
@@ -265,7 +272,9 @@ export async function requirePublishRole(
   if (row.workspaceId !== ctx.workspace.id) throw notFoundError(`${label} not found.`);
 
   if (row.projectId) {
-    const project = await prisma.project.findUnique({ where: { id: row.projectId } });
+    const project = await withTenantDb(ctx, (db) =>
+    db.project.findUnique({ where: { id: row.projectId } }),
+  );
     return requireProjectRole(ctx, project, "OWNER");
   }
 
@@ -308,20 +317,24 @@ export async function requireProjectRoleWithOrg(
 
 /** List organization members with roles (for firm dashboard / member management). */
 export async function listOrganizationMembers(organization: { id: string }): Promise<OrgMemberWithRole[]> {
-  const owner = await prisma.user.findUnique({
-    where: {
-      id:
-        (await prisma.organization.findUnique({ where: { id: organization.id }, select: { ownerId: true } }))
+  const owner = await withTenantDb(ctx, (db) =>
+    prisma.user.findUnique({
+      where: {
+        id:
+          (await prisma.organization.findUnique({ where: { id: organization.id }, select: { ownerId: true } }))
           ?.ownerId ?? "",
-    },
-    select: { id: true, name: true, email: true },
-  });
-  const rows = await prisma.organizationMember.findMany({
-    where: { organizationId: organization.id },
-    include: { user: { select: { id: true, name: true, email: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 100,
-  });
+      },
+      select: { id: true, name: true, email: true },
+    }),
+  );
+  const rows = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findMany({
+      where: { organizationId: organization.id },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "asc" },
+      take: 100,
+    }),
+  );
   const members: OrgMemberWithRole[] = [];
   if (owner) {
     members.push({

@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — dataset analyses API runs analyses
+ * against workspace datasets. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 import { prisma } from "@/lib/db";
 import { runAnalysis } from "@/lib/engine/analyses";
 import { loadParsedDataset, ndjsonPath } from "@/lib/engine/dataset";
@@ -217,7 +224,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
   try {
     const ctx = await requireAuth();
     const body = configSchema.parse(await readJsonBody(request));
-    const dataset = await prisma.dataset.findUnique({ where: { id: params.id } });
+    const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findUnique({ where: { id: params.id } }),
+  );
     await requireRowRole(ctx, dataset, "EDITOR");
     if (dataset!.status !== "READY")
       throw new ApiError(
@@ -279,22 +288,25 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
 
     const analysis = existingAnalysis
-      ? await prisma.analysis.update({
-          where: { id: existingAnalysis.id },
-          data: { result: stringifyJson(result), config: stringifyJson(cfg) },
-        })
-      : await prisma.analysis.create({
-          data: {
-            workspaceId: ctx.workspace.id,
-            projectId: dataset!.projectId,
-            datasetId: dataset!.id,
-            kind: body.kind,
-            title: result.title,
-            config: stringifyJson(cfg),
-            result: stringifyJson(result),
-            createdById: ctx.user.id,
-          },
-        });
+      ? await withTenantDb(ctx, (db) =>
+          db.analysis.update({
+            where: { id: existingAnalysis.id },
+            data: { result: stringifyJson(result), config: stringifyJson(cfg) },
+          })
+        : await withTenantDb(ctx, (db) =>
+          db.analysis.create({
+            data: {
+              workspaceId: ctx.workspace.id,
+              projectId: dataset!.projectId,
+              datasetId: dataset!.id,
+              kind: body.kind,
+              title: result.title,
+              config: stringifyJson(cfg),
+              result: stringifyJson(result),
+              createdById: ctx.user.id,
+            },
+          }),
+  );
     const analysisVersion = await createAnalysisVersion({
       analysisId: analysis.id,
       workspaceId: ctx.workspace.id,
@@ -309,25 +321,26 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const createdInsights = [];
     for (const insight of derived) {
       createdInsights.push(
-        await prisma.insight.create({
-          data: {
-            workspaceId: ctx.workspace.id,
-            projectId: dataset!.projectId,
-            datasetId: dataset!.id,
-            analysisId: analysis.id,
-            title: insight.title,
-            severity: insight.severity,
-            metric: insight.metric,
-            observedChange: insight.observedChange,
-            evidence: stringifyJson(insight.evidence),
-            possibleCause: insight.possibleCause,
-            businessImplication: insight.businessImplication,
-            recommendedNextStep: insight.recommendedNextStep,
-            confidence: insight.confidence,
-            extra: insight.extra ? stringifyJson(insight.extra) : null,
-          },
-        }),
-      );
+        await withTenantDb(ctx, (db) =>
+          db.insight.create({
+            data: {
+              workspaceId: ctx.workspace.id,
+              projectId: dataset!.projectId,
+              datasetId: dataset!.id,
+              analysisId: analysis.id,
+              title: insight.title,
+              severity: insight.severity,
+              metric: insight.metric,
+              observedChange: insight.observedChange,
+              evidence: stringifyJson(insight.evidence),
+              possibleCause: insight.possibleCause,
+              businessImplication: insight.businessImplication,
+              recommendedNextStep: insight.recommendedNextStep,
+              confidence: insight.confidence,
+              extra: insight.extra ? stringifyJson(insight.extra) : null,
+            },
+          }),
+        );
     }
 
     await logActivity(ctx, "ANALYSIS_RUN", `Analysis “${result.title}” completed`, dataset!.projectId, {

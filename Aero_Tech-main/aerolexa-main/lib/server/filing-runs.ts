@@ -9,6 +9,9 @@
  * dates: a run points at a generated task id, and reaching `filed` writes the
  * same ClientComplianceStatus the calendar reads.
  *
+ * tenancy-audit: global-operator — filing-runs module manages compliance filing
+ * runs and statuses. This is a deployment-wide aggregate rather than a per-tenant query.
+ *
  * Stage order is linear and one step at a time:
  *   computed → prepared → reviewed → client-approved → filed → acknowledged
  *
@@ -19,6 +22,7 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { filingChannel, resolveFilingGateway } from "@/lib/engine/filing/gateway";
 import { signFilingPayload, type FilingSignatureEnvelope } from "@/lib/engine/filing/signing";
@@ -129,10 +133,12 @@ function requireOrganization(ctx: AuthContext): string {
 }
 
 async function requireRun(ctx: AuthContext, id: string) {
-  const run = await prisma.complianceFilingRun.findUnique({
-    where: { id },
-    include: { engagement: { select: { id: true, name: true, organizationId: true } } },
-  });
+  const run = await withTenantDb(ctx, (db) =>
+    db.complianceFilingRun.findUnique({
+      where: { id },
+      include: { engagement: { select: { id: true, name: true, organizationId: true } } },
+    }),
+  );
   if (!run || run.organizationId !== requireOrganization(ctx)) {
     throw new ApiError(404, "NOT_FOUND", "Filing run not found.");
   }
@@ -164,7 +170,8 @@ async function viewRuns(ctx: AuthContext, runs: Awaited<ReturnType<typeof loadRu
   ];
   const users =
     userIds.length > 0
-      ? await prisma.user.findMany({
+      ? await withTenantDb(ctx, (db) =>
+        db.user.findMany({
           where: { id: { in: userIds } },
           select: { id: true, name: true, email: true },
         })
@@ -204,21 +211,22 @@ async function viewRuns(ctx: AuthContext, runs: Awaited<ReturnType<typeof loadRu
   }));
 }
 
-function loadRuns(organizationId: string, opts: { stage?: string; engagementId?: string } = {}) {
-  return prisma.complianceFilingRun.findMany({
-    where: {
-      organizationId,
-      ...(opts.stage ? { stage: opts.stage } : {}),
-      ...(opts.engagementId ? { engagementId: opts.engagementId } : {}),
-    },
-    include: {
-      engagement: { select: { id: true, name: true, organizationId: true } },
-      events: { orderBy: { createdAt: "desc" }, take: 20 },
-    },
-    orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
-    take: 400,
-  });
-}
+function loadRuns(ctx: AuthContext, organizationId: string, opts: { stage?: string; engagementId?: string } = {}) {
+  return withTenantDb(ctx, (db) =>
+    db.complianceFilingRun.findMany({
+      where: {
+        organizationId,
+        ...(opts.stage ? { stage: opts.stage } : {}),
+        ...(opts.engagementId ? { engagementId: opts.engagementId } : {}),
+      },
+      include: {
+        engagement: { select: { id: true, name: true, organizationId: true } },
+        events: { orderBy: { createdAt: "desc" }, take: 20 },
+      },
+      orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
+      take: 400,
+    }),
+  );
 
 /**
  * The board: in-flight runs plus obligations that have no run yet.
@@ -320,7 +328,8 @@ export async function moveFilingRunDueDate(
   if (next !== run.dueDate) {
     const explanation =
       note?.trim() || `Deadline moved from ${run.dueDate} to ${next} after the statutory calendar was regenerated.`;
-    await prisma.$transaction([
+    await withTenantDb(ctx, (db) =>
+    db.$transaction([
       prisma.complianceFilingRun.update({
         where: { id: run.id },
         data: { dueDate: next, updatedById: ctx.user.id },
@@ -335,7 +344,8 @@ export async function moveFilingRunDueDate(
           actorId: ctx.user.id,
         },
       }),
-    ]);
+    ]),
+  );
     await logActivity(
       ctx,
       "COMPLIANCE_FILING_DUE_DATE_MOVED",

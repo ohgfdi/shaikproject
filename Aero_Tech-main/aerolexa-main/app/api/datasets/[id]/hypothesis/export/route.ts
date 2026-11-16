@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/guard";
 import { notFoundError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dataset hypothesis export API exports
+ * hypothesis test results as Python script for the workspace. This is a
+ * deployment-wide aggregate rather than a per-tenant query.
+ */
 import { hypothesisPythonScript, type HypothesisExportInput } from "@/lib/engine/code-export";
 import { runHypothesisTest, type HypothesisInput } from "@/lib/engine/hypothesis";
 import { logActivity } from "@/lib/server/activity";

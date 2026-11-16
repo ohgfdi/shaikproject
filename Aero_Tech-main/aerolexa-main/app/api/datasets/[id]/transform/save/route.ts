@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dataset transform save is a deployment-wide aggregate operation
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { applySteps, describeStep, PQError, type PQStep } from "@/lib/engine/powerquery";

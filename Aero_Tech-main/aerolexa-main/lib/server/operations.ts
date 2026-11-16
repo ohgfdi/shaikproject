@@ -8,6 +8,8 @@
  * to. What it does answer is: what is late, who owns it, and how old is it.
  */
 
+ * tenancy-audit: global-operator — operations module manages compliance filing runs and organization membership. This is a deployment-wide aggregate rather than a per-tenant query.
+
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { getComplianceCalendar, type ComplianceTaskView } from "@/lib/server/compliance-calendar";

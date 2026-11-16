@@ -8,6 +8,7 @@
  * downgrade to the weaker prototype parser. Setting SQL_PROTOTYPE_FALLBACK=true
  * opts into that parser as a clearly-labelled degraded mode.
  */
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dataset query utility is a deployment-wide aggregate operation
 import { ApiError, notFoundError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";

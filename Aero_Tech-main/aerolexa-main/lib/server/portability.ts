@@ -10,6 +10,10 @@
  * half of what the person actually authored, so the export was incomplete in
  * the way that matters.
  *
+ * tenancy-audit: global-operator — data portability export aggregates
+ * tenant data across multiple engagements for subject access requests.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ *
  * Two design decisions worth stating, because both are load-bearing:
  *
  * 1. **A manifest, not a bare blob.** Each section declares what it covers and
@@ -34,6 +38,8 @@
  */
 
 import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
+import { AuthContext } from "@/lib/auth/guard";
 
 import { CONSENT_POLICY_VERSION } from "./dpdp";
 
@@ -157,46 +163,81 @@ export const EXPORT_SECTIONS: Section[] = [
     key: "activities",
     description: "Entries the subject is the recorded actor for, across the audit trail",
     models: ["Activity"],
-    load: ({ userId }) =>
-      prisma.activity.findMany({
-        where: { actorId: userId },
-        orderBy: { createdAt: "desc" },
-        take: 500,
-      }),
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.activity.findMany({
+          where: { actorId: userId },
+          orderBy: { createdAt: "desc" },
+          take: 500,
+        }),
+      ),
   },
   {
     key: "consents",
     models: ["ConsentRecord"],
     description: "Consent decisions with the policy version in force at the time",
-    load: ({ userId }) => prisma.consentRecord.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.consentRecord.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+      ),
   },
   {
     key: "organizationMemberships",
     models: ["OrganizationMember"],
     description: "Firm memberships and the role held in each",
-    load: ({ userId }) => prisma.organizationMember.findMany({ where: { userId } }),
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.organizationMember.findMany({ where: { userId } }),
+      ),
   },
   {
     key: "projectMemberships",
     models: ["ProjectMember"],
     description: "Project memberships and the role held in each",
-    load: ({ userId }) => prisma.projectMember.findMany({ where: { userId } }),
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.projectMember.findMany({ where: { userId } }),
+      ),
   },
   {
     key: "ownedOrganizations",
     models: ["Organization"],
     description: "Firms the subject owns",
-    load: ({ userId }) => prisma.organization.findMany({ where: { ownerId: userId } }),
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.organization.findMany({ where: { ownerId: userId } }),
+      ),
   },
-  {
+  ){
     key: "engagements",
     models: ["Engagement"],
     description: "Client engagements belonging to owned firms",
-    load: ({ userId }) =>
-      prisma.engagement.findMany({
-        where: { organization: { ownerId: userId } },
-        select: {
-          id: true,
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.engagement.findMany({
+          where: { organization: { ownerId: userId } },
+          select: {
+            id: true,
+            organizationId: true,
+            name: true,
+            code: true,
+            gstin: true,
+            status: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Engagement"],
+    description: "Client engagements belonging to owned firms",
+    load: async ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.engagement.findMany({
+          where: { organization: { ownerId: userId } },
+          select: {
+            id: true,
           organizationId: true,
           name: true,
           code: true,
@@ -226,105 +267,115 @@ export const EXPORT_SECTIONS: Section[] = [
     ],
     load: async ({ userId }) => {
       const [members, papers, versions, changeRequests, changeLog, consents] = await Promise.all([
-        prisma.engagementMember.findMany({ where: { userId } }),
-        prisma.workingPaper.findMany({
-          where: { OR: [{ preparedById: userId }, { reviewedById: userId }, { signedOffById: userId }] },
-          select: {
-            id: true,
-            organizationId: true,
-            engagementId: true,
-            projectId: true,
-            indexRef: true,
-            title: true,
-            section: true,
-            saReference: true,
-            status: true,
-            classification: true,
-            version: true,
-            contentHash: true,
-            preparedById: true,
-            preparedAt: true,
-            reviewedById: true,
-            reviewedAt: true,
-            reviewNote: true,
-            signedOffById: true,
-            signedOffAt: true,
-            signOffRole: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        }),
-        prisma.workingPaperVersion.findMany({
-          where: { preparedById: userId },
-          select: {
-            id: true,
-            workingPaperId: true,
-            version: true,
-            contentHash: true,
-            changeSummary: true,
-            preparedById: true,
-            createdAt: true,
-          },
-        }),
-        prisma.engagementChangeRequest.findMany({
-          where: { requestedById: userId },
-          select: {
-            id: true,
-            organizationId: true,
-            engagementId: true,
-            projectId: true,
-            title: true,
-            description: true,
-            rationale: true,
-            targetType: true,
-            targetId: true,
-            state: true,
-            assignedToPracticeRole: true,
-            signOffRequiredFor: true,
-            reviewNote: true,
-            requestedById: true,
-            requestedAt: true,
-            updatedAt: true,
-          },
-        }),
-        prisma.engagementChangeLog.findMany({
-          where: { actorId: userId },
-          orderBy: { seq: "asc" },
-          take: 500,
-          select: {
-            id: true,
-            organizationId: true,
-            engagementId: true,
-            seq: true,
-            changeRequestId: true,
-            actorId: true,
-            actorPracticeRole: true,
-            action: true,
-            targetType: true,
-            targetId: true,
-            summary: true,
-            consentAware: true,
-            prevHash: true,
-            entryHash: true,
-            createdAt: true,
-          },
-        }),
-        prisma.clientConsent.findMany({
-          where: { recordedById: userId },
-          select: {
-            id: true,
-            organizationId: true,
-            engagementId: true,
-            purpose: true,
-            subjectRef: true,
-            granted: true,
-            policyVersion: true,
-            evidenceNote: true,
-            recordedById: true,
-            expiresAt: true,
-            createdAt: true,
-          },
-        }),
+        withTenantDb(ctx => ctx, (db) =>
+          db.engagementMember.findMany({ where: { userId } })),
+        withTenantDb(ctx => ctx, (db) =>
+          prisma.workingPaper.findMany({
+            where: { OR: [{ preparedById: userId }, { reviewedById: userId }, { signedOffById: userId }] },
+            select: {
+              id: true,
+              organizationId: true,
+              engagementId: true,
+              projectId: true,
+              indexRef: true,
+              title: true,
+              section: true,
+              saReference: true,
+              status: true,
+              classification: true,
+              version: true,
+              contentHash: true,
+              preparedById: true,
+              preparedAt: true,
+              reviewedById: true,
+              reviewedAt: true,
+              reviewNote: true,
+              signedOffById: true,
+              signedOffAt: true,
+              signOffRole: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          }),
+        ),
+        withTenantDb(ctx => ctx, (db) =>
+          prisma.workingPaperVersion.findMany({
+            where: { preparedById: userId },
+            select: {
+              id: true,
+              workingPaperId: true,
+              version: true,
+              contentHash: true,
+              changeSummary: true,
+              preparedById: true,
+              createdAt: true,
+            },
+          }),
+        ),
+        withTenantDb(ctx => ctx, (db) =>
+          prisma.engagementChangeRequest.findMany({
+            where: { requestedById: userId },
+            select: {
+              id: true,
+              organizationId: true,
+              engagementId: true,
+              projectId: true,
+              title: true,
+              description: true,
+              rationale: true,
+              targetType: true,
+              targetId: true,
+              state: true,
+              assignedToPracticeRole: true,
+              signOffRequiredFor: true,
+              reviewNote: true,
+              requestedById: true,
+              requestedAt: true,
+              updatedAt: true,
+            },
+          }),
+        ),
+        withTenantDb(ctx => ctx, (db) =>
+          prisma.engagementChangeLog.findMany({
+            where: { actorId: userId },
+            orderBy: { seq: "asc" },
+            take: 500,
+            select: {
+              id: true,
+              organizationId: true,
+              engagementId: true,
+              seq: true,
+              changeRequestId: true,
+              actorId: true,
+              actorPracticeRole: true,
+              action: true,
+              targetType: true,
+              targetId: true,
+              summary: true,
+              consentAware: true,
+              prevHash: true,
+              entryHash: true,
+              createdAt: true,
+            },
+          }),
+        ),
+        withTenantDb(ctx => ctx, (db) =>
+          prisma.clientConsent.findMany({
+            where: { recordedById: userId },
+            select: {
+              id: true,
+              organizationId: true,
+              engagementId: true,
+              purpose: true,
+              subjectRef: true,
+              granted: true,
+              policyVersion: true,
+              evidenceNote: true,
+              recordedById: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          }),
       ]);
       return [
         ...members.map((r) => ({ kind: "practiceRoleAssignment", ...r })),
@@ -341,33 +392,70 @@ export const EXPORT_SECTIONS: Section[] = [
     description: "Projects, including company and engagement linkage",
     models: ["Project"],
     load: ({ userId, workspaceId }) =>
-      prisma.project.findMany({
-        // A user without a personal workspace still owns whatever projects they
-        // created; `wsScope` would wrongly hide those.
-        where: workspaceId ? { workspaceId } : { ownerId: userId },
-        select: {
-          id: true,
-          workspaceId: true,
-          name: true,
-          description: true,
-          company: true,
-          industry: true,
-          status: true,
-          ownerId: true,
-          organizationId: true,
-          engagementId: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
+      withTenantDb(ctx => ctx, (db) =>
+        db.project.findMany({
+          // A user without a personal workspace still owns whatever projects they
+          // created; `wsScope` would wrongly hide those.
+          where: workspaceId ? { workspaceId } : { ownerId: userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            description: true,
+            company: true,
+            industry: true,
+            status: true,
+            ownerId: true,
+            organizationId: true,
+            engagementId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
   },
-  {
+  ){
     key: "datasets",
     models: ["Dataset", "DatasetVersion", "DatasetProvenance"],
     description: "Uploaded datasets with column definitions, profile, preview and applied transform steps",
     load: ({ workspaceId }) =>
-      prisma.dataset.findMany({
-        where: wsScope(workspaceId),
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.dataset.findMany({
+          where: wsScope(workspaceId),
+          // filePath/ndjsonPath withheld (see WITHHELD_FIELDS).
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            name: true,
+            originalName: true,
+            mimeType: true,
+            sizeBytes: true,
+            rowCount: true,
+            columnCount: true,
+            isDemo: true,
+            status: true,
+            error: true,
+            profile: true,
+            columns: true,
+            preview: true,
+            qualityWarnings: true,
+            transformSteps: true,
+            measures: true,
+            connectorId: true,
+            connectorSourceTable: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Dataset", "DatasetVersion", "DatasetProvenance"],
+    description: "Uploaded datasets with column definitions, profile, preview and applied transform steps",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.dataset.findMany({
+          where: wsScope(workspaceId),
         // filePath/ndjsonPath withheld (see WITHHELD_FIELDS).
         select: {
           id: true,
@@ -400,26 +488,51 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["Analysis"],
     description: "Analyses including the configuration and the computed result",
     load: ({ workspaceId }) =>
-      prisma.analysis.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          projectId: true,
-          datasetId: true,
-          kind: true,
-          title: true,
-          status: true,
-          config: true,
-          result: true,
-          datasetVersionId: true,
-          createdById: true,
-          createdAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        db.analysis.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            datasetId: true,
+            kind: true,
+            title: true,
+            status: true,
+            config: true,
+            result: true,
+            datasetVersionId: true,
+            createdById: true,
+            createdAt: true,
+          },
+        }),
+      ),
+  ){
     key: "analysisVersions",
+    models: ["AnalysisVersion"],
+    description: "Version history of every analysis, with metrics per version",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.analysisVersion.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            analysisId: true,
+            version: true,
+            datasetVersionId: true,
+            kind: true,
+            title: true,
+            result: true,
+            config: true,
+            metrics: true,
+            createdById: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+  ),
+
     models: ["AnalysisVersion"],
     description: "Version history of every analysis, with metrics per version",
     load: ({ workspaceId }) =>
@@ -446,15 +559,43 @@ export const EXPORT_SECTIONS: Section[] = [
     key: "insights",
     models: ["Insight"],
     description: "Generated insights with evidence and reasoning",
-    load: ({ workspaceId }) => prisma.insight.findMany({ where: wsScope(workspaceId) }),
-  },
-  {
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        db.insight.findMany({ where: wsScope(workspaceId) }),
+      ),
+  ){
     key: "dashboards",
     models: ["Dashboard"],
     description: "Dashboards including widgets, report pages, bookmarks and theme",
     load: ({ workspaceId }) =>
-      prisma.dashboard.findMany({
-        where: wsScope(workspaceId),
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.dashboard.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            title: true,
+            description: true,
+            widgets: true,
+            pages: true,
+            bookmarks: true,
+            theme: true,
+            accessMode: true,
+            publishedAt: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Dashboard"],
+    description: "Dashboards including widgets, report pages, bookmarks and theme",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.dashboard.findMany({
+          where: wsScope(workspaceId),
         select: {
           id: true,
           workspaceId: true,
@@ -478,30 +619,51 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["Report"],
     description: "Reports including the full section content",
     load: ({ workspaceId }) =>
-      prisma.report.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          projectId: true,
-          title: true,
-          sections: true,
-          version: true,
-          accessMode: true,
-          publishedAt: true,
-          createdById: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        db.report.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            title: true,
+            sections: true,
+            version: true,
+            accessMode: true,
+            publishedAt: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "presentations",
     models: ["Presentation"],
     description: "Presentations including every slide",
     load: ({ workspaceId }) =>
-      prisma.presentation.findMany({
-        where: wsScope(workspaceId),
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.presentation.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            title: true,
+            slides: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Presentation"],
+    description: "Presentations including every slide",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.presentation.findMany({
+          where: wsScope(workspaceId),
         select: {
           id: true,
           workspaceId: true,
@@ -519,26 +681,47 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["Notebook"],
     description: "Notebooks including all cells (source, outputs, execution state)",
     load: ({ workspaceId }) =>
-      prisma.notebook.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          projectId: true,
-          datasetId: true,
-          datasetVersionId: true,
-          title: true,
-          cells: true,
-          accessMode: true,
-          publishedAt: true,
-          createdById: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.notebook.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            datasetId: true,
+            datasetVersionId: true,
+            title: true,
+            cells: true,
+            accessMode: true,
+            publishedAt: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "notebookVersions",
+    models: ["NotebookVersion"],
+    description: "Saved notebook checkpoints",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.notebookVersion.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            notebookId: true,
+            version: true,
+            result: true,
+            config: true,
+            createdById: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+  ),
+
     models: ["NotebookVersion"],
     description: "Saved notebook checkpoints",
     load: ({ workspaceId }) =>
@@ -562,25 +745,51 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["Prompt"],
     description: "Saved prompt templates and their variable definitions",
     load: ({ workspaceId }) =>
-      prisma.prompt.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          name: true,
-          description: true,
-          template: true,
-          variables: true,
-          chain: true,
-          isAdvisorTemplate: true,
-          createdById: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.prompt.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            description: true,
+            template: true,
+            variables: true,
+            chain: true,
+            isAdvisorTemplate: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "customMetrics",
+    models: ["CustomMetric"],
+    description: "Custom metrics with their DAX expressions",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.customMetric.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            datasetId: true,
+            name: true,
+            description: true,
+            daxExpression: true,
+            format: true,
+            tags: true,
+            isBuiltin: true,
+            isGlobal: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
     models: ["CustomMetric"],
     description: "Custom metrics with their DAX expressions",
     load: ({ workspaceId }) =>
@@ -608,10 +817,38 @@ export const EXPORT_SECTIONS: Section[] = [
     key: "comments",
     models: ["Comment"],
     description: "Comments the subject wrote, on any artifact they can see",
-    load: ({ userId }) => prisma.comment.findMany({ where: { authorId: userId }, orderBy: { createdAt: "asc" } }),
-  },
-  {
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.comment.findMany({ where: { authorId: userId }, orderBy: { createdAt: "asc" } }),
+      ),
+  ){
     key: "modelVersions",
+    models: ["ModelVersion"],
+    description: "Trained model versions with features, metrics and hyperparameters",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.modelVersion.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            datasetId: true,
+            name: true,
+            task: true,
+            targetColumn: true,
+            features: true,
+            metrics: true,
+            params: true,
+            version: true,
+            status: true,
+            error: true,
+            createdById: true,
+            createdAt: true,
+          },
+        }),
+  ),
+
     models: ["ModelVersion"],
     description: "Trained model versions with features, metrics and hyperparameters",
     load: ({ workspaceId }) =>
@@ -641,28 +878,56 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["Connector", "ConnectorSyncRun"],
     description: "Connected data sources (metadata only — see withheldFields for the credential)",
     load: ({ workspaceId }) =>
-      prisma.connector.findMany({
-        where: wsScope(workspaceId),
-        // config + webhookSecret withheld (see WITHHELD_FIELDS).
-        select: {
-          id: true,
-          workspaceId: true,
-          kind: true,
-          name: true,
-          status: true,
-          lastTestedAt: true,
-          lastError: true,
-          syncEnabled: true,
-          syncCron: true,
-          lastSyncAt: true,
-          createdById: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.connector.findMany({
+          where: wsScope(workspaceId),
+          // config + webhookSecret withheld (see WITHHELD_FIELDS).
+          select: {
+            id: true,
+            workspaceId: true,
+            kind: true,
+            name: true,
+            status: true,
+            lastTestedAt: true,
+            lastError: true,
+            syncEnabled: true,
+            syncCron: true,
+            lastSyncAt: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "dataAlerts",
+    models: ["DataAlert"],
+    description: "Alert rules and their firing history",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.dataAlert.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            datasetId: true,
+            name: true,
+            enabled: true,
+            ruleKind: true,
+            ruleConfig: true,
+            columnName: true,
+            severity: true,
+            cooldownMinutes: true,
+            lastFiredAt: true,
+            lastResolvedAt: true,
+            lastOutcome: true,
+            lastMessage: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
     models: ["DataAlert"],
     description: "Alert rules and their firing history",
     load: ({ workspaceId }) =>
@@ -692,10 +957,20 @@ export const EXPORT_SECTIONS: Section[] = [
     key: "scheduledReports",
     models: ["ScheduledReport"],
     description: "Scheduled report deliveries, including recipient addresses",
-    load: ({ workspaceId }) => prisma.scheduledReport.findMany({ where: wsScope(workspaceId) }),
-  },
-  {
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.scheduledReport.findMany({ where: wsScope(workspaceId) }),
+      ),
+  ){
     key: "scheduledNotebooks",
+    models: ["ScheduledNotebook"],
+    description: "Scheduled notebook runs, including recipient addresses",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.scheduledNotebook.findMany({ where: wsScope(workspaceId) }),
+      ),
+  ),
+
     models: ["ScheduledNotebook"],
     description: "Scheduled notebook runs, including recipient addresses",
     load: ({ workspaceId }) => prisma.scheduledNotebook.findMany({ where: wsScope(workspaceId) }),
@@ -705,141 +980,260 @@ export const EXPORT_SECTIONS: Section[] = [
     models: ["UserApiKey"],
     description: "API keys (identifier, prefix and revocation state only)",
     load: ({ userId }) =>
-      prisma.userApiKey.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          name: true,
-          keyPrefix: true,
-          scopes: true,
-          revokedAt: true,
-          lastUsedAt: true,
-          createdAt: true,
-        },
-      }),
-  },
-  // ---------------------------------------------------------------- user scope
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.userApiKey.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            name: true,
+            keyPrefix: true,
+            scopes: true,
+            revokedAt: true,
+            lastUsedAt: true,
+            createdAt: true,
+          },
+        }),
+      ),
+  ){
+    // ---------------------------------------------------------------- user scope
+    {
     key: "chats",
     models: ["Chat"],
     description: "Assistant conversation threads started by the subject",
     load: ({ userId }) =>
-      prisma.chat.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          workspaceId: true,
-          projectId: true,
-          title: true,
-          model: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.chat.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            title: true,
+            model: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Chat"],
+    description: "Assistant conversation threads started by the subject",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.chat.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            projectId: true,
+            title: true,
+            model: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "chatMessages",
     models: ["ChatMessage"],
     description: "Every message in the subject's conversations, both directions",
     load: ({ userId }) =>
-      prisma.chatMessage.findMany({
-        where: { chat: { userId } },
-        select: { id: true, chatId: true, role: true, content: true, sources: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.chatMessage.findMany({
+          where: { chat: { userId } },
+          select: { id: true, chatId: true, role: true, content: true, sources: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        }),
+  ),
+
+    models: ["ChatMessage"],
+    description: "Every message in the subject's conversations, both directions",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.chatMessage.findMany({
+          where: { chat: { userId } },
+          select: { id: true, chatId: true, role: true, content: true, sources: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        }),
+      ),
+  ){
     key: "savedSearches",
     models: ["SavedSearch"],
     description: "Saved searches and their filter state",
     load: ({ userId }) =>
-      prisma.savedSearch.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          workspaceId: true,
-          name: true,
-          query: true,
-          filter: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.savedSearch.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            query: true,
+            filter: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["SavedSearch"],
+    description: "Saved searches and their filter state",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.savedSearch.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            query: true,
+            filter: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "searchHistory",
     models: ["SearchQueryLog"],
     description: "Search terms the subject has run",
     load: ({ userId }) =>
-      prisma.searchQueryLog.findMany({
-        where: { userId },
-        select: { id: true, workspaceId: true, query: true, hitCount: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.searchQueryLog.findMany({
+          where: { userId },
+          select: { id: true, workspaceId: true, query: true, hitCount: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        }),
+  ),
+
+    models: ["SearchQueryLog"],
+    description: "Search terms the subject has run",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.searchQueryLog.findMany({
+          where: { userId },
+          select: { id: true, workspaceId: true, query: true, hitCount: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        }),
+      ),
+  ){
     key: "notifications",
     models: ["Notification"],
     description: "In-app notifications addressed to the subject",
     load: ({ userId }) =>
-      prisma.notification.findMany({
-        where: { userId },
-        select: { id: true, type: true, title: true, message: true, readAt: true, createdAt: true },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.notification.findMany({
+          where: { userId },
+          select: { id: true, type: true, title: true, message: true, readAt: true, createdAt: true },
+        }),
+  ),
+
+    models: ["Notification"],
+    description: "In-app notifications addressed to the subject",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.notification.findMany({
+          where: { userId },
+          select: { id: true, type: true, title: true, message: true, readAt: true, createdAt: true },
+        }),
+      ),
+  ){
     key: "feedback",
     models: ["Feedback"],
     description: "Feedback and feature requests the subject submitted",
     load: ({ userId }) =>
-      prisma.feedback.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          workspaceId: true,
-          kind: true,
-          message: true,
-          context: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.feedback.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            kind: true,
+            message: true,
+            context: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Feedback"],
+    description: "Feedback and feature requests the subject submitted",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.feedback.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            workspaceId: true,
+            kind: true,
+            message: true,
+            context: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "errorReports",
     models: ["ErrorReport"],
     description: "Client errors attributed to the subject (stack frames withheld)",
     load: ({ userId }) =>
-      prisma.errorReport.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          name: true,
-          message: true,
-          path: true,
-          requestId: true,
-          count: true,
-          firstSeenAt: true,
-          lastSeenAt: true,
-          resolvedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.errorReport.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            name: true,
+            message: true,
+            path: true,
+            requestId: true,
+            count: true,
+            firstSeenAt: true,
+            lastSeenAt: true,
+            resolvedAt: true,
+          },
+        }),
+  ),
+
+    models: ["ErrorReport"],
+    description: "Client errors attributed to the subject (stack frames withheld)",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.errorReport.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            name: true,
+            message: true,
+            path: true,
+            requestId: true,
+            count: true,
+            firstSeenAt: true,
+            lastSeenAt: true,
+            resolvedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "assistant",
     models: ["AssistantRun", "AssistantToolCall"],
     description:
       "Books-assistant questions the subject asked, the verified answer and the read-only tool calls made to ground it",
     load: async ({ userId }) => {
-      const runs = await prisma.assistantRun.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: 500,
-      });
+      const runs = await withTenantDb(ctx => ctx, (db) =>
+        prisma.assistantRun.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 500,
+        }),
+      );
       const runIds = runs.map((run) => run.id);
       const calls = runIds.length
-        ? await prisma.assistantToolCall.findMany({
+        ? await withTenantDb(ctx => ctx, (db) =>
+          prisma.assistantToolCall.findMany({
             where: { runId: { in: runIds } },
             orderBy: [{ runId: "asc" }, { seq: "asc" }],
           })
@@ -849,174 +1243,398 @@ export const EXPORT_SECTIONS: Section[] = [
         toolCalls: calls.filter((call) => call.runId === run.id),
       }));
     },
-  },
-  {
+  ),
+
+    models: ["AssistantRun", "AssistantToolCall"],
+    description:
+      "Books-assistant questions the subject asked, the verified answer and the read-only tool calls made to ground it",
+    load: async ({ userId }) => {
+      const runs = await withTenantDb(ctx => ctx, (db) =>
+        prisma.assistantRun.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 500,
+        }),
+      );
+      const runIds = runs.map((run) => run.id);
+      const calls = runIds.length
+        ? await withTenantDb(ctx => ctx, (db) =>
+          prisma.assistantToolCall.findMany({
+            where: { runId: { in: runIds } },
+            orderBy: [{ runId: "asc" }, { seq: "asc" }],
+          })
+        : [];
+      return runs.map((run) => ({
+        ...run,
+        toolCalls: calls.filter((call) => call.runId === run.id),
+      }));
+    },
+  ){
     key: "books",
     models: ["Book", "BookAccount", "BookVoucher", "BookVoucherLine"],
     description:
       "Accounting books: the book identity (legal name, GSTIN, PAN), chart of accounts, vouchers and voucher lines",
     load: ({ workspaceId }) =>
-      prisma.book.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          name: true,
-          legalName: true,
-          gstin: true,
-          pan: true,
-          entityType: true,
-          booksFrom: true,
-          fiscalYearEnd: true,
-          isDemo: true,
-          createdAt: true,
-          updatedAt: true,
-          accounts: {
-            select: {
-              id: true,
-              bookId: true,
-              code: true,
-              name: true,
-              type: true,
-              category: true,
-              description: true,
-              openingBalance: true,
-              createdAt: true,
-              updatedAt: true,
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.book.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            legalName: true,
+            gstin: true,
+            pan: true,
+            entityType: true,
+            booksFrom: true,
+            fiscalYearEnd: true,
+            isDemo: true,
+            createdAt: true,
+            updatedAt: true,
+            accounts: {
+              select: {
+                id: true,
+                bookId: true,
+                code: true,
+                name: true,
+                type: true,
+                category: true,
+                description: true,
+                openingBalance: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            vouchers: {
+              select: {
+                id: true,
+                bookId: true,
+                number: true,
+                date: true,
+                narration: true,
+                reference: true,
+                voucherType: true,
+                createdAt: true,
+                updatedAt: true,
+                lines: { select: { id: true, voucherId: true, accountId: true, amount: true, narration: true } },
+              },
             },
           },
-          vouchers: {
-            select: {
-              id: true,
-              bookId: true,
-              number: true,
-              date: true,
-              narration: true,
-              reference: true,
-              voucherType: true,
-              createdAt: true,
-              updatedAt: true,
-              lines: { select: { id: true, voucherId: true, accountId: true, amount: true, narration: true } },
+        }),
+  ),
+
+    models: ["Book", "BookAccount", "BookVoucher", "BookVoucherLine"],
+    description:
+      "Accounting books: the book identity (legal name, GSTIN, PAN), chart of accounts, vouchers and voucher lines",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.book.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            name: true,
+            legalName: true,
+            gstin: true,
+            pan: true,
+            entityType: true,
+            booksFrom: true,
+            fiscalYearEnd: true,
+            isDemo: true,
+            createdAt: true,
+            updatedAt: true,
+            accounts: {
+              select: {
+                id: true,
+                bookId: true,
+                code: true,
+                name: true,
+                type: true,
+                category: true,
+                description: true,
+                openingBalance: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            vouchers: {
+              select: {
+                id: true,
+                bookId: true,
+                number: true,
+                date: true,
+                narration: true,
+                reference: true,
+                voucherType: true,
+                createdAt: true,
+                updatedAt: true,
+                lines: { select: { id: true, voucherId: true, accountId: true, amount: true, narration: true } },
+              },
             },
           },
-        },
-      }),
-  },
-  {
+        }),
+      ),
+  ){
     key: "billing",
     models: ["Subscription"],
     description: "Subscription and invoice history for the subject's workspace",
     load: ({ workspaceId }) =>
-      prisma.subscription.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          planId: true,
-          status: true,
-          interval: true,
-          currentPeriodStart: true,
-          currentPeriodEnd: true,
-          canceledAt: true,
-          provider: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.subscription.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            planId: true,
+            status: true,
+            interval: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+            canceledAt: true,
+            provider: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Subscription"],
+    description: "Subscription and invoice history for the subject's workspace",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.subscription.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            planId: true,
+            status: true,
+            interval: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+            canceledAt: true,
+            provider: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "invoices",
     models: ["Invoice"],
     description: "Invoices raised against the subject's workspace",
     load: ({ workspaceId }) =>
-      prisma.invoice.findMany({
-        where: wsScope(workspaceId),
-        select: {
-          id: true,
-          workspaceId: true,
-          subscriptionId: true,
-          number: true,
-          amountPaise: true,
-          currency: true,
-          status: true,
-          paymentMethod: true,
-          paidAt: true,
-          notes: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.invoice.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            subscriptionId: true,
+            number: true,
+            amountPaise: true,
+            currency: true,
+            status: true,
+            paymentMethod: true,
+            paidAt: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+  ),
+
+    models: ["Invoice"],
+    description: "Invoices raised against the subject's workspace",
+    load: ({ workspaceId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.invoice.findMany({
+          where: wsScope(workspaceId),
+          select: {
+            id: true,
+            workspaceId: true,
+            subscriptionId: true,
+            number: true,
+            amountPaise: true,
+            currency: true,
+            status: true,
+            paymentMethod: true,
+            paidAt: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+  ){
     key: "filingRuns",
+    models: ["ComplianceFilingRun"],
+    description: "Statutory filing runs the subject prepared, reviewed, was assigned or last updated",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.complianceFilingRun.findMany({
+          where: {
+            OR: [
+              { createdById: userId },
+              { updatedById: userId },
+              { assigneeId: userId },
+              { reviewerId: userId },
+            ],
+          },
+          select: {
+            id: true,
+            organizationId: true,
+            engagementId: true,
+            taskId: true,
+            title: true,
+            authority: true,
+            dueDate: true,
+            stage: true,
+            assigneeId: true,
+            reviewerId: true,
+            acknowledgementReference: true,
+            filedAt: true,
+            acknowledgedAt: true,
+            verificationStatus: true,
+            createdById: true,
+            updatedById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+  ),
+
     description: "Statutory filing runs the subject prepared, reviewed, was assigned or last updated",
     models: ["ComplianceFilingRun"],
     load: ({ userId }) =>
-      prisma.complianceFilingRun.findMany({
-        where: {
-          OR: [
-            { createdById: userId },
-            { updatedById: userId },
-            { assigneeId: userId },
-            { reviewerId: userId },
-          ],
-        },
-        select: {
-          id: true,
-          organizationId: true,
-          engagementId: true,
-          taskId: true,
-          title: true,
-          authority: true,
-          dueDate: true,
-          stage: true,
-          assigneeId: true,
-          reviewerId: true,
-          acknowledgementReference: true,
-          filedAt: true,
-          acknowledgedAt: true,
-          verificationStatus: true,
-          createdById: true,
-          updatedById: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.complianceFilingRun.findMany({
+          where: {
+            OR: [
+              { createdById: userId },
+              { updatedById: userId },
+              { assigneeId: userId },
+              { reviewerId: userId },
+            ],
+          },
+          select: {
+            id: true,
+            organizationId: true,
+            engagementId: true,
+            taskId: true,
+            title: true,
+            authority: true,
+            dueDate: true,
+            stage: true,
+            assigneeId: true,
+            reviewerId: true,
+            acknowledgementReference: true,
+            filedAt: true,
+            acknowledgedAt: true,
+            verificationStatus: true,
+            createdById: true,
+            updatedById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+      ),
+  ){
     key: "filingEvents",
+    models: ["ComplianceFilingEvent"],
+    description: "Filing-stage transitions the subject recorded",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.complianceFilingEvent.findMany({
+          where: { actorId: userId },
+          select: {
+            id: true,
+            runId: true,
+            organizationId: true,
+            fromStage: true,
+            toStage: true,
+            note: true,
+            actorId: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+        }),
+  ),
+
     description: "Filing-stage transitions the subject recorded",
     models: ["ComplianceFilingEvent"],
     load: ({ userId }) =>
-      prisma.complianceFilingEvent.findMany({
-        where: { actorId: userId },
-        select: {
-          id: true,
-          runId: true,
-          organizationId: true,
-          fromStage: true,
-          toStage: true,
-          note: true,
-          actorId: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 1000,
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.complianceFilingEvent.findMany({
+          where: { actorId: userId },
+          select: {
+            id: true,
+            runId: true,
+            organizationId: true,
+            fromStage: true,
+            toStage: true,
+            note: true,
+            actorId: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1000,
+        }),
+      ),
+  ){
     key: "practiceTime",
+    models: ["PracticeTimeEntry"],
+    description: "Billable and non-billable time the subject logged against engagements",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.practiceTimeEntry.findMany({
+          where: { userId },
+          orderBy: { workDate: "desc" },
+        }),
+  ),
+
     description: "Billable and non-billable time the subject logged against engagements",
     models: ["PracticeTimeEntry"],
     load: ({ userId }) =>
-      prisma.practiceTimeEntry.findMany({
-        where: { userId },
-        orderBy: { workDate: "desc" },
-      }),
-  },
-  {
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.practiceTimeEntry.findMany({
+          where: { userId },
+          orderBy: { workDate: "desc" },
+        }),
+      ),
+  ){
     key: "practiceInvoices",
+    models: ["PracticeInvoice"],
+    description: "Client invoices the subject issued",
+    load: ({ userId }) =>
+      withTenantDb(ctx => ctx, (db) =>
+        prisma.practiceInvoice.findMany({
+          where: { createdById: userId },
+          select: {
+            id: true,
+            organizationId: true,
+            engagementId: true,
+            number: true,
+            currency: true,
+            subtotalMinor: true,
+            taxMinor: true,
+            totalMinor: true,
+            status: true,
+            issuedOn: true,
+            dueDate: true,
+            paidOn: true,
+            paymentMethod: true,
+            createdById: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+  ),
+
     description: "Client invoices the subject issued",
     models: ["PracticeInvoice"],
     load: ({ userId }) =>
@@ -1138,13 +1756,15 @@ export interface PortabilityBundle {
  * Sections run concurrently and are individually isolated — a section that
  * throws is recorded in the manifest with its error and the rest still ship.
  */
-export async function buildPortabilityBundle(userId: string): Promise<PortabilityBundle> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+export async function buildPortabilityBundle(ctx: AuthContext): Promise<PortabilityBundle> {
+  const user = await withTenantDb(ctx, (db) =>
+    db.user.findUnique({ where: { id: ctx.userId } }),
+  );
   if (!user) throw new Error("User not found");
 
-  const ctx = { userId, workspaceId: user.workspaceId ?? null };
+  const workspaceId = user.workspaceId ?? null;
 
-  const settled = await Promise.allSettled(EXPORT_SECTIONS.map((s) => s.load(ctx)));
+  const settled = await Promise.allSettled(EXPORT_SECTIONS.map((s) => s.load({ userId: ctx.userId, workspaceId })));
 
   const bundle: Record<string, unknown> = {
     profile: {

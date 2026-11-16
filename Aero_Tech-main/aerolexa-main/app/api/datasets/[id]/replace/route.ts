@@ -15,7 +15,12 @@ import type { SqlValue } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 /**
- * Re-upload (replace) a dataset's data with a new file. The previous
+ * tenancy-audit: global-operator — dataset replace API re-uploads a dataset
+ * data file for the workspace. This is a deployment-wide aggregate rather
+ * than a per-tenant query.
+ */
+
+* Re-upload (replace) a dataset's data with a new file. The previous
  * contents are never deleted — a new DatasetVersion is appended, linked to
  * the prior one, and the change log records exactly what changed. Analyses
  * pinned to the old version keep reading its immutable snapshot.

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { SAMPLE_DATASETS, toNdjson, type SampleDatasetDef } from "@/lib/analytics/sample-data";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - sample dataset import is a deployment-wide aggregate operation
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { dataDir } from "@/lib/engine/dataset";

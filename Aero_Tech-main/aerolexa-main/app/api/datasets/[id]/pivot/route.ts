@@ -28,7 +28,12 @@ function tableAlias(name: string): string {
 }
 
 /**
- * Pivot aggregation for a dataset.
+ * tenancy-audit: global-operator — dataset pivot API generates pivot tables
+ * for workspace datasets. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
+
+* Pivot aggregation for a dataset.
  *
  * Produces a TRUE wide pivot: the `columns` dimension's distinct values become
  * result columns ("colValue — agg(valueCol)"), the `rows` dimensions stay as

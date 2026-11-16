@@ -22,6 +22,7 @@
 
 import { ApiError, forbiddenError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import {
   engagementRetention,
   orgPrivacySettings,
@@ -49,10 +50,12 @@ const CLIENT_CONSENT_PURPOSES: readonly ClientConsentPurpose[] = [
 
 /** Read the firm privacy posture for the caller's organization. */
 async function privacyForOrganization(organizationId: string) {
-  const org = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: { settings: true },
-  });
+  const org = await withTenantDb(ctx, (db) =>
+    db.organization.findUnique({
+      where: { id: organizationId },
+      select: { settings: true },
+    }),
+  );
   return orgPrivacySettings(org?.settings ?? null).privacy;
 }
 
@@ -93,10 +96,12 @@ export interface EngagementDataPosture {
 }
 
 async function projectIdsForEngagement(organizationId: string, engagementId: string): Promise<string[]> {
-  const projects = await prisma.project.findMany({
-    where: { engagementId, organizationId },
-    select: { id: true },
-  });
+  const projects = await withTenantDb(ctx, (db) =>
+    db.project.findMany({
+      where: { engagementId, organizationId },
+      select: { id: true },
+    }),
+  );
   return projects.map((p) => p.id);
 }
 
@@ -106,21 +111,23 @@ async function projectIdsForEngagement(organizationId: string, engagementId: str
  * more than one engagement, so connectors are reported and revoked manually
  * rather than deleted out from under a sibling engagement.
  */
-async function workspaceIdsForEngagement(organizationId: string, engagementId: string): Promise<string[]> {
-  const projects = await prisma.project.findMany({
-    where: { engagementId, organizationId },
-    select: { workspaceId: true },
-  });
+async function workspaceIdsForEngagement(ctx: AuthContext, organizationId: string, engagementId: string): Promise<string[]> {
+  const projects = await withTenantDb(ctx, (db) =>
+    db.project.findMany({
+      where: { engagementId, organizationId },
+      select: { workspaceId: true },
+    }),
+  );
   return [...new Set(projects.map((p) => p.workspaceId))];
-}
 
 /** Count what an erasure would remove, and what statute requires keeping. */
 export async function erasureChecklistForEngagement(
+  ctx: AuthContext,
   organizationId: string,
   engagementId: string,
 ): Promise<ErasureChecklistItem[]> {
-  const projectIds = await projectIdsForEngagement(organizationId, engagementId);
-  const workspaceIds = await workspaceIdsForEngagement(organizationId, engagementId);
+  const projectIds = await projectIdsForEngagement(ctx, organizationId, engagementId);
+  const workspaceIds = await workspaceIdsForEngagement(ctx, organizationId, engagementId);
   const byProject = projectIds.length ? { projectId: { in: projectIds } } : { projectId: null as string | null };
   const byWorkspace = workspaceIds.length ? { workspaceId: { in: workspaceIds } } : { id: "__none__" };
 
@@ -139,19 +146,19 @@ export async function erasureChecklistForEngagement(
     clientConsents,
     changeLogs,
   ] = await Promise.all([
-    prisma.dataset.count({ where: byProject }),
-    prisma.analysis.count({ where: byProject }),
-    prisma.insight.count({ where: byProject }),
-    prisma.dashboard.count({ where: byProject }),
-    prisma.report.count({ where: byProject }),
-    prisma.notebook.count({ where: byProject }),
-    prisma.connector.count({ where: byWorkspace }),
-    prisma.scheduledReport.count({ where: byProject }),
-    prisma.scheduledNotebook.count({ where: byProject }),
-    prisma.workingPaper.count({ where: { engagementId } }),
-    prisma.engagementChangeRequest.count({ where: { engagementId } }),
-    prisma.clientConsent.count({ where: { engagementId } }),
-    prisma.engagementChangeLog.count({ where: { engagementId } }),
+    withTenantDb(ctx, (db) => db.dataset.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.analysis.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.insight.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.dashboard.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.report.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.notebook.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.connector.count({ where: byWorkspace })),
+    withTenantDb(ctx, (db) => db.scheduledReport.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.scheduledNotebook.count({ where: byProject })),
+    withTenantDb(ctx, (db) => db.workingPaper.count({ where: { engagementId } })),
+    withTenantDb(ctx, (db) => db.engagementChangeRequest.count({ where: { engagementId } })),
+    withTenantDb(ctx, (db) => db.clientConsent.count({ where: { engagementId } })),
+    withTenantDb(ctx, (db) => db.engagementChangeLog.count({ where: { engagementId } })),
   ]);
 
   return [
@@ -292,7 +299,9 @@ export async function applyRetentionPolicy(
   }
   if (input.dataClassification !== undefined) data.dataClassification = input.dataClassification;
 
-  const updated = await prisma.engagement.update({ where: { id: engagement.id }, data });
+  const updated = await withTenantDb(ctx, (db) =>
+    db.engagement.update({ where: { id: engagement.id }, data }),
+  );
 
   await appendLedgerEntry(ctx, engagement, role, {
     action: "RETENTION_POLICY_UPDATED",
@@ -332,11 +341,13 @@ const CLIENT_CONSENT_POLICY_VERSION = "2026-10-08.1";
 /** Current consent state per purpose (latest row wins). */
 export async function listClientConsents(ctx: AuthContext, engagementId: string): Promise<ClientConsentView[]> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const rows = await prisma.clientConsent.findMany({
-    where: { engagementId: engagement.id },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  const rows = await withTenantDb(ctx, (db) =>
+    db.clientConsent.findMany({
+      where: { engagementId: engagement.id },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    }),
+  );
   return rows.map((r) => ({
     id: r.id,
     purpose: r.purpose,
@@ -376,19 +387,21 @@ export async function recordClientConsent(
     throw new ApiError(400, "VALIDATION", "expiresAt must be an ISO date or null.");
   }
 
-  const row = await prisma.clientConsent.create({
-    data: {
-      organizationId: engagement.organizationId,
-      engagementId: engagement.id,
-      purpose: input.purpose,
-      subjectRef,
-      granted: input.granted ?? true,
-      policyVersion: CLIENT_CONSENT_POLICY_VERSION,
-      evidenceNote: input.evidenceNote?.trim() || null,
-      recordedById: ctx.user.id,
-      expiresAt,
-    },
-  });
+  const row = await withTenantDb(ctx, (db) =>
+    db.clientConsent.create({
+      data: {
+        organizationId: engagement.organizationId,
+        engagementId: engagement.id,
+        purpose: input.purpose,
+        subjectRef,
+        granted: input.granted ?? true,
+        policyVersion: CLIENT_CONSENT_POLICY_VERSION,
+        evidenceNote: input.evidenceNote?.trim() || null,
+        recordedById: ctx.user.id,
+        expiresAt,
+      },
+    }),
+  );
 
   await appendLedgerEntry(ctx, engagement, role, {
     action: input.granted === false ? "CLIENT_CONSENT_WITHDRAWN" : "CLIENT_CONSENT_RECORDED",
@@ -412,12 +425,14 @@ export async function recordClientConsent(
 }
 
 /** Is there a current, unexpired grant for the purpose? */
-async function hasCurrentConsent(engagementId: string, purpose: ClientConsentPurpose, now: Date): Promise<boolean> {
-  const rows = await prisma.clientConsent.findMany({
-    where: { engagementId, purpose },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+async function hasCurrentConsent(ctx: AuthContext, engagementId: string, purpose: ClientConsentPurpose, now: Date): Promise<boolean> {
+  const rows = await withTenantDb(ctx, (db) =>
+    db.clientConsent.findMany({
+      where: { engagementId, purpose },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  );
   const latest = rows[0];
   if (!latest) return false;
   if (!latest.granted) return false;
@@ -458,11 +473,11 @@ async function evaluateExport(
   //    any cross-border transfer needs one for the transfer purpose.
   const now = new Date();
   if (transfer.crossBorder && transfer.consentRequired) {
-    const ok = await hasCurrentConsent(engagement.id, "cross-border-transfer", now);
+    const ok = await hasCurrentConsent(ctx, engagement.id, "cross-border-transfer", now);
     if (!ok) blockers.push("No current client consent for a cross-border transfer.");
   }
   if (privacy.taxpayerExportConsentRequired) {
-    const ok = await hasCurrentConsent(engagement.id, "statutory-filing", now);
+    const ok = await hasCurrentConsent(ctx, engagement.id, "statutory-filing", now);
     if (!ok) blockers.push("No current client consent on file for exporting taxpayer data.");
   }
 
@@ -533,7 +548,9 @@ export async function exportEngagementPackage(
   if (reason.length < 3) throw new ApiError(400, "VALIDATION", "Record the reason for this export.");
 
   const { role, decision, engagement: eng } = await assertExportAllowed(ctx, engagementId, opts);
-  const full = await prisma.engagement.findUniqueOrThrow({ where: { id: eng.id } });
+  const full = await withTenantDb(ctx, (db) =>
+    db.engagement.findUniqueOrThrow({ where: { id: eng.id } }),
+  );
 
   const [workingPapers, changeRequests, consents, checklist, ledger] = await Promise.all([
     prisma.workingPaper.findMany({ where: { engagementId: eng.id }, orderBy: { indexRef: "asc" } }),
@@ -715,28 +732,30 @@ export async function executeEngagementErasure(
 
   const erased = await prisma.$transaction(async (tx) => {
     const counts: Record<string, number> = {};
-    counts.datasets = (await tx.dataset.deleteMany({ where: byProject })).count;
-    counts.analyses = (await tx.analysis.deleteMany({ where: byProject })).count;
-    counts.insights = (await tx.insight.deleteMany({ where: byProject })).count;
-    counts.dashboards = (await tx.dashboard.deleteMany({ where: byProject })).count;
-    counts.reports = (await tx.report.deleteMany({ where: byProject })).count;
-    counts.notebooks = (await tx.notebook.deleteMany({ where: byProject })).count;
-    counts.scheduledReports = (await tx.scheduledReport.deleteMany({ where: byProject })).count;
-    counts.scheduledNotebooks = (await tx.scheduledNotebook.deleteMany({ where: byProject })).count;
+    counts.datasets = (await withTenantDb(ctx, (db) => db.dataset.deleteMany({ where: byProject }))).count;
+    counts.analyses = (await withTenantDb(ctx, (db) => db.analysis.deleteMany({ where: byProject }))).count;
+    counts.insights = (await withTenantDb(ctx, (db) => db.insight.deleteMany({ where: byProject }))).count;
+    counts.dashboards = (await withTenantDb(ctx, (db) => db.dashboard.deleteMany({ where: byProject }))).count;
+    counts.reports = (await withTenantDb(ctx, (db) => db.report.deleteMany({ where: byProject }))).count;
+    counts.notebooks = (await withTenantDb(ctx, (db) => db.notebook.deleteMany({ where: byProject }))).count;
+    counts.scheduledReports = (await withTenantDb(ctx, (db) => db.scheduledReport.deleteMany({ where: byProject }))).count;
+    counts.scheduledNotebooks = (await withTenantDb(ctx, (db) => db.scheduledNotebook.deleteMany({ where: byProject }))).count;
     // Working papers: versions cascade with the paper.
-    counts.workingPapers = (await tx.workingPaper.deleteMany({ where: { engagementId: engagement.id } })).count;
+    counts.workingPapers = (await withTenantDb(ctx, (db) => db.workingPaper.deleteMany({ where: { engagementId: engagement.id } }))).count;
     counts.changeRequests = (
-      await tx.engagementChangeRequest.deleteMany({ where: { engagementId: engagement.id } })
+      await withTenantDb(ctx, (db) => db.engagementChangeRequest.deleteMany({ where: { engagementId: engagement.id } }))
     ).count;
     // Deliberately NOT deleted: workspace-scoped Connectors (shared with other
     // engagements), ClientConsent and EngagementChangeLog (audit proof).
     return counts;
   });
 
-  const archived = await prisma.engagement.update({
-    where: { id: engagement.id },
-    data: { status: "ARCHIVED", retentionUntil: null, retainedById: ctx.user.id },
-  });
+  const archived = await withTenantDb(ctx, (db) =>
+    db.engagement.update({
+      where: { id: engagement.id },
+      data: { status: "ARCHIVED", retentionUntil: null, retainedById: ctx.user.id },
+    }),
+  );
 
   await appendLedgerEntry(ctx, engagement, role, {
     action: "ERASURE_EXECUTED",

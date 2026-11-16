@@ -12,6 +12,7 @@
  * neither rows nor totals.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - deliverables hub is a deployment-wide aggregate operation
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { engagementPracticeRole } from "@/lib/server/engagement";

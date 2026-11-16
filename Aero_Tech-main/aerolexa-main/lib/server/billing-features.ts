@@ -24,6 +24,7 @@
  *   MODULE_DISABLED, so clients and support can grep one string.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - billing features are a deployment-wide aggregate operation
 import { ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { PLAN_ENTITLEMENTS, workspacePlanId, type PlanId } from "@/lib/server/entitlements";

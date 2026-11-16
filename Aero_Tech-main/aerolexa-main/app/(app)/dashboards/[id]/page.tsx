@@ -6,7 +6,7 @@ import { DashboardBuilder, type WidgetSourceAnalysis } from "@/components/dashbo
 import { DemoBadge } from "@/components/ui/feedback";
 import { PublishButton } from "@/components/ui/publish-button";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import {
   analysisResult,
   dashboardBookmarks,
@@ -22,22 +22,24 @@ export const metadata = { title: "Dashboard" };
 export default async function DashboardDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const ctx = await requirePageAuth();
-  const dashboard = await prisma.dashboard.findUnique({
-    where: { id: params.id },
-    include: { project: { select: { id: true, name: true, status: true } } },
-  });
+  const dashboard = await withTenantDb(ctx, (db) =>
+    db.dashboard.findUnique({
+      where: { id: params.id },
+      include: { project: { select: { id: true, name: true, status: true } } },
+    }),
+  );
   if (!dashboard || dashboard.workspaceId !== ctx.workspace.id) notFound();
 
   const role = await artifactRole(ctx, dashboard);
   const canPublish = role === "OWNER";
 
   const [analyses, insights] = await Promise.all([
-    prisma.analysis.findMany({
+    await withTenantDb(ctx, (db) => db.analysis.findMany({
       where: { workspaceId: ctx.workspace.id, projectId: dashboard.projectId ?? undefined },
       orderBy: { createdAt: "desc" },
       take: 40,
-    }),
-    prisma.insight.findMany({
+    })),
+    await withTenantDb(ctx, (db) => db.insight.findMany({
       where: { workspaceId: ctx.workspace.id, projectId: dashboard.projectId ?? undefined },
       orderBy: { createdAt: "desc" },
       take: 40,

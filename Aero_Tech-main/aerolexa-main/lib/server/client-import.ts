@@ -5,6 +5,7 @@
  * single interactive transaction: a half-imported client book is worse than a
  * rejected file. All errors are returned before anything is written.
  */
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - client import is a deployment-wide aggregate operation
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CommentsPanel } from "@/components/comments/comments-panel";
 import { PresentationEditor } from "@/components/presentations/presentation-editor";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { analysisResult, insightCard, presentationSlides } from "@/lib/serialize";
 
 export const metadata = { title: "Presentation" };
@@ -12,24 +12,28 @@ export const metadata = { title: "Presentation" };
 export default async function PresentationDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const ctx = await requirePageAuth();
-  const presentation = await prisma.presentation.findUnique({
-    where: { id: params.id },
-    include: { project: { select: { id: true, name: true } } },
-  });
+  const presentation = await withTenantDb(ctx, (db) =>
+    db.presentation.findUnique({
+      where: { id: params.id },
+      include: { project: { select: { id: true, name: true } } },
+    }),
+  );
   if (!presentation || presentation.workspaceId !== ctx.workspace.id) notFound();
 
   const [analyses, insights] = await Promise.all([
-    prisma.analysis.findMany({
+    withTenantDb(ctx, (db) =>
+    db.analysis.findMany({
       where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
       orderBy: { createdAt: "desc" },
       take: 40,
     }),
-    prisma.insight.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-    }),
-  ]);
+    withTenantDb(ctx, (db) =>
+      db.insight.findMany({
+        where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+  ));
 
   return (
     <div>

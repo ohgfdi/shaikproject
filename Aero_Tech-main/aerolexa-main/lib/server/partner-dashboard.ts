@@ -13,6 +13,7 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { logActivity } from "@/lib/server/activity";
 import { requireOrgRole } from "@/lib/server/members";
@@ -198,8 +199,8 @@ export async function loadPartnerDashboard(
   const weekStart = new Date(Date.parse(`${asOf}T00:00:00Z`) - 7 * DAY_MS).toISOString().slice(0, 10);
 
   const [organization, entries, invoices, runs, members] = await Promise.all([
-    prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } }),
-    prisma.practiceTimeEntry.findMany({
+    withTenantDb(ctx, (db) => db.organization.findUnique({ where: { id: organizationId }, select: { name: true } })),
+    withTenantDb(ctx, (db) => db.practiceTimeEntry.findMany({
       where: { organizationId },
       select: {
         engagementId: true,
@@ -212,8 +213,8 @@ export async function loadPartnerDashboard(
         engagement: { select: { name: true } },
       },
       take: 20_000,
-    }),
-    prisma.practiceInvoice.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.practiceInvoice.findMany({
       where: { organizationId },
       select: {
         id: true,
@@ -231,8 +232,8 @@ export async function loadPartnerDashboard(
       },
       orderBy: { issuedOn: "desc" },
       take: 500,
-    }),
-    prisma.complianceFilingRun.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.complianceFilingRun.findMany({
       where: { organizationId, stage: { not: "acknowledged" } },
       select: {
         id: true,
@@ -246,8 +247,8 @@ export async function loadPartnerDashboard(
         engagement: { select: { name: true } },
       },
       take: 2000,
-    }),
-    prisma.organizationMember.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.organizationMember.findMany({
       where: { organizationId },
       select: { userId: true, role: true, user: { select: { name: true, email: true } } },
       take: 200,
@@ -369,23 +370,29 @@ export async function autoAssignPreparers(
   const limit = Math.min(Math.max(Math.trunc(opts.limit ?? 25), 1), 100);
 
   const [unassigned, openRuns, members] = await Promise.all([
-    prisma.complianceFilingRun.findMany({
-      where: { organizationId, stage: "computed", assigneeId: null },
-      select: { id: true, engagementId: true, title: true },
-      orderBy: { dueDate: "asc" },
-      take: limit,
-    }),
-    prisma.complianceFilingRun.findMany({
-      where: { organizationId, stage: { not: "acknowledged" }, assigneeId: { not: null } },
-      select: { assigneeId: true },
-      take: 5000,
-    }),
-    prisma.organizationMember.findMany({
-      where: { organizationId },
-      select: { userId: true, role: true, user: { select: { name: true, email: true } } },
-      take: 200,
-    }),
-  ]);
+    withTenantDb(ctx, (db) =>
+      db.complianceFilingRun.findMany({
+        where: { organizationId, stage: "computed", assigneeId: null },
+        select: { id: true, engagementId: true, title: true },
+        orderBy: { dueDate: "asc" },
+        take: limit,
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.complianceFilingRun.findMany({
+        where: { organizationId, stage: { not: "acknowledged" }, assigneeId: { not: null } },
+        select: { assigneeId: true },
+        take: 5000,
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.organizationMember.findMany({
+        where: { organizationId },
+        select: { userId: true, role: true, user: { select: { name: true, email: true } } },
+        take: 200,
+      }),
+    )],
+  );
 
   const candidates = members
     .map((member) => ({ userId: member.userId, practiceRole: practiceRoleForOrgRole(member.role) }))

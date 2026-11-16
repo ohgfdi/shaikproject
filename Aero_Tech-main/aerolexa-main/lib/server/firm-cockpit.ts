@@ -14,6 +14,7 @@
  *  - hrefs point at the page that owns the fix, so the queue never dead-ends.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - firm cockpit is a deployment-wide aggregate operation
 import type { AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 

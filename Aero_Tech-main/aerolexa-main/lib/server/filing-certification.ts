@@ -18,6 +18,7 @@
  * it did not. A successful live submission flips it to `done`.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - filing certification is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { filingGatewayHealth } from "@/lib/engine/filing/gateway";
 import type { FilingGatewayHealth } from "@/lib/engine/filing/types";

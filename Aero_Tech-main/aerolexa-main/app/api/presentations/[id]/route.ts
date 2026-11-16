@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - presentation CRUD is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";

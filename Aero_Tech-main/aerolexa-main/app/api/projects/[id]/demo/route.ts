@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - demo dataset creation is a deployment-wide aggregate operation
 import { randomUUID } from "node:crypto";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";

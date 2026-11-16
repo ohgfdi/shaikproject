@@ -2,6 +2,12 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dashboard route fetches/updates/deletes a
+ * dashboard for the workspace. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";

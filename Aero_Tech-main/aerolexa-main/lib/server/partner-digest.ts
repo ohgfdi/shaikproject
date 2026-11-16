@@ -9,6 +9,7 @@
  */
 
 import { mailFooter, sendMail } from "@/lib/auth/mail";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - partner digest is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { appUrl } from "@/lib/env";
 import { loadPartnerDashboard, type PartnerDashboard } from "@/lib/server/partner-dashboard";

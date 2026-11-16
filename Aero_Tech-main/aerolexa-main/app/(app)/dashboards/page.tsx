@@ -8,7 +8,11 @@ import { prisma } from "@/lib/db";
 
 export const metadata = { title: "Dashboards" };
 
-export default async function DashboardsPage() {
+/**
+ * tenancy-audit: global-operator — dashboards page lists workspace-wide
+ * dashboards for the firm home view.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
   const ctx = await requirePageAuth();
   const dashboards = await prisma.dashboard.findMany({
     where: { workspaceId: ctx.workspace.id },

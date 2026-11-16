@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - notification sending is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";

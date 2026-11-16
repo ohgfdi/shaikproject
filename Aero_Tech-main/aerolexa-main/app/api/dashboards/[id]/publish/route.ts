@@ -2,6 +2,12 @@ import { randomUUID } from "crypto";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dashboard publish API publishes/unpublishes
+ * a workspace dashboard. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { requireEntitlement } from "@/lib/server/entitlements";
 import { requirePublishRole } from "@/lib/server/members";

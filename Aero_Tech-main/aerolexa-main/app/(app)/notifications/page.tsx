@@ -1,17 +1,19 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { NotificationsPanel } from "@/components/notifications/notifications-panel";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Notifications" };
 
 export default async function NotificationsPage() {
   const ctx = await requirePageAuth();
-  const rows = await prisma.notification.findMany({
-    where: { userId: ctx.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-  });
+  const rows = await withTenantDb(ctx, (db)
+    db.notification.findMany({
+      where: { userId: ctx.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+    }),
+  );
 
   return (
     <div>

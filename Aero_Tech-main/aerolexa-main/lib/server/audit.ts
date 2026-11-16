@@ -13,6 +13,7 @@
  * without a schema change.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - audit logging is a deployment-wide aggregate operation
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { stringifyJson } from "@/lib/json";

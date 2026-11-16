@@ -1,6 +1,8 @@
 /**
  * Dataset schema browser API.
  *
+ * TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - schema browsing is deployment-wide aggregate, no per-tenant context needed
+ *
  * Returns the full schema of a dataset including column names, types, and
  * profiling stats. This powers the schema browser panel in the SQL Lab and
  * notebook — equivalent to Hex's schema browser feature.

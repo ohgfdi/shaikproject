@@ -2,6 +2,13 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { ApiError } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — advisor API aggregates
+ * dataset insights for the firm.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 import { prisma } from "@/lib/db";
 import { answerAdvisorQuestion } from "@/lib/engine/advisor";
 import { loadParsedDataset } from "@/lib/engine/dataset";
@@ -31,20 +38,28 @@ export async function POST(request: Request) {
     // Resolve the dataset the question should be answered against.
     let dataset;
     if (body.datasetId) {
-      dataset = await prisma.dataset.findUnique({ where: { id: body.datasetId } });
+      dataset = await withTenantDb(ctx, (db) =>
+    prisma.dataset.findUnique({ where: { id: body.datasetId } }),
+  );
       await requireRowRole(ctx, dataset, "VIEWER");
     } else if (body.projectId) {
-      const project = await prisma.project.findUnique({ where: { id: body.projectId } });
+      const project = await withTenantDb(ctx, (db) =>
+    prisma.project.findUnique({ where: { id: body.projectId } }),
+  );
       await requireRowRole(ctx, project, "VIEWER");
-      dataset = await prisma.dataset.findFirst({
-        where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-        orderBy: { createdAt: "desc" },
-      });
+      dataset = await withTenantDb(ctx, (db) =>
+        prisma.dataset.findFirst({
+          where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+          orderBy: { createdAt: "desc" },
+        }),
+      );
     } else {
-      dataset = await prisma.dataset.findFirst({
-        where: { workspaceId: ctx.workspace.id },
-        orderBy: { createdAt: "desc" },
-      });
+      dataset = await withTenantDb(ctx, (db) =>
+        prisma.dataset.findFirst({
+          where: { workspaceId: ctx.workspace.id },
+          orderBy: { createdAt: "desc" },
+        }),
+      );
     }
     if (!dataset) {
       throw new ApiError(

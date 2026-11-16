@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dataset summary generation is a deployment-wide aggregate operation
 import { generateExecutiveSummary } from "@/lib/analytics/executive-summary";
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";

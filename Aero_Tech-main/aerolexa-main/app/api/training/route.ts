@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - model training is a deployment-wide aggregate operation
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { notFoundError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";

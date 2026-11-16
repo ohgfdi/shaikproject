@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - model version management is a deployment-wide aggregate operation
 import { promises as fs } from "node:fs";
 
 import { requireAuth } from "@/lib/auth/guard";

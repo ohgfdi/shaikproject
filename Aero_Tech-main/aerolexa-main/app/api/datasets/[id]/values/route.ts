@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dataset values fetch is a deployment-wide aggregate operation
 import { ApiError, notFoundError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";

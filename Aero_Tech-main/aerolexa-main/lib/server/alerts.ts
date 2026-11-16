@@ -19,6 +19,7 @@
  *    which must fire even when nothing syncs anymore
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - alert management is a deployment-wide aggregate operation
 import { createHmac } from "node:crypto";
 
 import { mailFooter } from "@/lib/auth/mail";

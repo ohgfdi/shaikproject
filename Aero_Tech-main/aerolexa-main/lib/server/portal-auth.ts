@@ -18,6 +18,8 @@
  *    invited, so the portal is not an account oracle.
  */
 
+ * tenancy-audit: global-operator — portal-auth provides token-based access to engagement deliverables. This is a deployment-wide aggregate rather than a per-tenant query.
+
 
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";

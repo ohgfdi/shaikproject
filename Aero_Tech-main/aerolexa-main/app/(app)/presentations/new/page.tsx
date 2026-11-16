@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { buildPresentationTemplate } from "@/lib/templates";
@@ -16,24 +16,28 @@ export default async function NewPresentationPage(props: {
   const ctx = await requirePageAuth();
   const projectId = searchParams.project;
   const project = projectId
-    ? await prisma.project.findUnique({ where: { id: projectId } })
-    : await prisma.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } });
+    ? await withTenantDb(ctx, (db) =>
+      db.project.findUnique({ where: { id: projectId } })
+    )
+    : await withTenantDb(ctx, (db) =>
+      db.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } }),
+  );
   if (!project || project.workspaceId !== ctx.workspace.id) redirect("/projects");
 
-  const dataset = await prisma.dataset.findFirst({
+  const dataset = await withTenantDb(ctx, (db) => db.dataset.findFirst({
     where: { workspaceId: ctx.workspace.id, projectId: project.id },
     orderBy: { createdAt: "desc" },
-  });
-  const analyses = await prisma.analysis.findMany({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
-  const insights = await prisma.insight.findMany({
+  }),
+  const analyses = await withTenantDb(ctx, (db) => db.analysis.findMany({
     where: { workspaceId: ctx.workspace.id, projectId: project.id },
     orderBy: { createdAt: "desc" },
     take: 8,
-  });
+  }),
+  const insights = await withTenantDb(ctx, (db) => db.insight.findMany({
+    where: { workspaceId: ctx.workspace.id, projectId: project.id },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+  }));
 
   const slides = buildPresentationTemplate({
     datasetName: dataset?.name,
@@ -46,15 +50,17 @@ export default async function NewPresentationPage(props: {
     })),
   });
 
-  const presentation = await prisma.presentation.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      projectId: project.id,
-      title: searchParams.title || `${project.name} · Board Deck`,
-      slides: stringifyJson(slides),
-      createdById: ctx.user.id,
-    },
-  });
+  const presentation = await withTenantDb(ctx, (db) =>
+    db.presentation.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        projectId: project.id,
+        title: searchParams.title || `${project.name} · Board Deck`,
+        slides: stringifyJson(slides),
+        createdById: ctx.user.id,
+      },
+    }),
+  );
   await logActivity(ctx, "PRESENTATION_CREATED", `Presentation “${presentation.title}” created`, project.id, {
     presentationId: presentation.id,
   });

@@ -10,6 +10,7 @@
  * two versions can be diffed without re-reading their full results.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - versioning is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import type { Cell } from "@/lib/engine/dataset";

@@ -1,4 +1,10 @@
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — connector webhook API processes
+ * inbound webhooks for workspace connectors. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
 import { ConnectorError } from "@/lib/engine/connectors/errors";
 import { verifyConnectorWebhookSignature } from "@/lib/server/alerts";
 import { ok, toErrorResponse } from "@/lib/server/api";

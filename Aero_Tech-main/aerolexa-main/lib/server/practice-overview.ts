@@ -19,6 +19,7 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - practice overview is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { requireEngagementRole } from "@/lib/server/engagement";
 import { requireOrgRole } from "@/lib/server/members";

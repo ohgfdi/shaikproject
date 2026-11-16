@@ -19,6 +19,7 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { filingChannel, filingProviderKind, resolveFilingGateway } from "@/lib/engine/filing/gateway";
 import type { FilingReceipt } from "@/lib/engine/filing/types";
@@ -89,14 +90,15 @@ export interface ReconciliationResult {
   unverifiable: number;
 }
 
-async function owners(organizationId: string): Promise<string[]> {
-  const members = await prisma.organizationMember.findMany({
-    where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
-    select: { userId: true },
-    take: 25,
-  });
+async function owners(ctx: AuthContext, organizationId: string): Promise<string[]> {
+  const members = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findMany({
+      where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
+      select: { userId: true },
+      take: 25,
+    }),
+  );
   return members.map((member) => member.userId);
-}
 
 /**
  * Apply a verdict to one run. The update is conditional on the run still being
@@ -123,7 +125,7 @@ async function applyVerdict(
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date();
 
-  const claimed = await prisma.$transaction(async (tx) => {
+  const claimed = await withTenantDb(ctx, (db) => db.$transaction(async (tx) => {
     const update = await tx.complianceFilingRun.updateMany({
       where: { id: run.id, verificationStatus: "unverified" },
       data: {
@@ -201,26 +203,28 @@ export async function reconcileFilingAcknowledgements(now: Date = new Date()): P
   const cutoff = new Date(now.getTime() - RECONCILE_AFTER_MS);
   const provider = filingProviderKind();
 
-  const runs = await prisma.complianceFilingRun.findMany({
-    where: { stage: "filed", filedAt: { lte: cutoff }, verificationStatus: "unverified" },
-    select: {
-      id: true,
-      organizationId: true,
-      engagementId: true,
-      taskId: true,
-      title: true,
-      authority: true,
-      dueDate: true,
-      stage: true,
-      acknowledgementReference: true,
-      assigneeId: true,
-      filedAt: true,
-      verificationStatus: true,
-      engagement: { select: { name: true } },
-    },
-    orderBy: { filedAt: "asc" },
-    take: 200,
-  });
+  const runs = await withTenantDb(ctx, (db) =>
+    db.complianceFilingRun.findMany({
+      where: { stage: "filed", filedAt: { lte: cutoff }, verificationStatus: "unverified" },
+      select: {
+        id: true,
+        organizationId: true,
+        engagementId: true,
+        taskId: true,
+        title: true,
+        authority: true,
+        dueDate: true,
+        stage: true,
+        acknowledgementReference: true,
+        assigneeId: true,
+        filedAt: true,
+        verificationStatus: true,
+        engagement: { select: { name: true } },
+      },
+      orderBy: { filedAt: "asc" },
+      take: 200,
+    }),
+  );
   if (runs.length === 0) return result;
 
   if (provider !== "live") {
@@ -297,10 +301,12 @@ export async function verifyFilingRunNow(
   runId: string,
 ): Promise<{ runId: string; verificationStatus: VerificationStatus; note: string; provider: string }> {
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
-  const run = await prisma.complianceFilingRun.findFirst({
-    where: { id: runId, organizationId: ctx.organization.id },
-    include: { engagement: { select: { name: true } } },
-  });
+  const run = await withTenantDb(ctx, (db) =>
+    db.complianceFilingRun.findFirst({
+      where: { id: runId, organizationId: ctx.organization.id },
+      include: { engagement: { select: { name: true } } },
+    }),
+  );
   if (!run) throw new ApiError(404, "NOT_FOUND", "Filing run not found.");
   await requireEngagementRole(ctx, run.engagementId, "MANAGER");
   if (run.stage !== "filed") {

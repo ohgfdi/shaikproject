@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — compliance nudge API.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -59,18 +65,21 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireAuth();
     const body = schema.parse(await readJsonBody<unknown>(request));
-    const { engagement } = await requireEngagementRole(ctx, body.engagementId, "ASSISTANT");
-    const detail = await prisma.engagement.findUnique({
+    const { engagement } = await requireEngagementRole(ctx, body.engagementId, "ASSISTANT");const detail = await withTenantDb(ctx, (db) =>
+    prisma.engagement.findUnique({
       where: { id: engagement.id },
       select: { name: true, gstin: true, organizationId: true },
-    });
+    }),
+  );
     if (!detail) throw new Error("Engagement disappeared while preparing the reminder.");
 
     const today = new Date().toISOString().slice(0, 10);
-    const stored = await prisma.clientComplianceProfile.findUnique({
-      where: { engagementId: engagement.id },
-      select: { profile: true },
-    });
+    const stored = await withTenantDb(ctx, (db) =>
+      prisma.clientComplianceProfile.findUnique({
+        where: { engagementId: engagement.id },
+        select: { profile: true },
+      }),
+  );
     const seed: ProfileSeed = readSeed(stored?.profile) ?? {
       entityKind: "company",
       financialYear: financialYearFor(today),
@@ -89,10 +98,12 @@ export async function POST(request: Request) {
       clientId: engagement.id,
       clientName: detail.name,
     });
-    const statuses = await prisma.clientComplianceStatus.findMany({
-      where: { engagementId: engagement.id },
-      select: { taskId: true, status: true },
-    });
+    const statuses = await withTenantDb(ctx, (db) =>
+      prisma.clientComplianceStatus.findMany({
+        where: { engagementId: engagement.id },
+        select: { taskId: true, status: true },
+      }),
+  );
     const closed = new Set(
       statuses.filter((row) => row.status === "filed" || row.status === "waived").map((row) => row.taskId),
     );

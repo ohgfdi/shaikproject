@@ -24,6 +24,7 @@
  * dataset as owner-level operations, not as a user's read.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dataset access chokepoint is a deployment-wide aggregate operation
 import { notFoundError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { loadParsedDataset, type Cell } from "@/lib/engine/dataset";

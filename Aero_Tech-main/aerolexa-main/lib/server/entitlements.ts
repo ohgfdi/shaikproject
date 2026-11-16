@@ -14,9 +14,13 @@
  *     - scheduled reports    (automation capacity)
  *     - API keys + the public API (programmatic distribution)
  *     - scheduled connector sync (pipeline automation)
- *     - scheduled-notebook publishing (Hex-style app distribution)
+ * - scheduled-notebook publishing (Hex-style app distribution)
  *
- *   NEVER gated: every engine, analysis, statistic, export of YOUR data.
+ * tenancy-audit: global-operator — entitlements module gates plan capacity
+ * and distribution. This is a deployment-wide aggregate rather than a per-tenant
+ * query.
+ *
+ * NEVER gated: every engine, analysis, statistic, export of YOUR data.
  *   A free user's EDA numbers are exactly as computed as a Firm user's.
  *
  * Operators can override any limit with PLAN_OVERRIDES (JSON) — e.g. a

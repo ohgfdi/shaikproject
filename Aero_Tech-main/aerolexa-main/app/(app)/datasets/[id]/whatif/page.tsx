@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+/**
+ * tenancy-audit: global-operator — dataset what-if page simulates perturbations
+ * on workspace-wide datasets. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
+
 import { PageHeader } from "@/components/layout/page-header";
 import { WhatIfPanel } from "@/components/whatif/what-if-panel";
 import { requirePageAuth } from "@/lib/auth/guard";

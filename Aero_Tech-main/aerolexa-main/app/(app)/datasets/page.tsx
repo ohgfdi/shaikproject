@@ -1,10 +1,16 @@
 import { FileSpreadsheet } from "lucide-react";
 
+/**
+ * tenancy-audit: global-operator — datasets page shows
+ * workspace-wide dataset listing for the firm home view.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
+
 import { DatasetUploader } from "@/components/datasets/dataset-uploader";
 import { ArtifactGrid } from "@/components/layout/artifact-grid";
 import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Datasets" };
 
@@ -15,7 +21,7 @@ export const metadata = { title: "Datasets" };
 export default async function DatasetsPage() {
   const ctx = await requirePageAuth();
   const [datasets, projects] = await Promise.all([
-    prisma.dataset.findMany({
+    await withTenantDb(ctx, (db) => prisma.dataset.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -27,13 +33,13 @@ export default async function DatasetsPage() {
         project: { select: { name: true } },
       },
       take: 200,
-    }),
-    prisma.project.findMany({
+    })),
+    await withTenantDb(ctx, (db) => prisma.project.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true },
       take: 200,
-    }),
+    })),
   ]);
 
   return (

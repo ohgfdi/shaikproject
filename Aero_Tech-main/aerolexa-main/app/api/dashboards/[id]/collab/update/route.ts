@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dashboard collab update is a deployment-wide aggregate operation
 import { requireAuth } from "@/lib/auth/guard";
 import { getDashboardCollabRoom } from "@/lib/collab/dashboard-collab";
 import { prisma } from "@/lib/db";

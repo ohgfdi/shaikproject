@@ -9,6 +9,7 @@
  * never a silent overwrite.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - connector sync is a deployment-wide aggregate operation
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";

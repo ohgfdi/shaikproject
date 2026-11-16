@@ -1,4 +1,10 @@
 import { AlertTriangle, FileSpreadsheet, FlaskConical, Sparkles } from "lucide-react";
+
+/**
+ * tenancy-audit: global-operator — dataset detail page shows workspace-wide
+ * dataset details and associated analyses. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -18,7 +24,7 @@ import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { SubNav } from "@/components/ui/sub-nav";
 import { DataTable } from "@/components/ui/table";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { Cell } from "@/lib/engine/dataset";
 import { fmtDate, timeAgo } from "@/lib/format";
 import { parseJson, parseJsonArray } from "@/lib/json";
@@ -32,21 +38,25 @@ export const metadata = { title: "Dataset" };
 export default async function DatasetDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const ctx = await requirePageAuth();
-  const dataset = await prisma.dataset.findUnique({
-    where: { id: params.id },
-    include: { project: { select: { id: true, name: true } } },
-  });
+  const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findUnique({
+      where: { id: params.id },
+      include: { project: { select: { id: true, name: true } } },
+    }),
+  );
   if (!dataset || dataset.workspaceId !== ctx.workspace.id) notFound();
 
   const columns = datasetColumns(dataset);
   const profile = parseJson<DatasetProfile | null>(dataset.profile, null);
   const preview = parseJsonArray<Cell[]>(dataset.preview, []);
   const warnings = parseJsonArray<string>(dataset.qualityWarnings, []);
-  const insights = await prisma.insight.findMany({
-    where: { datasetId: dataset.id },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-  });
+  const insights = await withTenantDb(ctx, (db) =>
+    db.insight.findMany({
+      where: { datasetId: dataset.id },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+  );
   const hasAnalyses = (await prisma.analysis.count({ where: { datasetId: dataset.id } })) > 0;
 
   const stats = [

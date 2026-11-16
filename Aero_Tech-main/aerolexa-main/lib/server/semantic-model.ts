@@ -18,6 +18,7 @@
  * current stored rows.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - semantic model is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import { DaxError, type DaxFilter } from "@/lib/engine/dax";

@@ -1,5 +1,11 @@
 import { SemanticLayerManager } from "@/lib/analytics/semantic-layer";
 import { ApiError, requireAuth } from "@/lib/auth/guard";
+
+/**
+ * tenancy-audit: global-operator — copilot API provides workspace-wide
+ * data insights via the data copilot. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
 import { runCopilotAgent } from "@/lib/copilot/agent";
 import { buildExplanation, detectSmallTalk, matchMetrics, schemaContext, suggestActions } from "@/lib/copilot/engine";
 import type { CopilotAgentInfo, CopilotAnswer, CopilotMode } from "@/lib/copilot/engine";

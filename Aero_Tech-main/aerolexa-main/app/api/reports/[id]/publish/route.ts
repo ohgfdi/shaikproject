@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - report publishing is a deployment-wide aggregate operation
 import { randomUUID } from "crypto";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";

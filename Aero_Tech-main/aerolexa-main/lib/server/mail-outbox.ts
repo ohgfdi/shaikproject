@@ -13,6 +13,7 @@
  */
 
 import { sendMail, type OutgoingMail } from "@/lib/auth/mail";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - mail outbox is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 
 export const OUTBOX_MAX_ATTEMPTS = 5;

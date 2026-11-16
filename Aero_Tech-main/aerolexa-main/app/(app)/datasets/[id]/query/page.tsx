@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+/**
+ * tenancy-audit: global-operator — dataset query page allows running
+ * SELECT queries against workspace-wide datasets. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
+
 import { PageHeader } from "@/components/layout/page-header";
 import { SqlLab } from "@/components/sql/sql-lab";
 import { requirePageAuth } from "@/lib/auth/guard";

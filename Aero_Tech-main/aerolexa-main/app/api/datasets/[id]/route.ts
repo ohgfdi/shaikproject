@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { dataDir } from "@/lib/engine/dataset";
 import { applyColumnOps } from "@/lib/file/parse";
@@ -31,7 +32,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
   try {
     const ctx = await requireAuth();
     const body = patchSchema.parse(await readJsonBody(request));
-    const dataset = await prisma.dataset.findUnique({ where: { id: params.id } });
+    const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findUnique({ where: { id: params.id } }),
+  );
     await requireRowRole(ctx, dataset, "EDITOR");
     if (dataset!.status === "PROCESSING") throw new ApiError(409, "PROCESSING", "Dataset is still processing.");
 
@@ -40,17 +43,19 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     if (body.ops?.length) {
       const result = await applyColumnOps(dataset!.id, columns, body.ops);
       columns = result.columns;
-      await prisma.dataset.update({
-        where: { id: dataset!.id },
-        data: {
-          columns: stringifyJson(result.columns),
-          profile: stringifyJson(result.profile),
-          preview: stringifyJson(result.preview),
-          qualityWarnings: stringifyJson(result.profile.qualityWarnings),
-          columnCount: result.columns.length,
-          updatedAt: new Date(),
-        },
-      });
+      await withTenantDb(ctx, (db) =>
+        db.dataset.update({
+          where: { id: dataset!.id },
+          data: {
+            columns: stringifyJson(result.columns),
+            profile: stringifyJson(result.profile),
+            preview: stringifyJson(result.preview),
+            qualityWarnings: stringifyJson(result.profile.qualityWarnings),
+            columnCount: result.columns.length,
+            updatedAt: new Date(),
+          },
+        }),
+      );
       // Phase 1.5: an immutable snapshot of the re-cast rows, so analyses can
       // pin to the pre-op state and the change is never silent.
       await createDatasetVersion({
@@ -64,8 +69,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
 
     const name = body.name?.trim();
     if (name && name !== dataset!.name) {
-      await prisma.dataset.update({ where: { id: dataset!.id }, data: { name, updatedAt: new Date() } });
-    }
+      await withTenantDb(ctx, (db) =>
+        db.dataset.update({ where: { id: dataset!.id }, data: { name, updatedAt: new Date() } }),
+    );
 
     await logActivity(ctx, "DATASET_UPDATED", `Dataset “${name ?? dataset!.name}” updated`, dataset!.projectId, {
       datasetId: dataset!.id,
@@ -80,17 +86,21 @@ export async function DELETE(_request: Request, props: { params: Promise<{ id: s
   const params = await props.params;
   try {
     const ctx = await requireAuth();
-    const dataset = await prisma.dataset.findUnique({
+    const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findUnique({
       where: { id: params.id },
       include: { _count: { select: { analyses: true } } },
-    });
+    }),
+  );
     await requireRowRole(ctx, dataset, "EDITOR");
     // Cascade in the schema removes analyses/insights; remove files too.
-    await prisma.$transaction([
-      prisma.analysis.deleteMany({ where: { datasetId: dataset!.id } }),
-      prisma.insight.deleteMany({ where: { datasetId: dataset!.id } }),
-      prisma.dataset.delete({ where: { id: dataset!.id } }),
-    ]);
+    await withTenantDb(ctx, (db) =>
+      db.$transaction([
+        db.analysis.deleteMany({ where: { datasetId: dataset!.id } }),
+        db.insight.deleteMany({ where: { datasetId: dataset!.id } }),
+        db.dataset.delete({ where: { id: dataset!.id } }),
+      ]),
+    );
     const parsedFile = path.join(dataDir(), "parsed", `${dataset!.id}.ndjson`);
     const rawFile = dataset!.filePath;
     await Promise.allSettled([

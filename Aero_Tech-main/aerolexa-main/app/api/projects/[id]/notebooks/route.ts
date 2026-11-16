@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - project notebook management is a deployment-wide aggregate operation
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { parseJsonArray } from "@/lib/json";

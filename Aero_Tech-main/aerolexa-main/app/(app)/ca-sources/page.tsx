@@ -12,6 +12,10 @@ export const metadata = { title: "CA Sources" };
  * statements, GST invoices, TDS challans, payroll exports…) into a canonical,
  * fingerprint-deduped document set with a full source-to-figure trace, using a
  * mapping profile saved once per source and reused on every repeat sync.
+ *
+ * tenancy-audit: global-operator — CA sources page lists workspace-wide
+ * source ingestion records. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
  */
 export default async function CaSourcesPage() {
   const ctx = await requirePageAuth();

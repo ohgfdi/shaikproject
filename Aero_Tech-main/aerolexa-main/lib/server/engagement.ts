@@ -32,6 +32,7 @@
  */
 
 import { ApiError, forbiddenError, notFoundError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { jurisdictionProfile, retentionFloorDays, retentionUntilFor } from "@/lib/server/jurisdiction";
@@ -299,17 +300,21 @@ export async function listEngagementAccess(
   const callerRole = await requireEngagementAccess(ctx, engagement, project, "ASSISTANT");
 
   const [assignments, firmMembers] = await Promise.all([
-    prisma.engagementMember.findMany({
-      where: { engagementId: engagement.id },
-      orderBy: { createdAt: "asc" },
-      take: 200,
-    }),
-    prisma.organizationMember.findMany({
-      where: { organizationId: engagement.organizationId },
-      include: { user: { select: { id: true, name: true, email: true } } },
-      take: 200,
-    }),
-  ]);
+    withTenantDb(ctx, (db) =>
+      db.engagementMember.findMany({
+        where: { engagementId: engagement.id },
+        orderBy: { createdAt: "asc" },
+        take: 200,
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.organizationMember.findMany({
+        where: { organizationId: engagement.organizationId },
+        include: { user: { select: { id: true, name: true, email: true } } },
+        take: 200,
+      }),
+    )],
+  );
 
   const assignedIds = new Set(assignments.map((a) => a.userId));
   const extraIds = assignments.map((a) => a.userId).filter((id) => !firmMembers.some((m) => m.userId === id));
@@ -377,22 +382,25 @@ export async function grantEngagementAccess(
   const practiceRole = normalizePracticeRole(input.practiceRole);
   if (!practiceRole) throw new ApiError(400, "VALIDATION", "Invalid practice role.");
 
-  const member = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId: engagement.organizationId, userId: input.userId } },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
+  const member = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId: engagement.organizationId, userId: input.userId } },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    }),
+  );
   if (!member) {
     throw new ApiError(400, "VALIDATION", "That user is not a member of this firm. Add them to the firm first.");
   }
 
-  const row = await prisma.engagementMember.upsert({
-    where: { engagementId_userId: { engagementId: engagement.id, userId: input.userId } },
-    create: {
-      organizationId: engagement.organizationId,
-      engagementId: engagement.id,
-      userId: input.userId,
-      practiceRole,
-      assignedById: ctx.user.id,
+  const row = await withTenantDb(ctx, (db) =>
+    db.engagementMember.upsert({
+      where: { engagementId_userId: { engagementId: engagement.id, userId: input.userId } },
+      create: {
+        organizationId: engagement.organizationId,
+        engagementId: engagement.id,
+        userId: input.userId,
+        practiceRole,
+        assignedById: ctx.user.id,
     },
     update: { practiceRole, assignedById: ctx.user.id },
   });
@@ -426,12 +434,15 @@ export async function revokeEngagementAccess(
   const callerRole = await requireEngagementAccess(ctx, engagement, project, "MANAGER");
   if (!canManageAccess(callerRole)) throw forbiddenError("Only a partner or manager may change engagement access.");
 
-  const existing = await prisma.engagementMember.findUnique({
-    where: { engagementId_userId: { engagementId: engagement.id, userId } },
-  });
+  const existing = await withTenantDb(ctx, (db) =>
+    db.engagementMember.findUnique({
+      where: { engagementId_userId: { engagementId: engagement.id, userId } },
+    }),
+  );
   if (!existing) throw notFoundError("That user has no explicit assignment on this engagement.");
 
-  await prisma.engagementMember.delete({ where: { id: existing.id } });
+  await withTenantDb(ctx, (db) =>
+    db.engagementMember.delete({ where: { id: existing.id } });
   await logOrgActivity(ctx, "ENGAGEMENT_ACCESS_REVOKED", `Explicit engagement access revoked`, {
     engagementId: engagement.id,
     userId,
@@ -693,10 +704,12 @@ export async function updateOrgPrivacy(
   if (!ctx.organization) throw notFoundError("No organization.");
   await requireOrgRole(ctx, ctx.organization.id, "ADMIN");
 
-  const current = await prisma.organization.findUnique({
-    where: { id: ctx.organization.id },
-    select: { settings: true },
-  });
+  const current = await withTenantDb(ctx, (db) =>
+    db.organization.findUnique({
+      where: { id: ctx.organization.id },
+      select: { settings: true },
+    }),
+
   const currentSettings = orgPrivacySettings(current?.settings ?? null);
   const mergedPrivacy: OrganizationPrivacySettings = { ...currentSettings.privacy, ...input };
 
@@ -714,7 +727,8 @@ export async function updateOrgPrivacy(
   }
 
   const merged = { ...currentSettings, privacy: mergedPrivacy };
-  await prisma.organization.update({
+  await withTenantDb(ctx, (db) =>
+    db.organization.update({
     where: { id: ctx.organization.id },
     data: { settings: stringifyJson(merged) },
   });
@@ -735,7 +749,8 @@ export async function logOrgActivity(
   message: string,
   meta: Record<string, unknown>,
 ): Promise<void> {
-  await prisma.activity.create({
+  await withTenantDb(ctx, (db) =>
+    db.activity.create({
     data: {
       workspaceId: ctx.workspace.id,
       actorId: ctx.user.id,

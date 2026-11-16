@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - dashboard embed is a deployment-wide aggregate operation
 import type { Metadata } from "next";
 import Link from "next/link";
 

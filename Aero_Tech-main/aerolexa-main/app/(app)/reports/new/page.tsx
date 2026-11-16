@@ -15,24 +15,30 @@ export default async function NewReportPage(props: { searchParams: Promise<{ pro
   const ctx = await requirePageAuth();
   const projectId = searchParams.project;
   const project = projectId
-    ? await prisma.project.findUnique({ where: { id: projectId } })
-    : await prisma.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } });
+    ? await withTenantDb(ctx, (db) => db.project.findUnique({ where: { id: projectId } }))
+    : await withTenantDb(ctx, (db) => db.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } }));
   if (!project || project.workspaceId !== ctx.workspace.id) redirect("/projects");
 
-  const dataset = await prisma.dataset.findFirst({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-  });
-  const analyses = await prisma.analysis.findMany({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
-  const insights = await prisma.insight.findMany({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+  const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findFirst({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+  const analyses = await withTenantDb(ctx, (db) =>
+    db.analysis.findMany({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  );
+  const insights = await withTenantDb(ctx, (db) =>
+    db.insight.findMany({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  );
 
   const sections = buildReportTemplate({
     dataset: dataset
@@ -57,15 +63,17 @@ export default async function NewReportPage(props: { searchParams: Promise<{ pro
   });
 
   const parsedTitle = z.string().max(200).optional().parse(searchParams.title);
-  const report = await prisma.report.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      projectId: project.id,
-      title: parsedTitle || `${project.name} · Executive Report`,
-      sections: stringifyJson(sections),
-      createdById: ctx.user.id,
-    },
-  });
+  const report = await withTenantDb(ctx, (db) =>
+    db.report.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        projectId: project.id,
+        title: parsedTitle || `${project.name} · Executive Report`,
+        sections: stringifyJson(sections),
+        createdById: ctx.user.id,
+      },
+    }),
+  );
   await logActivity(ctx, "REPORT_CREATED", `Report “${report.title}” created`, project.id, { reportId: report.id });
   redirect(`/reports/${report.id}`);
 }

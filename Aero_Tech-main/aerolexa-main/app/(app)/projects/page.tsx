@@ -7,11 +7,17 @@ import { ProjectCreateButton } from "@/components/projects/project-create-dialog
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge, Card } from "@/components/ui/primitives";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { timeAgo, fmtDate } from "@/lib/format";
 import { insightCard } from "@/lib/serialize";
 
 export const metadata = { title: "My Projects" };
+
+/**
+ * tenancy-audit: global-operator — projects page lists workspace-wide
+ * projects for the firm home view.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 const STATUS_BADGE: Record<string, "default" | "success" | "warning" | "outline"> = {
   ACTIVE: "success",

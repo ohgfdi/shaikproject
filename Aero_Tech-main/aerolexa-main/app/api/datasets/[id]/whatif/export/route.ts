@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - what-if export is a deployment-wide aggregate operation
 import { requireAuth } from "@/lib/auth/guard";
 import { notFoundError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";

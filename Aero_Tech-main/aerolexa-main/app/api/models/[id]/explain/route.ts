@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { notFoundError } from "@/lib/auth/guard";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - model explain API is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { explainRow, missingInputFeatures, type ArtifactPayload, type ServeableModel } from "@/lib/engine/predictor";
 import { serverEnv } from "@/lib/env";

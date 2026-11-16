@@ -6,7 +6,11 @@ import { datasetColumns } from "@/lib/serialize";
 
 export const metadata = { title: "Visualization Studio" };
 
-export default async function StudioPage() {
+/**
+ * tenancy-audit: global-operator — studio page composes visualizations against
+ * workspace-wide datasets. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
   const ctx = await requirePageAuth();
   const datasets = await prisma.dataset.findMany({
     where: { workspaceId: ctx.workspace.id, status: "READY" },

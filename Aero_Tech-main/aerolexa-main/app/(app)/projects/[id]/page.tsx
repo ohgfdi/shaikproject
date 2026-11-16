@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ProjectHub, type HubAnalysis, type HubDataset } from "@/components/projects/project-hub";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { serverEnv } from "@/lib/env";
 import { parseJsonArray } from "@/lib/json";
 import { analysisResult, datasetColumns, insightCard } from "@/lib/serialize";
@@ -21,9 +21,11 @@ export default async function ProjectPage(props: {
   const ctx = await requirePageAuth();
   const showAll = searchParams.all === "1";
   const take = showAll ? undefined : LIST_LIMIT;
-  const project = await prisma.project.findUnique({
-    where: { id: params.id },
-  });
+  const project = await withTenantDb(ctx, (db) =>
+    db.project.findUnique({
+      where: { id: params.id },
+    }),
+  );
   if (!project || project.workspaceId !== ctx.workspace.id) notFound();
 
   const worksWhere = { workspaceId: ctx.workspace.id, projectId: project.id };
@@ -46,55 +48,55 @@ export default async function ProjectPage(props: {
     myMembership,
     activity,
   ] = await Promise.all([
-    prisma.dataset.findMany({
+    withTenantDb(ctx, (db) => db.dataset.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: "desc" },
       take,
-    }),
-    prisma.dataset.count({ where: { projectId: project.id } }),
-    prisma.analysis.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.dataset.count({ where: { projectId: project.id } })),
+    withTenantDb(ctx, (db) => db.analysis.findMany({
       where: worksWhere,
       orderBy: { createdAt: "desc" },
       take,
       include: { dataset: { select: { name: true } } },
-    }),
-    prisma.analysis.count({ where: worksWhere }),
-    prisma.insight.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.analysis.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.insight.findMany({
       where: worksWhere,
       orderBy: { createdAt: "desc" },
       take,
-    }),
-    prisma.insight.count({ where: worksWhere }),
-    prisma.dashboard.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.insight.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.dashboard.findMany({
       where: worksWhere,
       orderBy: { updatedAt: "desc" },
       take,
-    }),
-    prisma.dashboard.count({ where: worksWhere }),
-    prisma.report.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.dashboard.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.report.findMany({
       where: worksWhere,
       orderBy: { updatedAt: "desc" },
       take,
-    }),
-    prisma.report.count({ where: worksWhere }),
-    prisma.presentation.findMany({
+    })),
+    withTenantDb(ctx, (db) => db.report.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.presentation.findMany({
       where: worksWhere,
       orderBy: { updatedAt: "desc" },
       take,
-    }),
-    prisma.presentation.count({ where: worksWhere }),
-    prisma.notebook.count({ where: worksWhere }),
-    prisma.modelVersion.count({ where: worksWhere }),
-    prisma.projectMember.count({ where: { projectId: project.id } }),
-    prisma.projectMember.findUnique({
+    })),
+    withTenantDb(ctx, (db) => db.presentation.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.notebook.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.modelVersion.count({ where: worksWhere })),
+    withTenantDb(ctx, (db) => db.projectMember.count({ where: { projectId: project.id } })),
+    withTenantDb(ctx, (db) => db.projectMember.findUnique({
       where: { projectId_userId: { projectId: project.id, userId: ctx.user.id } },
       select: { role: true },
     }),
-    prisma.activity.findMany({
+    withTenantDb(ctx, (db) => db.activity.findMany({
       where: worksWhere,
       orderBy: { createdAt: "desc" },
       take: 80,
-    }),
+    })),
   ]);
 
   const datasetsView: HubDataset[] = datasets.map((d) => ({

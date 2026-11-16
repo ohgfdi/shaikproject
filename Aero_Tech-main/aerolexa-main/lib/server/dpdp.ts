@@ -30,6 +30,7 @@
  * because no personal data remains attributable to the data principal.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - DPDP Act compliance is a deployment-wide aggregate operation
 import { createHash } from "node:crypto";
 
 import { prisma } from "@/lib/db";

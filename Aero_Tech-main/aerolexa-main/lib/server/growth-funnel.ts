@@ -17,6 +17,7 @@
  * from "nobody converted".
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - growth funnel is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 
 export interface StageCount {

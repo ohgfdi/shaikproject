@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - active organization switch is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import { readActiveOrganizationId, setActiveOrganizationId } from "@/lib/auth/active-org";

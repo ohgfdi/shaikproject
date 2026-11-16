@@ -8,11 +8,16 @@
  *
  * A client without a saved profile still appears, using conservative defaults
  * derived from the engagement (GST if a GSTIN is on file, TDS deductor assumed).
+ *
+ * tenancy-audit: global-operator — compliance calendar supplies registration
+ * facts and filed/waived state. This is a deployment-wide aggregate rather than
+ * a per-tenant query.
  * It is labelled `configured: false` so the UI asks the firm to confirm rather
  * than silently treating defaults as fact.
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -100,20 +105,26 @@ export async function getComplianceCalendar(
 
   const today = opts.today ?? new Date().toISOString().slice(0, 10);
   const [engagements, profiles, statuses] = await Promise.all([
-    prisma.engagement.findMany({
-      where: { organizationId, status: { not: "ARCHIVED" } },
-      select: { id: true, name: true, code: true, gstin: true },
-      orderBy: { name: "asc" },
-      take: MAX_CLIENTS,
-    }),
-    prisma.clientComplianceProfile.findMany({
-      where: { organizationId },
-      select: { engagementId: true, profile: true },
-    }),
-    prisma.clientComplianceStatus.findMany({
-      where: { organizationId },
-      select: { engagementId: true, taskId: true, status: true, filedOn: true, reference: true },
-    }),
+    withTenantDb(ctx, (db) =>
+      db.engagement.findMany({
+        where: { organizationId, status: { not: "ARCHIVED" } },
+        select: { id: true, name: true, code: true, gstin: true },
+        orderBy: { name: "asc" },
+        take: MAX_CLIENTS,
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.clientComplianceProfile.findMany({
+        where: { organizationId },
+        select: { engagementId: true, profile: true },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.clientComplianceStatus.findMany({
+        where: { organizationId },
+        select: { engagementId: true, taskId: true, status: true, filedOn: true, reference: true },
+      }),
+    ),
   ]);
 
   const profileByEngagement = new Map(profiles.map((p) => [p.engagementId, p.profile]));

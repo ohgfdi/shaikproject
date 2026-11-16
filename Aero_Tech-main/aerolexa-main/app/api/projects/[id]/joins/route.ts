@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - project join mapping is a deployment-wide aggregate operation
 import { requireAuth, ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";

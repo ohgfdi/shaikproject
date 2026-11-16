@@ -11,6 +11,8 @@
 
 import { prisma } from "@/lib/db";
 
+import { withTenantDb } from "@/lib/server/tenant-db";
+
 export type TenantAttention = "ok" | "watch" | "critical";
 
 export interface TenantOpsInput {
@@ -72,22 +74,30 @@ export function summarizeTenantOps(rows: TenantOpsInput[]): TenantOpsPosture {
 /** Read the posture for every organization that has work in this deployment. */
 export async function collectTenantOps(today: string = new Date().toISOString().slice(0, 10)): Promise<TenantOpsPosture> {
   const [overdue, open, mail, organizations] = await Promise.all([
-    prisma.complianceFilingRun.groupBy({
-      by: ["organizationId"],
-      where: { filedAt: null, dueDate: { lt: today } },
-      _count: { _all: true },
-    }),
-    prisma.complianceFilingRun.groupBy({
-      by: ["organizationId"],
-      where: { filedAt: null },
-      _count: { _all: true },
-    }),
-    prisma.mailOutbox.groupBy({
-      by: ["organizationId", "status"],
-      where: { status: { in: ["pending", "failed"] } },
-      _count: { _all: true },
-    }),
-    prisma.organization.findMany({ select: { id: true, name: true } }),
+    withTenantDb(ctx, (db) =>
+      db.complianceFilingRun.groupBy({
+        by: ["organizationId"],
+        where: { filedAt: null, dueDate: { lt: today } },
+        _count: { _all: true },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.complianceFilingRun.groupBy({
+        by: ["organizationId"],
+        where: { filedAt: null },
+        _count: { _all: true },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.mailOutbox.groupBy({
+        by: ["organizationId", "status"],
+        where: { status: { in: ["pending", "failed"] } },
+        _count: { _all: true },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.organization.findMany({ select: { id: true, name: true } }),
+    ),
   ]);
 
   const rows = new Map<string, TenantOpsInput>();

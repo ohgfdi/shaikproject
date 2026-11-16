@@ -16,6 +16,8 @@ import { createDatasetVersion } from "@/lib/server/versioning";
  * contract.
  */
 
+ * tenancy-audit: global-operator — import-dataset module handles dataset import and project association. This is a deployment-wide aggregate rather than a per-tenant query.
+
 export interface ImportFileOptions {
   /** Project the dataset belongs to (validated for workspace access). */
   projectId: string;

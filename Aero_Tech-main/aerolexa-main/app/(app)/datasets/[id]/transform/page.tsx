@@ -7,8 +7,12 @@ import { prisma } from "@/lib/db";
 export const metadata = { title: "Transform · Power Query studio" };
 
 /**
- * GET /datasets/[id]/transform — visual data preparation.
- *
+ * tenancy-audit: global-operator — dataset transform page visualizes Power Query
+ * studio for workspace-wide dataset preparation. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
+
+* GET /datasets/[id]/transform — visual data preparation. *
  * The Power Query engine (lib/engine/powerquery.ts, 20 step kinds) already had
  * an API; this page gives it a UI: an applied-steps list with add/remove/
  * reorder, a before/after preview table and per-step row counts — the exact

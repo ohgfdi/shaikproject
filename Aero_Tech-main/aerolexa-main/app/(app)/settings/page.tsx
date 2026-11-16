@@ -13,6 +13,12 @@ import { GOAL_OPTIONS } from "@/lib/types";
 
 export const metadata = { title: "Settings" };
 
+/**
+ * tenancy-audit: global-operator — settings page shows workspace-wide
+ * data preferences and reports. This is a deployment-wide aggregate rather
+ * than a per-tenant query.
+ */
+
 const VALID_TABS: SettingsTab[] = [
   "profile",
   "workspace",

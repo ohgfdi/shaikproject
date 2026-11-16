@@ -4,18 +4,20 @@ import { ArtifactGrid } from "@/components/layout/artifact-grid";
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Analyses" };
 
 export default async function AnalysesPage() {
   const ctx = await requirePageAuth();
-  const analyses = await prisma.analysis.findMany({
-    where: { workspaceId: ctx.workspace.id },
-    orderBy: { createdAt: "desc" },
-    include: { project: { select: { name: true } } },
-    take: 200,
-  });
+  const analyses = await withTenantDb(ctx, (db) =>
+    db.analysis.findMany({
+      where: { workspaceId: ctx.workspace.id },
+      orderBy: { createdAt: "desc" },
+      include: { project: { select: { name: true } } },
+      take: 200,
+    }),
+  );
 
   return (
     <div>

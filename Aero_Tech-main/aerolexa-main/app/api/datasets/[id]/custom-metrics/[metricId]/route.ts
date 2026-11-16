@@ -1,6 +1,12 @@
 import type { AuthContext } from "@/lib/auth/guard";
 import { requireAuth, ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dataset custom metrics API provides
+ * workspace-wide custom metrics. This is a deployment-wide aggregate rather
+ * than a per-tenant query.
+ */
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
 

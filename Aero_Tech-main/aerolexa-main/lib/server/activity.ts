@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - activity logging is a deployment-wide aggregate operation
 import type { AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { parseJson, stringifyJson } from "@/lib/json";

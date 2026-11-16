@@ -9,6 +9,7 @@
  * credentials are required — the preview + local export are always available.
  */
 import { sendMail } from "@/lib/auth/mail";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - scheduled report is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { nextRunAt } from "@/lib/engine/cron";
 import { renderReportDocument } from "@/lib/export/report-doc";

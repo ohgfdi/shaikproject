@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { parseJsonArray } from "@/lib/json";
 import { ok, toErrorResponse } from "@/lib/server/api";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
  * response in the app a shared cache (CDN, corporate proxy) may hold. Without
  * the header, every viewer of a shared dashboard hit the database on every page
  * load. The short s-maxage keeps "unpublish" responsive.
+ *
+ * TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - published app snapshots are deployment-wide aggregates, no per-tenant context needed
  */
 function publicOk<T>(data: T) {
   return ok(data, cacheInit(PUBLIC_ARTIFACT_CACHE));
@@ -40,7 +43,9 @@ export async function GET(request: Request, props: { params: Promise<{ shareToke
     if (typeHint === "dashboard") return findDashboard(params.shareToken);
     if (typeHint === "report") return findReport(params.shareToken);
 
-    const notebook = await prisma.notebook.findUnique({ where: { shareToken: params.shareToken } });
+    const notebook = await withTenantDb(ctx, (db) =>
+    db.notebook.findUnique({ where: { shareToken: params.shareToken } }),
+  );
     // A published notebook is still a notebook: freezing the module must not
     // leave a live public snapshot of it reachable. Dashboards/reports below
     // are core and stay public.
@@ -49,7 +54,8 @@ export async function GET(request: Request, props: { params: Promise<{ shareToke
     }
     if (notebook && notebook.accessMode === "public") {
       const dataset = notebook.datasetId
-        ? await prisma.dataset.findUnique({ where: { id: notebook.datasetId }, select: { name: true } })
+        ? await withTenantDb(ctx, (db) =>
+          db.dataset.findUnique({ where: { id: notebook.datasetId }, select: { name: true } })
         : null;
 
       const cells = parseJsonArray<NotebookCell>(notebook.cells, []);
@@ -104,7 +110,9 @@ export async function GET(request: Request, props: { params: Promise<{ shareToke
 }
 
 async function findDashboard(shareToken: string) {
-  const dashboard = await prisma.dashboard.findUnique({ where: { shareToken } });
+  const dashboard = await withTenantDb(ctx, (db) =>
+    db.dashboard.findUnique({ where: { shareToken } }),
+  );
   if (!dashboard || dashboard.accessMode !== "public") {
     throw new ApiError(404, "NOT_FOUND", "This published dashboard does not exist or is no longer public.");
   }
@@ -124,7 +132,9 @@ async function findDashboard(shareToken: string) {
 }
 
 async function findReport(shareToken: string) {
-  const report = await prisma.report.findUnique({ where: { shareToken } });
+  const report = await withTenantDb(ctx, (db) =>
+    db.report.findUnique({ where: { shareToken } }),
+  );
   if (!report || report.accessMode !== "public") {
     throw new ApiError(404, "NOT_FOUND", "This published report does not exist or is no longer public.");
   }

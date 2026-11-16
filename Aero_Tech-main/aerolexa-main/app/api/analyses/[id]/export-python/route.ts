@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — analysis export API.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
+
 import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import { serverEnv } from "@/lib/env";
@@ -19,7 +26,9 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
   const params = await props.params;
   try {
     const ctx = await requireAuth();
-    const analysis = await prisma.analysis.findUnique({ where: { id: params.id } });
+    const analysis = await withTenantDb(ctx, (db) =>
+    prisma.analysis.findUnique({ where: { id: params.id } }),
+  );
     if (!analysis) throw notFoundError("Analysis not found.");
     await requireRowRole(ctx, analysis, "VIEWER");
 
@@ -27,14 +36,19 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
     const versionId = url.searchParams.get("versionId");
 
     const version = versionId
-      ? await prisma.analysisVersion.findUnique({ where: { id: versionId } })
-      : await prisma.analysisVersion.findFirst({
-          where: { analysisId: analysis.id },
-          orderBy: { version: "desc" },
-        });
+      ? await withTenantDb(ctx, (db) =>
+          prisma.analysisVersion.findUnique({ where: { id: versionId } })
+        : await withTenantDb(ctx, (db) =>
+          prisma.analysisVersion.findFirst({
+            where: { analysisId: analysis.id },
+            orderBy: { version: "desc" },
+          }),
+      );
     if (!version || version.analysisId !== analysis.id) throw notFoundError("Analysis version not found.");
 
-    const dataset = await prisma.dataset.findUnique({ where: { id: analysis.datasetId } });
+    const dataset = await withTenantDb(ctx, (db) =>
+    prisma.dataset.findUnique({ where: { id: analysis.datasetId } }),
+  );
     if (!dataset) throw notFoundError("The source dataset is missing.");
 
     const columns: ColumnDef[] = datasetColumns(dataset);

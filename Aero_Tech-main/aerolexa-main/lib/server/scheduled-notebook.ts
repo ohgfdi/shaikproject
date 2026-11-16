@@ -5,6 +5,7 @@
  * Records the run on the schedule row, creates an in-app notification.
  */
 import { sendMail } from "@/lib/auth/mail";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - scheduled notebook is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { nextRunAt } from "@/lib/engine/cron";
 import { loadParsedDataset } from "@/lib/engine/dataset";

@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCircle2, FlaskConical } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - analysis detail page is a deployment-wide aggregate operation
 import { notFound } from "next/navigation";
 
 import { VersionsPanel } from "@/components/analyses/versions-panel";

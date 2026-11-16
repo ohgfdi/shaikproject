@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - public v1 dataset lookup is a deployment-wide aggregate operation
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";

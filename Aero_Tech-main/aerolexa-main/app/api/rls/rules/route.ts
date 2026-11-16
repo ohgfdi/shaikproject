@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - RLS rule management is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import { forbiddenError, notFoundError, requireAuth } from "@/lib/auth/guard";

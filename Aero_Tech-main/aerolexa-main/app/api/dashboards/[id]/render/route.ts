@@ -1,5 +1,11 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dashboard render API renders dashboard
+ * to PNG/PDF/JPEG for the workspace. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
 import { dashboardLayout, widgetToRenderPlan } from "@/lib/engine/widget-render-spec";
 import { parseJsonArray } from "@/lib/json";
 import { toErrorResponse } from "@/lib/server/api";

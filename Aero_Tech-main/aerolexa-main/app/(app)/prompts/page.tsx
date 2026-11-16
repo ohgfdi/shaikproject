@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArtifactGrid } from "@/components/layout/artifact-grid";
 import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { moduleEnabled } from "@/lib/server/modules";
 
 export const metadata = { title: "Prompt Library" };

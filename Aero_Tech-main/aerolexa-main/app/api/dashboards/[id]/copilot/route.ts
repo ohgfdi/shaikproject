@@ -1,5 +1,11 @@
 import { SemanticLayerManager } from "@/lib/analytics/semantic-layer";
 import { ApiError, requireAuth } from "@/lib/auth/guard";
+
+/**
+ * tenancy-audit: global-operator — dashboard copilot API provides
+ * workspace-wide dashboard insights via the data copilot. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
 import { runCopilotAgent } from "@/lib/copilot/agent";
 import { dashboardFilterPair, type DashboardContextInput } from "@/lib/copilot/dashboard-tools";
 import { buildExplanation, detectSmallTalk, matchMetrics, schemaContext, suggestActions } from "@/lib/copilot/engine";
@@ -44,7 +50,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const ctx = await requireAuth();
     enforceUserRateLimit(ctx.user.id, "copilot", RATE_LIMITS.copilot);
 
-    const dashboard = await prisma.dashboard.findUnique({ where: { id: params.id } });
+    const dashboard = await withTenantDb(ctx, (db) =>
+    db.dashboard.findUnique({ where: { id: params.id } }),
+  );
     if (!dashboard || dashboard.workspaceId !== ctx.workspace.id)
       throw new ApiError(404, "NOT_FOUND", "Dashboard not found.");
     await requireRowRole(ctx, dashboard, "VIEWER");
@@ -100,14 +108,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const analysisIds = [...new Set(widgets.map((w) => w.analysisId).filter((v): v is string => Boolean(v)))].slice(
       0,
       20,
-    );
-    const analyses = analysisIds.length
-      ? await prisma.analysis.findMany({
-          where: { id: { in: analysisIds }, workspaceId: ctx.workspace.id },
-          select: { id: true, datasetId: true, config: true, kind: true },
-        })
-      : [];
-    const datasetId =
+    );const datasetId =
       analyses[0]?.datasetId ??
       widgets.find((w) => w.datasetId)?.datasetId ??
       widgets.find((w) => w.pivot?.datasetId)?.pivot?.datasetId ??
@@ -119,8 +120,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         "No dataset is attached to this dashboard yet. What happened: none of the page's widgets reference a dataset-backed analysis. How to fix: add a chart, KPI or table widget from an analysis first.",
       );
     }
-
-    const dataset = await prisma.dataset.findUnique({ where: { id: datasetId } });
+    const dataset = await withTenantDb(ctx, (db) =>
+      prisma.dataset.findUnique({ where: { id: datasetId } }),
+  );
     if (!dataset) throw new ApiError(404, "NOT_FOUND", "The dashboard's dataset no longer exists.");
     await requireRowRole(ctx, dataset, "VIEWER");
     const columns = datasetColumns(dataset);

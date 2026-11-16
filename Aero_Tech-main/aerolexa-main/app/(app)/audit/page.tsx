@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/primitives";
 import { Table } from "@/components/ui/table";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { fmtDateTime } from "@/lib/format";
 
 export const metadata = { title: "Audit Log" };
@@ -55,29 +55,39 @@ export default async function AuditLogPage(props: { searchParams: Promise<AuditS
   };
 
   const [activities, total, distinctTypes, users, projects] = await Promise.all([
-    prisma.activity.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip: offset,
-      include: {
-        actor: { select: { id: true, name: true, email: true } },
-        project: { select: { id: true, name: true } },
-      },
-    }),
-    prisma.activity.count({ where }),
-    prisma.activity.findMany({ where: { workspaceId }, select: { type: true }, distinct: ["type"] }),
-    prisma.user.findMany({
-      where: { workspaceId },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true },
-    }),
-    prisma.project.findMany({
-      where: { workspaceId },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-  ]);
+    withTenantDb(ctx, (db) =>
+      db.activity.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: PAGE_SIZE,
+        skip: offset,
+        include: {
+          actor: { select: { id: true, name: true, email: true } },
+          project: { select: { id: true, name: true } },
+        },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.activity.count({ where }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.activity.findMany({ where: { workspaceId }, select: { type: true }, distinct: ["type"] }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.user.findMany({
+        where: { workspaceId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, email: true },
+      }),
+    ),
+    withTenantDb(ctx, (db) =>
+      db.project.findMany({
+        where: { workspaceId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+  )],
+  );
 
   const eventTypes = Array.from(
     new Set([

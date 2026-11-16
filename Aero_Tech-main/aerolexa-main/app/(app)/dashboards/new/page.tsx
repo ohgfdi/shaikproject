@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 
@@ -12,19 +12,25 @@ export default async function NewDashboardPage(props: { searchParams: Promise<{ 
   const ctx = await requirePageAuth();
   const projectId = searchParams.project;
   const project = projectId
-    ? await prisma.project.findUnique({ where: { id: projectId } })
-    : await prisma.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } });
+    ? await withTenantDb(ctx, (db) =>
+      db.project.findUnique({ where: { id: projectId } })
+    )
+    : await withTenantDb(ctx, (db) =>
+      db.project.findFirst({ where: { workspaceId: ctx.workspace.id }, orderBy: { updatedAt: "desc" } }),
+  );
   if (!project || project.workspaceId !== ctx.workspace.id) redirect("/projects");
 
-  const dashboard = await prisma.dashboard.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      projectId: project.id,
-      title: `${project.name} · Dashboard`,
-      widgets: stringifyJson([]),
-      createdById: ctx.user.id,
-    },
-  });
+  const dashboard = await withTenantDb(ctx, (db) =>
+    db.dashboard.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        projectId: project.id,
+        title: `${project.name} · Dashboard`,
+        widgets: stringifyJson([]),
+        createdById: ctx.user.id,
+      },
+    }),
+  );
   await logActivity(ctx, "DASHBOARD_CREATED", `Dashboard “${dashboard.title}” created`, project.id, {
     dashboardId: dashboard.id,
   });

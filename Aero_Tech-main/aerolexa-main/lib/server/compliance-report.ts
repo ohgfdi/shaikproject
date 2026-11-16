@@ -9,6 +9,7 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -74,27 +75,36 @@ async function assembleReport(input: {
   asOf: string;
 }): Promise<MonthlyComplianceReport> {
   const [profileRow, runs, statuses] = await Promise.all([
-    prisma.clientComplianceProfile.findUnique({
-      where: { engagementId: input.engagement.id },
-      select: { profile: true },
-    }),
-    prisma.complianceFilingRun.findMany({
-      where: { organizationId: input.organizationId, engagementId: input.engagement.id },
-      select: {
-        taskId: true,
-        stage: true,
-        dueDate: true,
-        filedAt: true,
-        acknowledgementReference: true,
-        proofDigest: true,
-        clientApprovedAt: true,
-      },
-      take: 500,
-    }),
-    prisma.clientComplianceStatus.findMany({
-      where: { organizationId: input.organizationId, engagementId: input.engagement.id },
-      select: { taskId: true, status: true, filedOn: true, reference: true },
-    }),
+    withTenantDb(ctx, (db) =>
+      withTenantDb(ctx, (db) =>
+        db.clientComplianceProfile.findUnique({
+          where: { engagementId: input.engagement.id },
+          select: { profile: true },
+        }),
+    ),
+    withTenantDb(ctx, (db) =>
+      withTenantDb(ctx, (db) =>
+        db.complianceFilingRun.findMany({
+          where: { organizationId: input.organizationId, engagementId: input.engagement.id },
+          select: {
+            taskId: true,
+            stage: true,
+            dueDate: true,
+            filedAt: true,
+            acknowledgementReference: true,
+            proofDigest: true,
+            clientApprovedAt: true,
+          },
+          take: 500,
+        }),
+    ),
+    withTenantDb(ctx, (db) =>
+      withTenantDb(ctx, (db) =>
+        db.clientComplianceStatus.findMany({
+          where: { organizationId: input.organizationId, engagementId: input.engagement.id },
+          select: { taskId: true, status: true, filedOn: true, reference: true },
+        }),
+    ),
   ]);
 
   const profile = readProfile(profileRow?.profile ?? null) ?? defaultProfile(financialYearFor(input.asOf), null);

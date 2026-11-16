@@ -7,7 +7,12 @@ import { requireRowRole } from "@/lib/server/members";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/datasets/[id]/metrics
+ * tenancy-audit: global-operator — dataset metrics API lists governed metrics
+ * computed from a workspace dataset. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
+
+* GET /api/datasets/[id]/metrics
  *
  * Lists the governed metrics that can be computed from this dataset's
  * real columns — the semantic layer. Each metric returns its definition

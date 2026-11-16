@@ -1,5 +1,11 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — dashboard duplicate API creates a copy
+ * of a workspace dashboard. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";

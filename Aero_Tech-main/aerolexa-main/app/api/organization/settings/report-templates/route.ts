@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - organization report template management is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import type { OrganizationReportTemplate } from "@/generated/prisma/client";

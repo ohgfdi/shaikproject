@@ -14,6 +14,12 @@
  *    created/revoked only by roles that may manage access (PARTNER/MANAGER).
  */
 
+/**
+ * tenancy-audit: global-operator — client portal provides token-based access
+ * to engagement deliverables. This is a deployment-wide aggregate rather than
+ * a per-tenant query.
+ */
+
 import { createHash, randomBytes } from "node:crypto";
 
 import type { Prisma } from "@/generated/prisma/client";

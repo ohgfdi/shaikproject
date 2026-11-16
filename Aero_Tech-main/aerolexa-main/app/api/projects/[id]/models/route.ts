@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - project model management is a deployment-wide aggregate operation
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { parseJson } from "@/lib/json";

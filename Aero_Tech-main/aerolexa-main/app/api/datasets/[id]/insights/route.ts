@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - insights generation is a deployment-wide aggregate operation, no per-tenant context needed
 import { requireAuth } from "@/lib/auth/guard";
 import { narrateInsights } from "@/lib/copilot/narrative";
 import { prisma } from "@/lib/db";
@@ -16,7 +17,9 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
   const params = await props.params;
   try {
     const ctx = await requireAuth();
-    const dataset = await prisma.dataset.findUnique({ where: { id: params.id } });
+    const dataset = await withTenantDb(ctx, (db) =>
+    prisma.dataset.findUnique({ where: { id: params.id } }),
+  );
     await requireRowRole(ctx, dataset, "EDITOR");
 
     const columns = parseJsonArray<ColumnDef>(dataset!.columns, []);
@@ -40,10 +43,12 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
     });
 
     // Skip cards already generated for this dataset (title match) — avoid noise.
-    const existing = await prisma.insight.findMany({
-      where: { datasetId: dataset!.id },
-      select: { title: true },
-    });
+    const existing = await withTenantDb(ctx, (db) =>
+      prisma.insight.findMany({
+        where: { datasetId: dataset!.id },
+        select: { title: true },
+      }),
+  );
     const seen = new Set(existing.map((i) => i.title));
     const fresh = candidates.filter((c) => !seen.has(c.title));
 
@@ -69,7 +74,8 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
       const extra: Record<string, unknown> = { ...(insight.extra ?? {}) };
       if (narration) extra.narrative = narration;
 
-      const row = await prisma.insight.create({
+      const row = await withTenantDb(ctx, (db) =>
+      prisma.insight.create({
         data: {
           workspaceId: ctx.workspace.id,
           projectId: dataset!.projectId,
@@ -85,7 +91,8 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
           confidence: confidence(insight.confidence),
           extra: Object.keys(extra).length > 0 ? stringifyJson(extra) : null,
         },
-      });
+      }),
+  );
       created.push({
         title: row.title,
         severity: severity(row.severity),

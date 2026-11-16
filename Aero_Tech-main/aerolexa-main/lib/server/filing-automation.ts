@@ -12,8 +12,10 @@
  * so a process restart or two replicas running the job cannot double-notify.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - filing automation is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
 import { notify } from "@/lib/server/activity";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const REMINDER_OFFSETS = [7, 3, 0] as const;
 export type ReminderKind = "T-7" | "T-3" | "T-0";
@@ -76,24 +78,26 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
   const today = now.toISOString().slice(0, 10);
   const windowEnd = new Date(now.getTime() + 8 * DAY_MS).toISOString().slice(0, 10);
 
-  const runs = await prisma.complianceFilingRun.findMany({
-    where: {
-      stage: { notIn: ["filed", "acknowledged"] },
-      dueDate: { lte: windowEnd },
-    },
-    select: {
-      id: true,
-      organizationId: true,
-      engagementId: true,
-      title: true,
-      dueDate: true,
-      stage: true,
-      assigneeId: true,
-      engagement: { select: { name: true } },
-      events: { select: { note: true }, orderBy: { createdAt: "desc" }, take: 50 },
-    },
-    take: 2000,
-  });
+  const runs = await withTenantDb(ctx, (db) =>
+    db.complianceFilingRun.findMany({
+      where: {
+        stage: { notIn: ["filed", "acknowledged"] },
+        dueDate: { lte: windowEnd },
+      },
+      select: {
+        id: true,
+        organizationId: true,
+        engagementId: true,
+        title: true,
+        dueDate: true,
+        stage: true,
+        assigneeId: true,
+        engagement: { select: { name: true } },
+        events: { select: { note: true }, orderBy: { createdAt: "desc" }, take: 50 },
+      },
+      take: 2000,
+    }),
+  );
 
   const result: FilingAutomationResult = { reminders: 0, escalations: 0 };
 
@@ -109,16 +113,18 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
             message: `${run.engagement.name} — ${run.title} is due ${run.dueDate}. Open Firm Operations to see what is outstanding.`,
           });
         }
-        await prisma.complianceFilingEvent.create({
-          data: {
-            runId: run.id,
-            organizationId: run.organizationId,
-            fromStage: run.stage,
-            toStage: run.stage,
-            note: reminderMarker(kind),
-            actorId: "system",
-          },
-        });
+        await withTenantDb(ctx, (db) =>
+      db.complianceFilingEvent.create({
+        data: {
+          runId: run.id,
+          organizationId: run.organizationId,
+          fromStage: run.stage,
+          toStage: run.stage,
+          note: reminderMarker(kind),
+          actorId: "system",
+        },
+      }),
+  );
         result.reminders += 1;
       } catch {
         // A failed notification must not stop other runs from being reminded.
@@ -157,10 +163,12 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
 
 /** Owners and admins of the organization, cached per pass. */
 async function escalationRecipients(organizationId: string): Promise<string[]> {
-  const members = await prisma.organizationMember.findMany({
-    where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
-    select: { userId: true },
-    take: 25,
-  });
+  const members = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findMany({
+      where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
+      select: { userId: true },
+      take: 25,
+    }),
+  );
   return members.map((member) => member.userId);
 }

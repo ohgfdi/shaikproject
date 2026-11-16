@@ -24,6 +24,7 @@
  * (404, never 403) is enforced in one place.
  */
 
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - governance is a deployment-wide aggregate operation
 import { createHash } from "node:crypto";
 
 import { ApiError, forbiddenError, notFoundError, type AuthContext } from "@/lib/auth/guard";

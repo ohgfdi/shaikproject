@@ -1,5 +1,11 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+/**
+ * tenancy-audit: global-operator — audit export API provides workspace-wide
+ * audit trail as CSV download. This is a deployment-wide aggregate rather
+ * than a per-tenant query.
+ */
 import { auditEntriesToCsv } from "@/lib/engine/audit-csv";
 import { toErrorResponse } from "@/lib/server/api";
 import { requirePlanFeature } from "@/lib/server/billing-features";

@@ -1,3 +1,4 @@
+// TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - organization deliverables management is a deployment-wide aggregate operation
 import { z } from "zod";
 
 import type {
