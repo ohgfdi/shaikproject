@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { defaultDashboardWidgets } from "@/lib/templates";
 import type { AnalysisResult, DashboardWidget, InsightCard } from "@/lib/types";
 
@@ -20,25 +20,29 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireAuth();
     const body = schema.parse(await readJsonBody(request));
-    const project = await prisma.project.findUnique({ where: { id: body.projectId } });
+    const project = await withTenantDb(ctx, (db) => db.project.findUnique({ where: { id: body.projectId } }));
     await requireRowRole(ctx, project, "EDITOR");
 
     let widgets: DashboardWidget[] = [];
     if (body.seed) {
-      const dataset = await prisma.dataset.findFirst({
-        where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-        orderBy: { createdAt: "desc" },
-      });
-      const analyses = await prisma.analysis.findMany({
-        where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      });
-      const insights = await prisma.insight.findMany({
-        where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      });
+      const [dataset, analyses, insights] = await withTenantDb(ctx, (db) =>
+        Promise.all([
+          db.dataset.findFirst({
+            where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+            orderBy: { createdAt: "desc" },
+          }),
+          db.analysis.findMany({
+            where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+            orderBy: { createdAt: "desc" },
+            take: 6,
+          }),
+          db.insight.findMany({
+            where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+            orderBy: { createdAt: "desc" },
+            take: 6,
+          }),
+        ]),
+      );
       widgets = defaultDashboardWidgets({
         dataset,
         analyses: analyses.map((a) => ({
@@ -51,16 +55,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const dashboard = await prisma.dashboard.create({
-      data: {
-        workspaceId: ctx.workspace.id,
-        projectId: project!.id,
-        title: body.title,
-        description: body.description ?? null,
-        widgets: stringifyJson(widgets),
-        createdById: ctx.user.id,
-      },
-    });
+    const dashboard = await withTenantDb(ctx, (db) =>
+      db.dashboard.create({
+        data: {
+          workspaceId: ctx.workspace.id,
+          projectId: project!.id,
+          title: body.title,
+          description: body.description ?? null,
+          widgets: stringifyJson(widgets),
+          createdById: ctx.user.id,
+        },
+      }),
+    );
     await logActivity(ctx, "DASHBOARD_CREATED", `Dashboard “${dashboard.title}” created`, project!.id, {
       dashboardId: dashboard.id,
     });

@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { applyTypeFacet, countTypeFacets, sortHits, type FacetHit, type SearchSort } from "@/lib/search/facets";
 import { ok, toErrorResponse } from "@/lib/server/api";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
  * the /search page (search upgrade: facets + sort + analytics).
  *
  * Mirrors the queries behind the /search page (same models, same contains
- * semantics) but returns JSON. Auth + tenancy: requireAuth scopes every
- * query to the caller's workspace — a user can only ever find artifacts in
- * their own workspace.
+ * semantics) but returns JSON. Auth + tenancy: requireAuth resolves the
+ * workspace, the reads run inside withTenantDb() so the PostgreSQL RLS GUCs
+ * are set, and every query is additionally filtered by workspaceId — a user
+ * can only ever find artifacts in their own workspace.
  *
  * Upgrade additions:
  *  - `type` facet: `facets` (count per hit type) is always returned; pass
@@ -36,59 +37,61 @@ export async function GET(request: Request) {
     const contains = (s: string | null | undefined) => (s ? { contains: q } : undefined);
 
     const [projects, datasets, analyses, insights, notebooks, models, prompts, dashboards, reports, presentations] =
-      await Promise.all([
-        prisma.project.findMany({
-          where: { workspaceId: ctx.workspace.id, name: contains(q) },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-        prisma.dataset.findMany({
-          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { originalName: contains(q) }] },
-          take: 6,
-          orderBy: { createdAt: "desc" },
-          include: { project: { select: { name: true } } },
-        }),
-        prisma.analysis.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.insight.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.notebook.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-        prisma.modelVersion.findMany({
-          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { targetColumn: contains(q) }] },
-          take: 6,
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.prompt.findMany({
-          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { description: contains(q) }] },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-        prisma.dashboard.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-        prisma.report.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-        prisma.presentation.findMany({
-          where: { workspaceId: ctx.workspace.id, title: contains(q) },
-          take: 6,
-          orderBy: { updatedAt: "desc" },
-        }),
-      ]);
+      await withTenantDb(ctx, (db) =>
+        Promise.all([
+          db.project.findMany({
+            where: { workspaceId: ctx.workspace.id, name: contains(q) },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+          db.dataset.findMany({
+            where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { originalName: contains(q) }] },
+            take: 6,
+            orderBy: { createdAt: "desc" },
+            include: { project: { select: { name: true } } },
+          }),
+          db.analysis.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { createdAt: "desc" },
+          }),
+          db.insight.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { createdAt: "desc" },
+          }),
+          db.notebook.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+          db.modelVersion.findMany({
+            where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { targetColumn: contains(q) }] },
+            take: 6,
+            orderBy: { createdAt: "desc" },
+          }),
+          db.prompt.findMany({
+            where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { description: contains(q) }] },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+          db.dashboard.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+          db.report.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+          db.presentation.findMany({
+            where: { workspaceId: ctx.workspace.id, title: contains(q) },
+            take: 6,
+            orderBy: { updatedAt: "desc" },
+          }),
+        ]),
+      );
 
     const allHits: FacetHit[] = [
       ...projects.map((p) => ({
@@ -173,11 +176,16 @@ export async function GET(request: Request) {
     const facets = countTypeFacets(allHits);
     const hits = sortHits(applyTypeFacet(allHits, facet), sort);
 
-    // Analytics floor: best-effort logging, never fails the search.
+    // Analytics floor: best-effort logging, never fails the search. Its own
+    // scoped transaction, because a failed INSERT aborts the enclosing
+    // Postgres transaction — sharing one would turn a logging error into a
+    // failed search.
     try {
-      await prisma.searchQueryLog.create({
-        data: { workspaceId: ctx.workspace.id, userId: ctx.user.id, query: q.slice(0, 120), hitCount: allHits.length },
-      });
+      await withTenantDb(ctx, (db) =>
+        db.searchQueryLog.create({
+          data: { workspaceId: ctx.workspace.id, userId: ctx.user.id, query: q.slice(0, 120), hitCount: allHits.length },
+        }),
+      );
     } catch {
       /* analytics must never break search */
     }

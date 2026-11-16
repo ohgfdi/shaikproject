@@ -10,13 +10,19 @@
  * members.ts (OWNER→OWNER, ADMIN→EDITOR, MEMBER→VIEWER, AUDITOR→AUDITOR) even
  * when the project lives in a different member's workspace. All writes here are
  * guarded by requireOrgRole so a MEMBER/AUDITOR can never mutate firm config.
+ *
+ * Every query runs through withTenantDb(), so the workspace/firm GUCs the
+ * PostgreSQL RLS policies compare against are set inside one transaction.
+ * requireOrgRole() is deliberately called outside those transactions — it
+ * resolves the role through its own scoped read, and nesting interactive
+ * transactions is how deadlocks start.
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { stringifyJson } from "@/lib/json";
 import { requireOrgSeatAvailable } from "@/lib/server/entitlements";
 import { listOrganizationMembers, orgRank, requireOrgRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { OrganizationRole, OrganizationSettings } from "@/lib/types";
 
 export const ORG_ADMIN_ROLES: OrganizationRole[] = ["OWNER", "ADMIN"];
@@ -45,18 +51,20 @@ async function logOrgActivity(
 ): Promise<void> {
   const resolved = assertOrgActivityOK(kind);
   if (!resolved) return;
-  await prisma.activity.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      actorId: ctx.user.id,
-      organizationId: ctx.organization?.id ?? null,
-      type: resolved,
-      message,
-      targetType: "organization",
-      targetId: ctx.organization?.id ?? null,
-      meta: stringifyJson(meta),
-    },
-  });
+  await withTenantDb(ctx, (db) =>
+    db.activity.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        actorId: ctx.user.id,
+        organizationId: ctx.organization?.id ?? null,
+        type: resolved,
+        message,
+        targetType: "organization",
+        targetId: ctx.organization?.id ?? null,
+        meta: stringifyJson(meta),
+      },
+    }),
+  );
 }
 
 export interface OrgSnapshot {
@@ -77,12 +85,14 @@ const DEFAULT_ORG_SETTINGS: OrganizationSettings = {};
 /** Current organization snapshot for the signed-in user, or null. */
 export async function getOrganizationSnapshot(ctx: AuthContext): Promise<OrgSnapshot | null> {
   if (!ctx.organization) return null;
-  const org = await prisma.organization.findUnique({
-    where: { id: ctx.organization.id },
-    include: {
-      _count: { select: { members: true, engagements: true, projects: true } },
-    },
-  });
+  const org = await withTenantDb(ctx, (db) =>
+    db.organization.findUnique({
+      where: { id: ctx.organization!.id },
+      include: {
+        _count: { select: { members: true, engagements: true, projects: true } },
+      },
+    }),
+  );
   if (!org) return null;
   return {
     id: org.id,
@@ -111,14 +121,16 @@ export async function createOrganization(ctx: AuthContext, input: CreateOrgInput
   }
   // DB-level guard: protects against a cold-start session where ctx.organization
   // is unset but a membership already exists.
-  const existingMembership = await prisma.organizationMember.findFirst({ where: { userId: ctx.user.id } });
+  const existingMembership = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findFirst({ where: { userId: ctx.user.id } }),
+  );
   if (existingMembership) {
     throw new ApiError(409, "ORGANIZATION_EXISTS", "This account already belongs to an organization.");
   }
   const name = input.name.trim();
   if (name.length < 2) throw new ApiError(400, "VALIDATION", "Organization name must be at least 2 characters.");
 
-  const org = await prisma.$transaction(async (tx) => {
+  const org = await withTenantDb(ctx, async (tx) => {
     const created = await tx.organization.create({
       data: {
         name,
@@ -158,14 +170,16 @@ export async function updateOrganization(ctx: AuthContext, input: UpdateOrgInput
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
   await requireOrgRole(ctx, ctx.organization.id, "ADMIN");
 
-  const org = await prisma.organization.update({
-    where: { id: ctx.organization.id },
-    data: {
-      name: input.name ? input.name.trim() : undefined,
-      gstin: input.gstin === null ? null : input.gstin?.trim() || undefined,
-      settings: input.settings ? stringifyJson(input.settings) : undefined,
-    },
-  });
+  const org = await withTenantDb(ctx, (db) =>
+    db.organization.update({
+      where: { id: ctx.organization!.id },
+      data: {
+        name: input.name ? input.name.trim() : undefined,
+        gstin: input.gstin === null ? null : input.gstin?.trim() || undefined,
+        settings: input.settings ? stringifyJson(input.settings) : undefined,
+      },
+    }),
+  );
   await logOrgActivity(ctx, "ORGANIZATION_UPDATED", `Organization “${org.name}” updated`, { organizationId: org.id });
   return (await getOrganizationSnapshot(ctx))!;
 }
@@ -193,22 +207,26 @@ export async function inviteOrganizationMember(ctx: AuthContext, input: InviteMe
   if (!INVITABLE_ORG_ROLES.includes(input.role)) {
     throw new ApiError(400, "VALIDATION", "Role must be ADMIN, MEMBER or AUDITOR (OWNER is reserved).");
   }
-  const invited = await prisma.user.findUnique({ where: { email } });
+  const invited = await withTenantDb(ctx, (db) => db.user.findUnique({ where: { email } }));
   if (!invited) {
     throw new ApiError(400, "NOT_FOUND", `No account exists for “${email}”. They need to sign up first.`);
   }
-  const existing = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId: ctx.organization.id, userId: invited.id } },
-  });
+  const existing = await withTenantDb(ctx, (db) =>
+    db.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId: ctx.organization!.id, userId: invited.id } },
+    }),
+  );
   if (existing) throw new ApiError(400, "VALIDATION", "That user is already a member of this organization.");
 
   // Seat entitlement: Free includes no org seats, Pro is owner-only (solo),
   // Firm is unlimited. The org owner's subscription is the billable plan.
   await requireOrgSeatAvailable(ctx.organization.id);
 
-  const memberRow = await prisma.organizationMember.create({
-    data: { organizationId: ctx.organization.id, userId: invited.id, role: input.role },
-  });
+  const memberRow = await withTenantDb(ctx, (db) =>
+    db.organizationMember.create({
+      data: { organizationId: ctx.organization!.id, userId: invited.id, role: input.role },
+    }),
+  );
   await logOrgActivity(ctx, "ORGANIZATION_MEMBER_ADDED", `${invited.name} (${email}) added as ${input.role}`, {
     memberId: memberRow.id,
     role: input.role,
@@ -233,19 +251,25 @@ export async function updateOrganizationMember(
   if (!INVITABLE_ORG_ROLES.includes(role)) {
     throw new ApiError(400, "VALIDATION", "Role must be ADMIN, MEMBER or AUDITOR (OWNER is reserved).");
   }
-  const memberRow = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId: ctx.organization.id, userId } },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
+  const [memberRow, org] = await withTenantDb(ctx, (db) =>
+    Promise.all([
+      db.organizationMember.findUnique({
+        where: { organizationId_userId: { organizationId: ctx.organization!.id, userId } },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
+      db.organization.findUnique({ where: { id: ctx.organization!.id }, select: { ownerId: true } }),
+    ]),
+  );
   if (!memberRow) throw new ApiError(404, "NOT_FOUND", "That user is not a member of this organization.");
-  const org = await prisma.organization.findUnique({ where: { id: ctx.organization.id }, select: { ownerId: true } });
   if (memberRow.role === "OWNER" || (org && org.ownerId === userId)) {
     throw new ApiError(403, "PROTECTED", "The organization owner's role cannot be changed.");
   }
-  const updated = await prisma.organizationMember.update({
-    where: { id: memberRow.id },
-    data: { role },
-  });
+  const updated = await withTenantDb(ctx, (db) =>
+    db.organizationMember.update({
+      where: { id: memberRow.id },
+      data: { role },
+    }),
+  );
   await logOrgActivity(ctx, "ORGANIZATION_MEMBER_UPDATED", `${memberRow.user.name} → ${role}`, {
     memberId: memberRow.id,
     role,
@@ -263,16 +287,20 @@ export async function updateOrganizationMember(
 export async function removeOrganizationMember(ctx: AuthContext, userId: string): Promise<{ removed: string }> {
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
   await requireOrgRole(ctx, ctx.organization.id, "ADMIN");
-  const memberRow = await prisma.organizationMember.findUnique({
-    where: { organizationId_userId: { organizationId: ctx.organization.id, userId } },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
+  const [memberRow, org] = await withTenantDb(ctx, (db) =>
+    Promise.all([
+      db.organizationMember.findUnique({
+        where: { organizationId_userId: { organizationId: ctx.organization!.id, userId } },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
+      db.organization.findUnique({ where: { id: ctx.organization!.id }, select: { ownerId: true } }),
+    ]),
+  );
   if (!memberRow) throw new ApiError(404, "NOT_FOUND", "That user is not a member of this organization.");
-  const org = await prisma.organization.findUnique({ where: { id: ctx.organization.id }, select: { ownerId: true } });
   if (memberRow.role === "OWNER" || (org && org.ownerId === userId)) {
     throw new ApiError(403, "PROTECTED", "The organization owner cannot be removed.");
   }
-  await prisma.organizationMember.delete({ where: { id: memberRow.id } });
+  await withTenantDb(ctx, (db) => db.organizationMember.delete({ where: { id: memberRow.id } }));
   await logOrgActivity(ctx, "ORGANIZATION_MEMBER_REMOVED", `${memberRow.user.name} removed from the organization`, {
     memberId: memberRow.id,
   });
@@ -296,12 +324,14 @@ export interface EngagementSummary {
 export async function listOrganizationEngagements(ctx: AuthContext): Promise<EngagementSummary[]> {
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
   await requireOrgRole(ctx, ctx.organization.id, "MEMBER");
-  const engagements = await prisma.engagement.findMany({
-    where: { organizationId: ctx.organization.id },
-    include: { projects: { select: { id: true }, orderBy: { updatedAt: "desc" }, take: 1 } },
-    orderBy: { updatedAt: "desc" },
-    take: 200,
-  });
+  const engagements = await withTenantDb(ctx, (db) =>
+    db.engagement.findMany({
+      where: { organizationId: ctx.organization!.id },
+      include: { projects: { select: { id: true }, orderBy: { updatedAt: "desc" }, take: 1 } },
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+    }),
+  );
   return engagements.map((e) => ({
     id: e.id,
     name: e.name,
@@ -343,13 +373,15 @@ export async function createEngagement(
   if (name.length < 2) throw new ApiError(400, "VALIDATION", "Engagement name must be at least 2 characters.");
   const code = input.code?.trim() || null;
   if (code) {
-    const dupe = await prisma.engagement.findUnique({
-      where: { organizationId_code: { organizationId: organization.id, code } },
-    });
+    const dupe = await withTenantDb(ctx, (db) =>
+      db.engagement.findUnique({
+        where: { organizationId_code: { organizationId: organization.id, code } },
+      }),
+    );
     if (dupe) throw new ApiError(400, "VALIDATION", `An engagement with the code “${code}” already exists.`);
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await withTenantDb(ctx, async (tx) => {
     const engagement = await tx.engagement.create({
       data: {
         organizationId: organization.id,
@@ -413,27 +445,33 @@ export async function updateEngagement(
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
   await requireOrgRole(ctx, ctx.organization.id, "ADMIN");
 
-  const engagement = await prisma.engagement.findFirst({
-    where: { id: engagementId, organizationId: ctx.organization.id },
-  });
+  const engagement = await withTenantDb(ctx, (db) =>
+    db.engagement.findFirst({
+      where: { id: engagementId, organizationId: ctx.organization!.id },
+    }),
+  );
   if (!engagement) throw new ApiError(404, "NOT_FOUND", "Engagement not found.");
 
-  const updated = await prisma.engagement.update({
-    where: { id: engagement.id },
-    data: {
-      name: input.name ? input.name.trim() : undefined,
-      code: input.code === null ? null : input.code?.trim() || undefined,
-      gstin: input.gstin === null ? null : input.gstin?.trim() || undefined,
-      description: input.description === null ? null : input.description?.trim() || undefined,
-      status: input.status,
-    },
-  });
+  const updated = await withTenantDb(ctx, (db) =>
+    db.engagement.update({
+      where: { id: engagement.id },
+      data: {
+        name: input.name ? input.name.trim() : undefined,
+        code: input.code === null ? null : input.code?.trim() || undefined,
+        gstin: input.gstin === null ? null : input.gstin?.trim() || undefined,
+        description: input.description === null ? null : input.description?.trim() || undefined,
+        status: input.status,
+      },
+    }),
+  );
   await logOrgActivity(ctx, "ENGAGEMENT_UPDATED", `Engagement “${updated.name}” updated`, { engagementId: updated.id });
-  const project = await prisma.project.findFirst({
-    where: { engagementId: updated.id },
-    select: { id: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  const project = await withTenantDb(ctx, (db) =>
+    db.project.findFirst({
+      where: { engagementId: updated.id },
+      select: { id: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+  );
   return {
     id: updated.id,
     name: updated.name,

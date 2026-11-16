@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { buildReportTemplate } from "@/lib/templates";
 import type { AnalysisResult, DatasetProfile, InsightCard } from "@/lib/types";
 
@@ -15,23 +15,27 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireAuth();
     const body = schema.parse(await readJsonBody(request));
-    const project = await prisma.project.findUnique({ where: { id: body.projectId } });
+    const project = await withTenantDb(ctx, (db) => db.project.findUnique({ where: { id: body.projectId } }));
     await requireRowRole(ctx, project, "EDITOR");
 
-    const dataset = await prisma.dataset.findFirst({
-      where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-      orderBy: { createdAt: "desc" },
-    });
-    const analyses = await prisma.analysis.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-    });
-    const insights = await prisma.insight.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: project!.id },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    });
+    const [dataset, analyses, insights] = await withTenantDb(ctx, (db) =>
+      Promise.all([
+        db.dataset.findFirst({
+          where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+          orderBy: { createdAt: "desc" },
+        }),
+        db.analysis.findMany({
+          where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+          orderBy: { createdAt: "desc" },
+          take: 8,
+        }),
+        db.insight.findMany({
+          where: { workspaceId: ctx.workspace.id, projectId: project!.id },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        }),
+      ]),
+    );
     const columns = dataset ? parseJson<{ name: string; type: string }[]>(dataset.columns, []) : [];
     const profile = dataset ? parseJson<DatasetProfile | null>(dataset.profile ?? "", null) : null;
 
@@ -57,15 +61,17 @@ export async function POST(request: Request) {
       projectName: project!.name,
     });
 
-    const report = await prisma.report.create({
-      data: {
-        workspaceId: ctx.workspace.id,
-        projectId: project!.id,
-        title: body.title,
-        sections: stringifyJson(sections),
-        createdById: ctx.user.id,
-      },
-    });
+    const report = await withTenantDb(ctx, (db) =>
+      db.report.create({
+        data: {
+          workspaceId: ctx.workspace.id,
+          projectId: project!.id,
+          title: body.title,
+          sections: stringifyJson(sections),
+          createdById: ctx.user.id,
+        },
+      }),
+    );
     await logActivity(ctx, "REPORT_CREATED", `Report “${report.title}” created`, project!.id, { reportId: report.id });
     return ok({ report: { id: report.id } }, { status: 201 });
   } catch (err) {

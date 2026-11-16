@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { stringifyJson, parseJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { InsightCard, ReportSection, ReportSectionSource, InsightSeverity, Confidence } from "@/lib/types";
 
 const schema = z.object({
@@ -20,7 +20,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const ctx = await requireAuth();
     const body = schema.parse(await readJsonBody(request));
 
-    const insight = await prisma.insight.findUnique({ where: { id: params.id } });
+    const insight = await withTenantDb(ctx, (db) => db.insight.findUnique({ where: { id: params.id } }));
     if (!insight) throw new ApiError(404, "NOT_FOUND", "Insight not found");
     await requireRowRole(ctx, insight, "VIEWER");
 
@@ -28,26 +28,31 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     if (body.createNew) {
       const projectId =
-        insight.projectId ?? (await prisma.project.findFirst({ where: { workspaceId: ctx.workspace.id } }))?.id;
+        insight.projectId ??
+        (await withTenantDb(ctx, (db) => db.project.findFirst({ where: { workspaceId: ctx.workspace.id } })))?.id;
       if (!projectId) throw new ApiError(400, "NO_PROJECT", "No project available");
 
-      const project = await prisma.project.findUnique({ where: { id: projectId } });
+      const project = await withTenantDb(ctx, (db) => db.project.findUnique({ where: { id: projectId } }));
       await requireRowRole(ctx, project, "EDITOR");
 
-      const dataset = await prisma.dataset.findFirst({
-        where: { workspaceId: ctx.workspace.id, projectId },
-        orderBy: { createdAt: "desc" },
-      });
-      const analyses = await prisma.analysis.findMany({
-        where: { workspaceId: ctx.workspace.id, projectId },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-      });
-      const insights = await prisma.insight.findMany({
-        where: { workspaceId: ctx.workspace.id, projectId },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      });
+      const [dataset, analyses, insights] = await withTenantDb(ctx, (db) =>
+        Promise.all([
+          db.dataset.findFirst({
+            where: { workspaceId: ctx.workspace.id, projectId },
+            orderBy: { createdAt: "desc" },
+          }),
+          db.analysis.findMany({
+            where: { workspaceId: ctx.workspace.id, projectId },
+            orderBy: { createdAt: "desc" },
+            take: 8,
+          }),
+          db.insight.findMany({
+            where: { workspaceId: ctx.workspace.id, projectId },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          }),
+        ]),
+      );
 
       const { buildReportTemplate } = await import("@/lib/templates");
       const sections = buildReportTemplate({
@@ -72,28 +77,30 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         projectName: project!.name,
       });
 
-      const report = await prisma.report.create({
-        data: {
-          workspaceId: ctx.workspace.id,
-          projectId,
-          title: body.title ?? `${project!.name} · Executive Report`,
-          sections: stringifyJson(sections),
-          createdById: ctx.user.id,
-        },
-      });
+      const report = await withTenantDb(ctx, (db) =>
+        db.report.create({
+          data: {
+            workspaceId: ctx.workspace.id,
+            projectId,
+            title: body.title ?? `${project!.name} · Executive Report`,
+            sections: stringifyJson(sections),
+            createdById: ctx.user.id,
+          },
+        }),
+      );
       await logActivity(ctx, "REPORT_CREATED", `Report "${report.title}" created from insight`, projectId, {
         reportId: report.id,
       });
       reportId = report.id;
     } else if (reportId) {
-      const report = await prisma.report.findUnique({ where: { id: reportId } });
+      const report = await withTenantDb(ctx, (db) => db.report.findUnique({ where: { id: reportId } }));
       if (!report) throw new ApiError(404, "NOT_FOUND", "Report not found");
       await requireRowRole(ctx, report, "EDITOR");
     } else {
       throw new ApiError(400, "BAD_REQUEST", "Either reportId or createNew must be provided");
     }
 
-    const report = await prisma.report.findUnique({ where: { id: reportId! } });
+    const report = await withTenantDb(ctx, (db) => db.report.findUnique({ where: { id: reportId! } }));
     const existingSections = parseJson<ReportSection[]>(report!.sections, []);
 
     const evidence = parseJson<string[]>(insight.evidence, []);
@@ -123,10 +130,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     };
 
     const updatedSections = [...existingSections, newSection];
-    await prisma.report.update({
-      where: { id: reportId! },
-      data: { sections: stringifyJson(updatedSections), updatedAt: new Date() },
-    });
+    await withTenantDb(ctx, (db) =>
+      db.report.update({
+        where: { id: reportId! },
+        data: { sections: stringifyJson(updatedSections), updatedAt: new Date() },
+      }),
+    );
     await logActivity(ctx, "REPORT_UPDATED", `Insight "${insight.title}" added to report`, report!.projectId, {
       reportId: report!.id,
       insightId: insight.id,

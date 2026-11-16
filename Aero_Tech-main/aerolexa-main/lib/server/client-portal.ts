@@ -18,6 +18,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
+import { withOrganization, withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -244,17 +245,19 @@ export async function createPortalLink(
   const label = input.label?.trim().slice(0, 120) || null;
   const { raw, hash, prefix } = newPortalToken();
 
-  const row = await prisma.clientPortalToken.create({
-    data: {
-      organizationId: engagement.organizationId,
-      engagementId: engagement.id,
-      tokenHash: hash,
-      tokenPrefix: prefix,
-      label,
-      createdById: ctx.user.id,
-      expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
-    },
-  });
+  const row = await withTenantDb(ctx, (db) =>
+    db.clientPortalToken.create({
+      data: {
+        organizationId: engagement.organizationId,
+        engagementId: engagement.id,
+        tokenHash: hash,
+        tokenPrefix: prefix,
+        label,
+        createdById: ctx.user.id,
+        expiresAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+      },
+    }),
+  );
 
   return { ...toLinkView(row), raw };
 }
@@ -262,11 +265,13 @@ export async function createPortalLink(
 /** Links for one engagement (hashes never leave the server). */
 export async function listPortalLinks(ctx: AuthContext, engagementId: string): Promise<PortalLinkView[]> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const rows = await prisma.clientPortalToken.findMany({
-    where: { engagementId: engagement.id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const rows = await withTenantDb(ctx, (db) =>
+    db.clientPortalToken.findMany({
+      where: { engagementId: engagement.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+  );
   return rows.map(toLinkView);
 }
 
@@ -278,24 +283,30 @@ export async function revokePortalLink(
   const { engagement } = await requireEngagementRole(ctx, engagementId, "MANAGER");
   await requireLinkManager(ctx, engagementId);
 
-  const row = await prisma.clientPortalToken.findFirst({
-    where: { id: tokenId, engagementId: engagement.id },
-  });
+  const row = await withTenantDb(ctx, (db) =>
+    db.clientPortalToken.findFirst({
+      where: { id: tokenId, engagementId: engagement.id },
+    }),
+  );
   if (!row) throw new ApiError(404, "NOT_FOUND", "Portal link not found.");
   const updated = row.revokedAt
     ? row
-    : await prisma.clientPortalToken.update({ where: { id: row.id }, data: { revokedAt: new Date() } });
+    : await withTenantDb(ctx, (db) =>
+      db.clientPortalToken.update({ where: { id: row.id }, data: { revokedAt: new Date() } })
+    );
   return toLinkView(updated);
 }
 
 /** Documents the client has uploaded for this engagement. */
 export async function listPortalUploads(ctx: AuthContext, engagementId: string): Promise<PortalUploadView[]> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const rows = await prisma.clientPortalUpload.findMany({
-    where: { engagementId: engagement.id },
-    orderBy: { uploadedAt: "desc" },
-    take: 200,
-  });
+  const rows = await withTenantDb(ctx, (db) =>
+    db.clientPortalUpload.findMany({
+      where: { engagementId: engagement.id },
+      orderBy: { uploadedAt: "desc" },
+      take: 200,
+    }),
+  );
   return rows.map((row) => ({
     id: row.id,
     filename: row.filename,
@@ -324,10 +335,12 @@ export async function readPortalUpload(
   uploadId: string,
 ): Promise<PortalUploadFile> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const row = await prisma.clientPortalUpload.findFirst({
-    where: { id: uploadId, engagementId: engagement.id },
-    select: { filename: true, mimeType: true, storageKey: true },
-  });
+  const row = await withTenantDb(ctx, (db) =>
+    db.clientPortalUpload.findFirst({
+      where: { id: uploadId, engagementId: engagement.id },
+      select: { filename: true, mimeType: true, storageKey: true },
+    }),
+  );
   if (!row) throw new ApiError(404, "NOT_FOUND", "Upload not found.");
   return {
     filename: row.filename,
@@ -607,83 +620,85 @@ export async function getPortalSnapshot(raw: string): Promise<PortalSnapshot> {
   const { token, engagement } = await resolvePortalToken(raw);
 
   const [organization, deliverables, uploads, requests, filings, invoices, complianceProfile, complianceStatuses] =
-    await Promise.all([
-    prisma.organization.findUnique({ where: { id: token.organizationId }, select: { name: true } }),
-    prisma.engagementDeliverableVersion.findMany({
-      where: {
-        engagementId: engagement.id,
-        variant: "CLIENT",
-        status: "ISSUED",
-      },
-      select: {
-        id: true,
-        formatCode: true,
-        revision: true,
-        issuedAt: true,
-        udin: true,
-        documentReference: true,
-        format: { select: { label: true } },
-      },
-      orderBy: [{ issuedAt: "desc" }, { createdAt: "desc" }],
-      take: 100,
-    }),
-    prisma.clientPortalUpload.findMany({
-      where: { engagementId: engagement.id, tokenId: token.id },
-      select: { id: true, filename: true, sizeBytes: true, note: true, uploadedAt: true },
-      orderBy: { uploadedAt: "desc" },
-      take: 50,
-    }),
-    prisma.clientDocumentRequest.findMany({
-      where: { engagementId: engagement.id, status: "requested" },
-      select: { id: true, title: true, category: true, period: true, dueDate: true, notes: true },
-      orderBy: { dueDate: "asc" },
-      take: 50,
-    }),
-    prisma.complianceFilingRun.findMany({
-      where: {
-        engagementId: engagement.id,
-        stage: { in: ["reviewed", "client-approved", "filed", "acknowledged"] },
-      },
-      select: {
-        id: true,
-        title: true,
-        authority: true,
-        dueDate: true,
-        stage: true,
-        acknowledgementReference: true,
-        verificationStatus: true,
-        verificationNote: true,
-        filedAt: true,
-        clientApprovedAt: true,
-        clientApprovalDigest: true,
-      },
-      orderBy: { dueDate: "asc" },
-      take: 50,
-    }),
-    prisma.practiceInvoice.findMany({
-      where: { engagementId: engagement.id, status: { in: ["issued", "paid"] } },
-      select: {
-        id: true,
-        number: true,
-        issuedOn: true,
-        dueDate: true,
-        totalMinor: true,
-        status: true,
-        paidOn: true,
-        paymentReference: true,
-      },
-      orderBy: { issuedOn: "desc" },
-      take: 100,
-    }),
-    prisma.clientComplianceProfile.findUnique({
-      where: { engagementId: engagement.id },
-      select: { profile: true },
-    }),
-    prisma.clientComplianceStatus.findMany({
-      where: { engagementId: engagement.id },
-      select: { taskId: true, status: true },
-    }),
-  ]);
+    await withOrganization(token.organizationId, (db) =>
+      Promise.all([
+        db.organization.findUnique({ where: { id: token.organizationId }, select: { name: true } }),
+        db.engagementDeliverableVersion.findMany({
+          where: {
+            engagementId: engagement.id,
+            variant: "CLIENT",
+            status: "ISSUED",
+          },
+          select: {
+            id: true,
+            formatCode: true,
+            revision: true,
+            issuedAt: true,
+            udin: true,
+            documentReference: true,
+            format: { select: { label: true } },
+          },
+          orderBy: [{ issuedAt: "desc" }, { createdAt: "desc" }],
+          take: 100,
+        }),
+        db.clientPortalUpload.findMany({
+          where: { engagementId: engagement.id, tokenId: token.id },
+          select: { id: true, filename: true, sizeBytes: true, note: true, uploadedAt: true },
+          orderBy: { uploadedAt: "desc" },
+          take: 50,
+        }),
+        db.clientDocumentRequest.findMany({
+          where: { engagementId: engagement.id, status: "requested" },
+          select: { id: true, title: true, category: true, period: true, dueDate: true, notes: true },
+          orderBy: { dueDate: "asc" },
+          take: 50,
+        }),
+        db.complianceFilingRun.findMany({
+          where: {
+            engagementId: engagement.id,
+            stage: { in: ["reviewed", "client-approved", "filed", "acknowledged"] },
+          },
+          select: {
+            id: true,
+            title: true,
+            authority: true,
+            dueDate: true,
+            stage: true,
+            acknowledgementReference: true,
+            verificationStatus: true,
+            verificationNote: true,
+            filedAt: true,
+            clientApprovedAt: true,
+            clientApprovalDigest: true,
+          },
+          orderBy: { dueDate: "asc" },
+          take: 50,
+        }),
+        db.practiceInvoice.findMany({
+          where: { engagementId: engagement.id, status: { in: ["issued", "paid"] } },
+          select: {
+            id: true,
+            number: true,
+            issuedOn: true,
+            dueDate: true,
+            totalMinor: true,
+            status: true,
+            paidOn: true,
+            paymentReference: true,
+          },
+          orderBy: { issuedOn: "desc" },
+          take: 100,
+        }),
+        db.clientComplianceProfile.findUnique({
+          where: { engagementId: engagement.id },
+          select: { profile: true },
+        }),
+        db.clientComplianceStatus.findMany({
+          where: { engagementId: engagement.id },
+          select: { taskId: true, status: true },
+        }),
+      ]),
+    );
 
   return {
     engagement: { name: engagement.name, code: engagement.code },
@@ -758,11 +773,13 @@ export interface PortalPaymentOrder {
  * The amount is the stored invoice total — the request cannot choose it.
  */
 export async function payPortalInvoice(raw: string, invoiceId: string): Promise<PortalPaymentOrder> {
-  const { engagement } = await resolvePortalToken(raw);
-  const invoice = await prisma.practiceInvoice.findFirst({
-    where: { id: invoiceId, engagementId: engagement.id },
-    select: { id: true, number: true, totalMinor: true, status: true, razorpayOrderId: true },
-  });
+  const { token, engagement } = await resolvePortalToken(raw);
+  const invoice = await withOrganization(token.organizationId, (db) =>
+    db.practiceInvoice.findFirst({
+      where: { id: invoiceId, engagementId: engagement.id },
+      select: { id: true, number: true, totalMinor: true, status: true, razorpayOrderId: true },
+    }),
+  );
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
   if (invoice.status === "paid") {
     throw new ApiError(409, "ALREADY_PAID", "This invoice has already been paid. No second payment is needed.");
@@ -784,7 +801,9 @@ export async function payPortalInvoice(raw: string, invoiceId: string): Promise<
     totalMinor: invoice.totalMinor,
   });
   if (invoice.razorpayOrderId !== order.id) {
-    await prisma.practiceInvoice.update({ where: { id: invoice.id }, data: { razorpayOrderId: order.id } });
+    await withOrganization(token.organizationId, (db) =>
+      db.practiceInvoice.update({ where: { id: invoice.id }, data: { razorpayOrderId: order.id } }),
+    );
   }
 
   return {
@@ -806,11 +825,13 @@ export async function verifyPortalInvoicePayment(
   invoiceId: string,
   input: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string },
 ): Promise<{ invoiceId: string; status: string; paidOn: string }> {
-  const { engagement } = await resolvePortalToken(raw);
-  const invoice = await prisma.practiceInvoice.findFirst({
-    where: { id: invoiceId, engagementId: engagement.id },
-    select: { id: true, status: true, razorpayOrderId: true, razorpayPaymentId: true, issuedOn: true },
-  });
+  const { token, engagement } = await resolvePortalToken(raw);
+  const invoice = await withOrganization(token.organizationId, (db) =>
+    db.practiceInvoice.findFirst({
+      where: { id: invoiceId, engagementId: engagement.id },
+      select: { id: true, status: true, razorpayOrderId: true, razorpayPaymentId: true, issuedOn: true },
+    }),
+  );
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
 
   if (invoice.status === "paid") {
@@ -839,18 +860,21 @@ export async function verifyPortalInvoicePayment(
   }
 
   const paidOn = new Date().toISOString().slice(0, 10);
-  await prisma.practiceInvoice.update({
-    where: { id: invoice.id },
-    data: {
-      status: "paid",
-      paidOn,
-      paymentReference: input.razorpayPaymentId.slice(0, 120),
-      paymentMethod: "razorpay",
-      razorpayOrderId: input.razorpayOrderId,
-      razorpayPaymentId: input.razorpayPaymentId.slice(0, 120),
-    },
-  });
+  await withOrganization(token.organizationId, (db) =>
+    db.practiceInvoice.update({
+      where: { id: invoice.id },
+      data: {
+        status: "paid",
+        paidOn,
+        paymentReference: input.razorpayPaymentId.slice(0, 120),
+        paymentMethod: "razorpay",
+        razorpayOrderId: input.razorpayOrderId,
+        razorpayPaymentId: input.razorpayPaymentId.slice(0, 120),
+      },
+    }),
+  );
   return { invoiceId: invoice.id, status: "paid", paidOn };
+
 }
 
 /**
@@ -889,18 +913,20 @@ export async function approveFilingRunFromPortal(
   actor?: PortalApprovalActor | null,
 ): Promise<PortalFilingApprovalResult> {
   const { token, engagement } = await resolvePortalToken(raw);
-  const run = await prisma.complianceFilingRun.findFirst({
-    where: { id: runId, engagementId: engagement.id },
-    select: {
-      id: true,
-      taskId: true,
-      title: true,
-      authority: true,
-      dueDate: true,
-      stage: true,
-      clientApprovalReceipt: true,
-    },
-  });
+  const run = await withOrganization(token.organizationId, (db) =>
+    db.complianceFilingRun.findFirst({
+      where: { id: runId, engagementId: engagement.id },
+      select: {
+        id: true,
+        taskId: true,
+        title: true,
+        authority: true,
+        dueDate: true,
+        stage: true,
+        clientApprovalReceipt: true,
+      },
+    }),
+  );
   if (!run) throw new ApiError(404, "NOT_FOUND", "That filing is not part of this portal.");
   if (run.stage === "client-approved") {
     // Approving twice must not mint a second receipt: return the stored one, so
@@ -954,36 +980,38 @@ export async function approveFilingRunFromPortal(
   // silently storing an unsigned receipt after the firm opted into signing.
   const signedReceipt = await signApprovalReceipt(receipt);
 
-  await prisma.$transaction([
-    prisma.complianceFilingRun.update({
-      where: { id: run.id },
-      data: {
-        stage: "client-approved",
-        clientApprovedAt: new Date(approvedAt),
-        clientApprovalDigest: signedReceipt.digest,
-        clientApprovalReceipt: signedReceipt as unknown as Prisma.InputJsonValue,
-        updatedById: signedIn ? `client:${signedIn.accountId}` : `portal:${token.id}`,
-      },
-    }),
-    prisma.complianceFilingEvent.create({
-      data: {
-        runId: run.id,
-        organizationId: token.organizationId,
-        fromStage: "reviewed",
-        toStage: "client-approved",
-        note:
-          [
-            approvedBy?.trim() ? `Approved by ${approvedBy.trim()}.` : "Approved by the client through the portal.",
-            signedIn ? `Signed in as ${signedIn.email}.` : null,
-            note?.trim(),
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .slice(0, 1000) || null,
-        actorId: signedIn ? `client:${signedIn.accountId}` : `portal:${token.id}`,
-      },
-    }),
-  ]);
+  await withOrganization(token.organizationId, (db) =>
+    db.$transaction([
+      db.complianceFilingRun.update({
+        where: { id: run.id },
+        data: {
+          stage: "client-approved",
+          clientApprovedAt: new Date(approvedAt),
+          clientApprovalDigest: signedReceipt.digest,
+          clientApprovalReceipt: signedReceipt as unknown as Prisma.InputJsonValue,
+          updatedById: signedIn ? `client:${signedIn.accountId}` : `portal:${token.id}`,
+        },
+      }),
+      db.complianceFilingEvent.create({
+        data: {
+          runId: run.id,
+          organizationId: token.organizationId,
+          fromStage: "reviewed",
+          toStage: "client-approved",
+          note:
+            [
+              approvedBy?.trim() ? `Approved by ${approvedBy.trim()}.` : "Approved by the client through the portal.",
+              signedIn ? `Signed in as ${signedIn.email}.` : null,
+              note?.trim(),
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .slice(0, 1000) || null,
+          actorId: signedIn ? `client:${signedIn.accountId}` : `portal:${token.id}`,
+        },
+      }),
+    ]),
+  );
 
   return { id: run.id, title: run.title, stage: "client-approved", receipt: signedReceipt };
 }
@@ -996,11 +1024,13 @@ export async function getPortalFilingApprovalReceipt(
   raw: string,
   runId: string,
 ): Promise<{ receipt: unknown; digest: string | null; approvedAt: string | null }> {
-  const { engagement } = await resolvePortalToken(raw);
-  const run = await prisma.complianceFilingRun.findFirst({
-    where: { id: runId, engagementId: engagement.id },
-    select: { clientApprovalReceipt: true, clientApprovalDigest: true, clientApprovedAt: true },
-  });
+  const { token, engagement } = await resolvePortalToken(raw);
+  const run = await withOrganization(token.organizationId, (db) =>
+    db.complianceFilingRun.findFirst({
+      where: { id: runId, engagementId: engagement.id },
+      select: { clientApprovalReceipt: true, clientApprovalDigest: true, clientApprovedAt: true },
+    }),
+  );
   if (!run || !run.clientApprovalReceipt) {
     throw new ApiError(404, "NO_APPROVAL_RECEIPT", "No approval receipt is stored for this filing.");
   }
@@ -1029,11 +1059,13 @@ export async function getPortalDeliverable(
   raw: string,
   versionId: string,
 ): Promise<PortalDeliverableView> {
-  const { engagement } = await resolvePortalToken(raw);
-  const version = await prisma.engagementDeliverableVersion.findFirst({
-    where: { id: versionId, engagementId: engagement.id },
-    select: { id: true, variant: true, status: true, issuedAt: true, udin: true, documentReference: true },
-  });
+  const { token, engagement } = await resolvePortalToken(raw);
+  const version = await withOrganization(token.organizationId, (db) =>
+    db.engagementDeliverableVersion.findFirst({
+      where: { id: versionId, engagementId: engagement.id },
+      select: { id: true, variant: true, status: true, issuedAt: true, udin: true, documentReference: true },
+    }),
+  );
   // The single tested visibility rule applies here too — a draft or reviewer
   // copy is not merely hidden from the list, it is unreachable by id.
   if (!version || !portalDeliverableVisible(version)) {
@@ -1097,10 +1129,12 @@ export async function savePortalUpload(
 
   const requestId = input.requestId?.trim() || null;
   if (requestId) {
-    const open = await prisma.clientDocumentRequest.findFirst({
-      where: { id: requestId, engagementId: engagement.id, status: "requested" },
-      select: { id: true },
-    });
+    const open = await withOrganization(token.organizationId, (db) =>
+      db.clientDocumentRequest.findFirst({
+        where: { id: requestId, engagementId: engagement.id, status: "requested" },
+        select: { id: true },
+      }),
+    );
     if (!open) throw new ApiError(404, "NOT_FOUND", "That document request is no longer open.");
   }
 
@@ -1109,28 +1143,30 @@ export async function savePortalUpload(
   await saveFile(key, input.bytes);
 
   const note = input.note?.trim().slice(0, 1000) || null;
-  const row = await prisma.$transaction(async (tx) => {
-    const upload = await tx.clientPortalUpload.create({
-      data: {
-        organizationId: token.organizationId,
-        engagementId: engagement.id,
-        tokenId: token.id,
-        filename: accepted.filename,
-        mimeType: accepted.mimeType,
-        sizeBytes: input.bytes.length,
-        storageKey: key,
-        sha256,
-        note,
-      },
-    });
-    if (requestId) {
-      await tx.clientDocumentRequest.updateMany({
-        where: { id: requestId, engagementId: engagement.id, status: "requested" },
-        data: { status: "received", receivedAt: new Date(), fulfilledByUploadId: upload.id },
+  const row = await withOrganization(token.organizationId, (db) =>
+    db.$transaction(async (tx) => {
+      const upload = await tx.clientPortalUpload.create({
+        data: {
+          organizationId: token.organizationId,
+          engagementId: engagement.id,
+          tokenId: token.id,
+          filename: accepted.filename,
+          mimeType: accepted.mimeType,
+          sizeBytes: input.bytes.length,
+          storageKey: key,
+          sha256,
+          note,
+        },
       });
-    }
-    return upload;
-  });
+      if (requestId) {
+        await tx.clientDocumentRequest.updateMany({
+          where: { id: requestId, engagementId: engagement.id, status: "requested" },
+          data: { status: "received", receivedAt: new Date(), fulfilledByUploadId: upload.id },
+        });
+      }
+      return upload;
+    }),
+  );
 
   return {
     id: row.id,

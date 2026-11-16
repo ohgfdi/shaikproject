@@ -31,7 +31,7 @@ function createAdapter(): PrismaBetterSqlite3 | PrismaPg {
     return new PrismaPg({
       connectionString: url,
       connectionTimeoutMillis: numEnv("DATABASE_POOL_CONNECT_TIMEOUT_MS", 5_000),
-      ssl: { rejectUnauthorized: verifyCerts },
+      ssl: sslConfig(url, verifyCerts),
       max: numEnv("DATABASE_POOL_MAX", 10),
       // Idle connections are returned to the pool rather than held open for
       // the life of the process, and keepAlive stops PgBouncer/pgpool in front
@@ -48,6 +48,24 @@ function createAdapter(): PrismaBetterSqlite3 | PrismaPg {
     });
   }
   return new PrismaBetterSqlite3({ url: sqliteFilePath(url) });
+}
+
+/**
+ * SSL settings for a Postgres connection string.
+ *
+ * The URL is the single source of truth so the local/dev paths work: the
+ * documented `docker compose --profile pg` database (and every test suite)
+ * speaks plaintext and passes `sslmode=disable`, which must mean "no TLS"
+ * rather than "TLS anyway, then fail". A managed database should pass
+ * `sslmode=require` (or `verify-full`), and that is what turns TLS on.
+ *
+ * With no `sslmode` at all, TLS stays on — the previous behaviour — so an
+ * existing production URL is not downgraded by this change.
+ */
+function sslConfig(url: string, verifyCerts: boolean): false | { rejectUnauthorized: boolean } {
+  const mode = new URL(url).searchParams.get("sslmode");
+  if (mode === "disable" || mode === "allow") return false;
+  return { rejectUnauthorized: verifyCerts || mode === "verify-ca" || mode === "verify-full" };
 }
 
 /** Parse a positive-integer env var, falling back when unset or malformed. */

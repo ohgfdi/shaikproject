@@ -1,8 +1,8 @@
 import { ApiError, requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { requireRowRole, type ArtifactRow } from "@/lib/server/members";
+import { withTenantDb, type TenantDb } from "@/lib/server/tenant-db";
 import type { CommentThreadItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,22 +12,23 @@ const TARGET_KEYS = ["analysis", "dashboard", "report", "presentation", "insight
 export type CommentTargetType = (typeof TARGET_KEYS)[number];
 
 async function resolveTarget(
+  db: TenantDb,
   targetType: CommentTargetType,
   targetId: string,
 ): Promise<(ArtifactRow & { id: string }) | null> {
   switch (targetType) {
     case "analysis":
-      return await prisma.analysis.findUnique({ where: { id: targetId } });
+      return await db.analysis.findUnique({ where: { id: targetId } });
     case "dashboard":
-      return await prisma.dashboard.findUnique({ where: { id: targetId } });
+      return await db.dashboard.findUnique({ where: { id: targetId } });
     case "report":
-      return await prisma.report.findUnique({ where: { id: targetId } });
+      return await db.report.findUnique({ where: { id: targetId } });
     case "presentation":
-      return await prisma.presentation.findUnique({ where: { id: targetId } });
+      return await db.presentation.findUnique({ where: { id: targetId } });
     case "insight":
-      return await prisma.insight.findUnique({ where: { id: targetId } });
+      return await db.insight.findUnique({ where: { id: targetId } });
     case "dataset":
-      return await prisma.dataset.findUnique({ where: { id: targetId } });
+      return await db.dataset.findUnique({ where: { id: targetId } });
     default:
       return null;
   }
@@ -43,16 +44,20 @@ export async function GET(request: Request) {
       throw new ApiError(400, "VALIDATION", "Missing or invalid targetType.");
     }
     if (!targetId) throw new ApiError(400, "VALIDATION", "Missing targetId.");
-    const target = await resolveTarget(targetType, targetId);
+    const target = await withTenantDb(ctx, (db) => resolveTarget(db, targetType, targetId));
     if (!target) throw new ApiError(404, "NOT_FOUND", "Target not found.");
+    // Role resolution opens its own tenant transaction (members.ts); keep it
+    // outside this one rather than nesting interactive transactions.
     await requireRowRole(ctx, target, "VIEWER");
 
-    const rows = await prisma.comment.findMany({
-      where: { targetType, targetId },
-      orderBy: { createdAt: "asc" },
-      take: 200,
-      include: { author: { select: { id: true, name: true } } },
-    });
+    const rows = await withTenantDb(ctx, (db) =>
+      db.comment.findMany({
+        where: { targetType, targetId },
+        orderBy: { createdAt: "asc" },
+        take: 200,
+        include: { author: { select: { id: true, name: true } } },
+      }),
+    );
     return ok({
       comments: rows.map(
         (c) =>
@@ -84,32 +89,32 @@ export async function POST(request: Request) {
     const text = (body.body ?? "").trim();
     if (!text) throw new ApiError(400, "VALIDATION", "Write a comment first.");
     if (text.length > 5000) throw new ApiError(400, "VALIDATION", "Comments are limited to 5 000 characters.");
-    const target = await resolveTarget(targetType, body.targetId ?? "");
+    const target = await withTenantDb(ctx, (db) => resolveTarget(db, targetType, body.targetId ?? ""));
     if (!target) throw new ApiError(404, "NOT_FOUND", "Target not found.");
     // VIEWERs may comment (spec permission matrix); replies must target an existing comment on the same target.
     await requireRowRole(ctx, target, "VIEWER");
 
-    let parentId: string | null = body.parentId ?? null;
+    const parentId: string | null = body.parentId ?? null;
     if (parentId) {
-      const parent = await prisma.comment.findUnique({ where: { id: parentId } });
+      const parent = await withTenantDb(ctx, (db) => db.comment.findUnique({ where: { id: parentId } }));
       if (!parent || parent.targetType !== targetType || parent.targetId !== target.id) {
         throw new ApiError(400, "VALIDATION", "The reply target comment does not exist on this item.");
       }
-    } else {
-      parentId = null;
     }
 
-    const comment = await prisma.comment.create({
-      data: {
-        workspaceId: ctx.workspace.id,
-        projectId: (target as { projectId?: string | null }).projectId ?? null,
-        authorId: ctx.user.id,
-        targetType,
-        targetId: target.id,
-        body: text,
-        parentId,
-      },
-    });
+    const comment = await withTenantDb(ctx, (db) =>
+      db.comment.create({
+        data: {
+          workspaceId: ctx.workspace.id,
+          projectId: (target as { projectId?: string | null }).projectId ?? null,
+          authorId: ctx.user.id,
+          targetType,
+          targetId: target.id,
+          body: text,
+          parentId,
+        },
+      }),
+    );
     await logActivity(
       ctx,
       "COMMENT_ADDED",

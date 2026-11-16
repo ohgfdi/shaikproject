@@ -18,8 +18,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, Badge } from "@/components/ui/primitives";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { timeAgo } from "@/lib/format";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Search" };
@@ -60,53 +60,55 @@ export default async function SearchPage(props: {
   const match = (s: string | null | undefined) => (s ?? "").toLowerCase().includes(qLower);
 
   const [projects, datasets, analyses, insights, notebooks, models, prompts, dashboards, reports, presentations] =
-    await Promise.all([
-      prisma.project.findMany({ where: { workspaceId: ctx.workspace.id, name: contains(q) }, take: 8 }),
-      prisma.dataset.findMany({
-        where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { originalName: contains(q) }] },
-        take: 8,
-        include: { project: { select: { id: true, name: true } } },
-      }),
-      prisma.analysis.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.insight.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.notebook.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.modelVersion.findMany({
-        where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { targetColumn: contains(q) }] },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.prompt.findMany({
-        where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { description: contains(q) }] },
-        take: 8,
-      }),
-      prisma.dashboard.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.report.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-      prisma.presentation.findMany({
-        where: { workspaceId: ctx.workspace.id, title: contains(q) },
-        take: 8,
-        include: { project: { select: { id: true } } },
-      }),
-    ]);
+    await withTenantDb(ctx, (db) =>
+      Promise.all([
+        db.project.findMany({ where: { workspaceId: ctx.workspace.id, name: contains(q) }, take: 8 }),
+        db.dataset.findMany({
+          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { originalName: contains(q) }] },
+          take: 8,
+          include: { project: { select: { id: true, name: true } } },
+        }),
+        db.analysis.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.insight.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.notebook.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.modelVersion.findMany({
+          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { targetColumn: contains(q) }] },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.prompt.findMany({
+          where: { workspaceId: ctx.workspace.id, OR: [{ name: contains(q) }, { description: contains(q) }] },
+          take: 8,
+        }),
+        db.dashboard.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.report.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+        db.presentation.findMany({
+          where: { workspaceId: ctx.workspace.id, title: contains(q) },
+          take: 8,
+          include: { project: { select: { id: true } } },
+        }),
+      ]),
+    );
 
   const group = (
     label: string,

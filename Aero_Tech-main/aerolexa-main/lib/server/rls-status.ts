@@ -19,8 +19,12 @@ export const RLS_QUERY_LAYER_WIRED = false;
  * a tenant model fails `tenancy-ratchet.test.ts`, which forces the choice
  * between wrapping the file and consciously raising this number with a reason.
  * When the audit reaches zero, flip RLS_QUERY_LAYER_WIRED and delete this.
+ *
+ * History: 169 at first measurement, 160 after batch 2 (search, comments,
+ * organization admin, reports/presentations/dashboards/insights routes, chat).
+ * Lower it in the same PR that wraps files — never raise it silently.
  */
-export const RLS_UNWRAPPED_BASELINE = 169;
+export const RLS_UNWRAPPED_BASELINE = 160;
 
 /** Tenant-scoped Prisma accessors covered by the audit. */
 export const TENANT_MODELS: readonly string[] = [

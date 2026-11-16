@@ -1082,6 +1082,26 @@ export const NOT_EXPORTED: { model: string; reason: string }[] = [
     reason:
       "Organization-level feature switch for the books assistant (on/off plus who last changed it). It is firm configuration rather than the subject's content, and the assistant conversations themselves ARE exported in the assistant section.",
   },
+  {
+    model: "ClientPortalAccount",
+    reason:
+      "Portal account metadata is firm configuration, not the requesting subject's personal data — portability means the subject's content, not firm settings.",
+  },
+  {
+    model: "ClientPortalLoginToken",
+    reason:
+      "Login token is an authentication credential, not user content: it is a one-time access grant and is not exported.",
+  },
+  {
+    model: "MailOutbox",
+    reason:
+      "Outbox entries are firm mail routing records, not the subject's authored content, and contain SMTP headers / sending status.",
+  },
+  {
+    model: "FilingRollout",
+    reason:
+      "Filing rollout state is firm administrative data; the subject's filings themselves appear in the filing section.",
+  },
 ];
 
 /** Per-section outcome, shipped inside the bundle. */

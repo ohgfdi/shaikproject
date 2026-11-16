@@ -1,7 +1,7 @@
 /**
  * Tenancy ratchet — the gap may shrink, never grow.
  *
- * Wrapping 169 tenant files in withTenantContext() is a multi-week refactor.
+ * Wrapping the remaining 163 tenant files in withTenantContext() is a multi-week refactor.
  * Until it lands, DB-level RLS stays off, and every new endpoint that queries
  * Prisma directly would add another place where the isolation story depends on
  * someone remembering a guard.

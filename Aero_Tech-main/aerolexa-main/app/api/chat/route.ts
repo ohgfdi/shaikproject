@@ -10,11 +10,11 @@ import {
 } from "@/lib/chat/engine";
 import { buildWorkspaceIndex, type RagFact, type RagHit } from "@/lib/chat/rag";
 import { getWorkspaceIndex, retrieveWorkspaceFacts } from "@/lib/chat/workspace-retrieval";
-import { prisma } from "@/lib/db";
 import { firstAvailableLLMProvider, getChatProviderChain, type LLMProvider } from "@/lib/llm/providers";
 import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { RATE_LIMITS, enforceUserRateLimit } from "@/lib/server/rate-limit";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -99,12 +99,14 @@ export async function POST(request: Request) {
 export async function GET() {
   try {
     const ctx = await requireAuth();
-    const chats = await prisma.chat.findMany({
-      where: { workspaceId: ctx.workspace.id, userId: ctx.user.id },
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-      include: { messages: { orderBy: { createdAt: "asc" } } },
-    });
+    const chats = await withTenantDb(ctx, (db) =>
+      db.chat.findMany({
+        where: { workspaceId: ctx.workspace.id, userId: ctx.user.id },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+        include: { messages: { orderBy: { createdAt: "asc" } } },
+      }),
+    );
     return ok({
       chats: chats.map((c) => ({
         id: c.id,
@@ -153,10 +155,12 @@ async function loadOrCreateConversation(
   requestedModel: string | undefined,
 ): Promise<LoadedThread> {
   if (conversationId) {
-    const chat = await prisma.chat.findUnique({
-      where: { id: conversationId },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
-    });
+    const chat = await withTenantDb(ctx, (db) =>
+      db.chat.findUnique({
+        where: { id: conversationId },
+        include: { messages: { orderBy: { createdAt: "asc" } } },
+      }),
+    );
     if (!chat || chat.userId !== ctx.user.id || chat.workspaceId !== ctx.workspace.id) {
       throw new ApiError(404, "NOT_FOUND", "Conversation not found.");
     }
@@ -174,15 +178,17 @@ async function loadOrCreateConversation(
     };
   }
 
-  const chat = await prisma.chat.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      userId: ctx.user.id,
-      title: titleForChat([{ role: "user" as const, content: message }]),
-      webSearch,
-      model: requestedModel ?? null,
-    },
-  });
+  const chat = await withTenantDb(ctx, (db) =>
+    db.chat.create({
+      data: {
+        workspaceId: ctx.workspace.id,
+        userId: ctx.user.id,
+        title: titleForChat([{ role: "user" as const, content: message }]),
+        webSearch,
+        model: requestedModel ?? null,
+      },
+    }),
+  );
   return {
     chatId: chat.id,
     title: chat.title,
@@ -199,38 +205,40 @@ async function loadOrCreateConversation(
  * of metadata-only queries; no row data is ever read.
  */
 async function buildParticipantContext(ctx: AuthContext): Promise<ChatParticipantContext> {
-  const [projects, datasets, dashboards, reports, analyses] = await Promise.all([
-    prisma.project.findMany({
-      where: { workspaceId: ctx.workspace.id },
-      orderBy: { updatedAt: "desc" },
-      take: 6,
-      select: { id: true, name: true },
-    }),
-    prisma.dataset.findMany({
-      where: { workspaceId: ctx.workspace.id },
-      orderBy: { updatedAt: "desc" },
-      take: 10,
-      select: { name: true, rowCount: true, columnCount: true, columns: true },
-    }),
-    prisma.dashboard.findMany({
-      where: { workspaceId: ctx.workspace.id },
-      orderBy: { updatedAt: "desc" },
-      take: 8,
-      select: { id: true, title: true },
-    }),
-    prisma.report.findMany({
-      where: { workspaceId: ctx.workspace.id },
-      orderBy: { updatedAt: "desc" },
-      take: 8,
-      select: { id: true, title: true },
-    }),
-    prisma.analysis.findMany({
-      where: { workspaceId: ctx.workspace.id },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      select: { id: true, title: true, kind: true },
-    }),
-  ]);
+  const [projects, datasets, dashboards, reports, analyses] = await withTenantDb(ctx, (db) =>
+    Promise.all([
+      db.project.findMany({
+        where: { workspaceId: ctx.workspace.id },
+        orderBy: { updatedAt: "desc" },
+        take: 6,
+        select: { id: true, name: true },
+      }),
+      db.dataset.findMany({
+        where: { workspaceId: ctx.workspace.id },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+        select: { name: true, rowCount: true, columnCount: true, columns: true },
+      }),
+      db.dashboard.findMany({
+        where: { workspaceId: ctx.workspace.id },
+        orderBy: { updatedAt: "desc" },
+        take: 8,
+        select: { id: true, title: true },
+      }),
+      db.report.findMany({
+        where: { workspaceId: ctx.workspace.id },
+        orderBy: { updatedAt: "desc" },
+        take: 8,
+        select: { id: true, title: true },
+      }),
+      db.analysis.findMany({
+        where: { workspaceId: ctx.workspace.id },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: { id: true, title: true, kind: true },
+      }),
+    ]),
+  );
 
   // Metadata-only RAG index (see lib/chat/rag.ts): datasets carry their
   // column names as retrieval keywords so "which dataset has invoice dates"
@@ -317,9 +325,11 @@ function runChatStream(opts: StreamOpts): ReadableStream<Uint8Array> {
       // Persist the user turn first so a reload after a mid-stream error still
       // shows the question.
       try {
-        await prisma.chatMessage.create({
-          data: { chatId: opts.thread.chatId, role: "user", content: opts.message },
-        });
+        await withTenantDb(opts.ctx, (db) =>
+          db.chatMessage.create({
+            data: { chatId: opts.thread.chatId, role: "user", content: opts.message },
+          }),
+        );
       } catch {
         // Persistence is best-effort; never fail the user's chat because of it.
       }
@@ -392,20 +402,24 @@ function runChatStream(opts: StreamOpts): ReadableStream<Uint8Array> {
 
       // Persist the assistant answer + the sources it was allowed to cite.
       try {
-        await prisma.chatMessage.create({
-          data: {
-            chatId: opts.thread.chatId,
-            role: "assistant",
-            content: fullText,
-            sources: web.used && web.sources.length > 0 ? JSON.stringify(web.sources) : null,
-          },
-        });
+        await withTenantDb(opts.ctx, (db) =>
+          db.chatMessage.create({
+            data: {
+              chatId: opts.thread.chatId,
+              role: "assistant",
+              content: fullText,
+              sources: web.used && web.sources.length > 0 ? JSON.stringify(web.sources) : null,
+            },
+          }),
+        );
         const actualModel = `${active.name}:${active.model}`;
         if (opts.thread.model !== actualModel) {
-          await prisma.chat.update({
-            where: { id: opts.thread.chatId },
-            data: { model: actualModel },
-          });
+          await withTenantDb(opts.ctx, (db) =>
+            db.chat.update({
+              where: { id: opts.thread.chatId },
+              data: { model: actualModel },
+            }),
+          );
         }
       } catch {
         // Best-effort persistence.
