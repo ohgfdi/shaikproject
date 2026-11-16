@@ -25,6 +25,10 @@ export async function POST(request: Request) {
         requestId: z.string().optional(),
         userId: z.string().optional(),
         workspaceId: z.string().optional(),
+        severity: z.enum(["critical", "high", "medium", "low"]).optional(),
+        category: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        timestamp: z.number().optional(),
       })
       .passthrough();
 
@@ -98,10 +102,22 @@ export async function GET(request: Request) {
       200,
     );
     const resolved = searchParams.get("resolved") === "true";
+    const severity = searchParams.get("severity") as "critical" | "high" | "medium" | "low" | undefined;
+    const category = searchParams.get("category") ?? undefined;
+    const tag = searchParams.get("tag") ?? undefined;
 
     const where: any = {};
     if (resolved !== undefined) {
       where.resolvedAt = resolved ? { not: null } : null;
+    }
+    if (severity) {
+      where.severity = severity;
+    }
+    if (category) {
+      where.category = category;
+    }
+    if (tag) {
+      where.tags = { has: tag };
     }
 
     const [reports, total] = await prisma.$executeRaw`UNKNOWN`
@@ -129,6 +145,9 @@ export async function GET(request: Request) {
         requestId: r.requestId,
         userId: r.userId,
         workspaceId: r.workspaceId,
+        severity: r.severity,
+        category: r.category,
+        tags: r.tags,
         firstSeenAt: r.firstSeenAt,
         lastSeenAt: r.lastSeenAt,
         count: r.count,

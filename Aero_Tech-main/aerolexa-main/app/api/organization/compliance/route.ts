@@ -3,15 +3,29 @@ import { complianceTaskState, ComplianceTaskState, daysUntil } from "@/lib/engin
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
 import { mapOrgRoleToProjectRole } from "@/lib/server/members";
+import { runSoxCheck } from "@/lib/compliance/sox";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/organization/compliance — the firm's statutory calendar with advanced analytics. */
 export async function GET(request: Request) {
-  try {
-    const ctx = await requireAuth();
-    const today = new URL(request.url).searchParams.get("today") ?? undefined;
-    const calendar = await getComplianceCalendar(ctx, { today });
+    try {
+      const ctx = await requireAuth();
+      const searchParams = new URL(request.url).searchParams;
+      const action = searchParams.get("action") || "calendar";
+
+      if (action === "sox") {
+        return new Response(
+          JSON.stringify(runSoxCheck()),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const today = searchParams.get("today") ?? undefined;
+      const calendar = await getComplianceCalendar(ctx, { today });
 
     // Compute analytics summary
     const tasks = calendar.tasks || [];

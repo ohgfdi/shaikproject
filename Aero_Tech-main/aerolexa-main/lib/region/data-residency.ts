@@ -8,7 +8,7 @@
 import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
 
-export type Region = "us-east-1" | "eu-central-1" | "ap-southeast-1" | "sa-east-1";
+export type Region = "us-east-1" | "eu-central-1" | "ap-southeast-1" | "sa-east-1" | "ap-northeast-1" | "eu-west-1";
 
 export type DataResidencyLevel = "local" | "regional" | "global";
 
@@ -70,6 +70,26 @@ export const RegionConfigs: Record<Region, RegionConfig> = {
     allowed_plans: ["enterprise"],
     features: ["Portuguese", "Spanish", "English"],
   },
+  "ap-northeast-1": {
+    code: "ap-northeast-1",
+    name: "Asia Pacific (Tokyo)",
+    allowed_operations: ["read", "write", "process", "analyze"],
+    compliance_frameworks: ["PDPA", "SOC2"],
+    residency_level: "regional",
+    min_encryption: "AES-256",
+    allowed_plans: ["pro", "enterprise"],
+    features: ["English", "Japanese", "Chinese", "Korean"],
+  },
+  "eu-west-1": {
+    code: "eu-west-1",
+    name: "Europe (Ireland)",
+    allowed_operations: ["read", "write", "process", "analyze", "store"],
+    compliance_frameworks: ["GDPR", "SOC2"],
+    residency_level: "local",
+    min_encryption: "AES-256",
+    allowed_plans: ["pro", "enterprise"],
+    features: ["English", "German", "French", "Spanish", "Italian"],
+  },
 };
 
 /** Get region config by code. */
@@ -86,10 +106,12 @@ export function getAllowedRegions(plan: "free" | "pro" | "enterprise"): Region[]
   }
   if (plan === "pro" || plan === "enterprise") {
     allowed.push("eu-central-1");
+    allowed.push("eu-west-1");
   }
   if (plan === "enterprise") {
     allowed.push("ap-southeast-1");
     allowed.push("sa-east-1");
+    allowed.push("ap-northeast-1");
   }
 
   return allowed;
@@ -132,6 +154,13 @@ export async function GET(
     // Default: list all regions
     const regions = Object.keys(RegionConfigs) as Region[];
     const regionConfigs = regions.map((code) => getRegionConfig(code));
+    // Ensure new regions are included
+    if (!regions.includes("ap-northeast-1")) {
+      regions.push("ap-northeast-1");
+    }
+    if (!regions.includes("eu-west-1")) {
+      regions.push("eu-west-1");
+    }
 
     return new Response(JSON.stringify({ regions, configs: regionConfigs }), {
       status: 200,

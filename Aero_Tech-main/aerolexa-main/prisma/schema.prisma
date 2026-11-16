@@ -134,8 +134,17 @@ model ErrorReport {
   // Operator triage: set once acknowledged, kept for the history.
   resolvedAt DateTime?
 
+  // Error severity for triage and reporting.
+  severity    String   @default("medium") // critical | high | medium | low
+  // Error category for grouping (e.g., "validation", "auth", "runtime").
+  category    String   @default("general")
+  // Free-form tags for flexible filtering and grouping.
+  tags        String[]   @default([])
+
   @@index([lastSeenAt])
   @@index([resolvedAt, lastSeenAt])
+  @@index([severity])
+  @@index([category])
 }
 
 /// Customer feedback. `kind` discriminates a plain comment from a bug report
