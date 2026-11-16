@@ -6,6 +6,7 @@ import { mapOrgRoleToProjectRole } from "@/lib/server/members";
 import { runSoxCheck } from "@/lib/compliance/sox";
 import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
 import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
+import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,38 @@ export async function GET(request: Request) {
             headers: { "Content-Type": "application/json" },
           }
         );
+      }
+
+      if (action === "rbac:roles") {
+        const roles = Object.keys(ROLE_DEFINITIONS as any).map((key: any) => ({
+          key,
+          ...(ROLE_DEFINITIONS as any)[key],
+        }));
+        return new Response(JSON.stringify({ roles }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "rbac:check") {
+        const role = searchParams.get("role") as RoleKey || "member";
+        const permission = searchParams.get("permission") as Permission || "read:own profile";
+        const scope = searchParams.get("scope") as "own" | "team" | "organization" | "all" || "own";
+        const result = hasPermission(role, permission, scope);
+        return new Response(JSON.stringify({ role, permission, scope, hasPermission: result }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "rbac:effective") {
+        const role = searchParams.get("role") as RoleKey || "member";
+        const scope = searchParams.get("scope") as "own" | "team" | "organization" | "all" || "own";
+        const result = getEffectivePermissions(role, scope);
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
       const today = searchParams.get("today") ?? undefined;
