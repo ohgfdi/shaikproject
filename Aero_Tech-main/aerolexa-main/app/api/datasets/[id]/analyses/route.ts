@@ -61,7 +61,8 @@ const configSchema = z
       "real-time-serving",
       "hte",
       "iv-calculus",
-      "geospatial",
+      "geospatial" |
+      "map",
     ]),
     title: z.string().max(200).optional(),
     // Analysis-specific parameters (validated semantically by the engine)

@@ -75,7 +75,7 @@ export interface DashboardEditorProps {
   numStyle?: "comma" | "dot" | "plain";
 }
 
-type AddKind = "chart" | "table" | "kpi" | "pivot" | "insight" | "text" | "recommendation" | "pbi" | "slicer";
+type AddKind = "chart" | "table" | "kpi" | "pivot" | "insight" | "text" | "recommendation" | "pbi" | "slicer" | "map";
 
 export function DashboardBuilder(props: DashboardEditorProps) {
   const router = useRouter();
@@ -1358,6 +1358,7 @@ function AddWidgetDialog({
     { key: "pbi", label: "Power BI visuals", count: chartAnalyses.length },
     { key: "insight", label: "Insight cards", count: insights.length },
     { key: "slicer", label: "Slicers", count: slicerColumns.length },
+    { key: "map", label: "Filled maps", count: chartAnalyses.length },
     { key: "text", label: "Text note", count: 1 },
   ];
 
@@ -1403,6 +1404,30 @@ function AddWidgetDialog({
       });
     } catch (err) {
       setPbiError(err instanceof Error ? err.message : "Could not build that slicer.");
+    }
+  };
+
+  const addMapWidget = (a: WidgetSourceAnalysis) => {
+    const result = a.result;
+    if (!result) return;
+    const chart = result.charts.find((c) => c.kind !== "kpi") ?? result.charts[0];
+    if (!chart) return;
+    try {
+      const spec = buildMapSpec({ title: a.title, chart });
+      setPbiError(null);
+      onAdd({
+        id: uid("w"),
+        type: "pbi-visual",
+        title: `${a.title} · map`,
+        analysisId: a.id,
+        pbiVisual: spec,
+        mapScope: "us-states",
+        w: 6,
+        h: 4,
+        sourceDatasetName: result.dataset.name,
+      });
+    } catch (err) {
+      setPbiError(err instanceof Error ? err.message : "Could not derive that map visual from this analysis.");
     }
   };
 

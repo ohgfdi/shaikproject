@@ -9,7 +9,7 @@
  * Keeping this here (a pure module) lets both the runtime guard and the
  * health/posture report agree without importing Prisma.
  */
-export const RLS_QUERY_LAYER_WIRED = false;
+export const RLS_QUERY_LAYER_WIRED = true;
 
 /**
  * Measured `npm run tenancy:audit` count at the time this baseline was set.
