@@ -13,6 +13,7 @@ import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, Partne
 import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
 import { interpretQuery, generateInsight, InsightType, InsightConfidence, Insight, ChartConfig, InsightAction } from "@/lib/ai/natural-language-insight";
 import { linearTrendForecast, exponentialSmoothing, ForecastResult, ForecastMethod, ForecastPoint } from "@/lib/ai/predictive-analytics";
+import { getSecurityControls, BugBountyProgram, SecurityHardening, SecurityControl } from "@/lib/security/security-hardening";
 
 export const dynamic = "force-dynamic";
 
@@ -270,6 +271,22 @@ export async function GET(request: Request) {
             { key: "seasonal_decomposition", name: "Seasonal Decomposition", description: "Captures seasonal patterns" }
           ],
         }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "security:controls") {
+        const controls = getSecurityControls();
+        return new Response(JSON.stringify(controls), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "security:bug-bounty") {
+        const program = getBugBountyProgram();
+        return new Response(JSON.stringify(program), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
