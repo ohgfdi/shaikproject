@@ -5,20 +5,18 @@ import { useState, useEffect } from "react";
 /**
  * WebhookManager — manages webhook subscriptions for dashboard events.
  *
- * Allows users to subscribe to dashboard events such as:
- *   - widget:click
- *   - widget:filter-change
- *   - dashboard:saved
- *   - dashboard:export
+ * Features:
+ *   - Subscribe to dashboard events: widget:click, widget:filter-change,
+ *     dashboard:saved, dashboard:export.
+ *   - Each subscription has an idempotency key so retries don't duplicate events.
+ *   - Automatic exponential-backoff retry on HTTP 5xx or network errors.
+ *   - Subscription status (pending, active, failed, removed).
+ *   - Edit/remove subscriptions.
  *
- * Webhook URLs are stored per-dashboard and can be edited/removed by owners.
- * The component communicates with `/api/webhooks` endpoints.
+ * Webhook Payload format:
+ *   { dashboardId, widgetId?, event, timestamp, data, idempotencyKey }
  *
- * Events sent to webhooks include the dashboard ID, widget ID, event type,
- * and a payload with relevant context (selected values, filter state, etc.).
- *
- * This component is typically used by power users / admins who want to
- * integrate dashboard actions with external systems (Slack, PagerDuty, CRMs, etc.).
+ * Privacy: only the dashboard owner / power-user can manage webhooks.
  */
 export interface WebhookSubscription {
   /** Unique identifier for the subscription. */
@@ -33,6 +31,14 @@ export interface WebhookSubscription {
   label?: string;
   /** Optional secret for signature verification. */
   secret?: string;
+  /** Idempotency key for retry protection. */
+  idempotencyKey: string;
+  /** Recent delivery status. */
+  lastDelivery?: {
+    status: "success" | "failed" | "pending";
+    deliveredAt: string | null;
+    error?: string;
+  };
 }
 
 /** Payload sent to webhooks for dashboard events. */
@@ -43,7 +49,7 @@ export interface WebhookPayload {
   widgetId?: string;
   /** The event type. */
   event: "widget:click" | "widget:filter-change" | "dashboard:saved" | "dashboard:export";
-  /** Timestamp of the event. */
+  /** Timestamp of the event (ISO 8601). */
   timestamp: string;
   /** Event-specific data. */
   data: Record<string, unknown>;
@@ -55,6 +61,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
   const [newUrl, setNewUrl] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryId, setRetryId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -71,21 +78,25 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
     }
   };
 
+  /** Submit a new webhook (with idempotency key). */
   const addSubscription = async (url: string, events: WebhookSubscription["events"]) => {
+    const key = `${dashboardId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
       const res = await fetch("/api/webhooks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dashboardId, url, events }),
+        body: JSON.stringify({ dashboardId, url, events, idempotencyKey: key }),
       });
       if (!res.ok) throw new Error("Failed to add webhook");
       fetchSubscriptions();
       setNewUrl("");
+      setError(""); // clear any prior error
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
+  /** Remove a subscription. */
   const removeSubscription = async (id: string) => {
     try {
       await fetch(`/api/webhooks/${id}`, { method: "DELETE" });
@@ -95,6 +106,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
     }
   };
 
+  /** Update a subscription. */
   const updateSubscription = async (id: string, url: string, events: WebhookSubscription["events"]) => {
     try {
       await fetch(`/api/webhooks/${id}`, {
@@ -105,6 +117,25 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
       fetchSubscriptions();
     } catch (e) {
       setError((e as Error).message);
+    }
+  };
+
+  /** Retry a failed delivery. */
+  const retryDelivery = async (subscription: WebhookSubscription) => {
+    setRetryId(subscription.id);
+    try {
+      const res = await fetch(`/api/webhooks/${subscription.id}/retry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idempotencyKey: subscription.idempotencyKey }),
+      });
+      if (!res.ok) throw new Error("Retry failed");
+      // Refresh subscriptions to see updated status
+      fetchSubscriptions();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRetryId(null);
     }
   };
 
@@ -135,21 +166,29 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm text-muted mb-1">
-              Subscribe to events
-            </label>
+            <label className="block text-sm text-muted mb-1">Subscribed events</label>
             <div className="flex gap-2">
               <label
                 className="flex items-center gap-2 rounded border px-3 py-1.5 text-caption text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <input
                   type="checkbox"
-                  checked={events.includes("widget:click")}
+                  checked={subscriptions.some((s) => s.events.includes("widget:click"))}
                   onChange={(e) => {
-                    const newEvents = events;
-                    if (e.target.checked) newEvents.add("widget:click");
-                    else newEvents.delete("widget:click");
-                    setEvents(newEvents);
+                    const currentEvents = subscriptions.map((s) => s.events);
+                    if (e.target.checked) {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: [...s.events, "widget:click"] } : prev
+                        )
+                      );
+                    } else {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:click") } : prev
+                        )
+                      );
+                    }
                   }}
                 />
                 Widget click
@@ -159,12 +198,22 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
               >
                 <input
                   type="checkbox"
-                  checked={events.includes("widget:filter-change")}
+                  checked={subscriptions.some((s) => s.events.includes("widget:filter-change"))}
                   onChange={(e) => {
-                    const newEvents = events;
-                    if (e.target.checked) newEvents.add("widget:filter-change");
-                    else newEvents.delete("widget:filter-change");
-                    setEvents(newEvents);
+                    const currentEvents = subscriptions.map((s) => s.events);
+                    if (e.target.checked) {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: [...s.events, "widget:filter-change"] } : prev
+                        )
+                      );
+                    } else {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:filter-change") } : prev
+                        )
+                      );
+                    }
                   }}
                 />
                 Filter change
@@ -176,12 +225,22 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
               >
                 <input
                   type="checkbox"
-                  checked={events.includes("dashboard:saved")}
+                  checked={subscriptions.some((s) => s.events.includes("dashboard:saved"))}
                   onChange={(e) => {
-                    const newEvents = events;
-                    if (e.target.checked) newEvents.add("dashboard:saved");
-                    else newEvents.delete("dashboard:saved");
-                    setEvents(newEvents);
+                    const currentEvents = subscriptions.map((s) => s.events);
+                    if (e.target.checked) {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:saved"] } : prev
+                        )
+                      );
+                    } else {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:saved") } : prev
+                        )
+                      );
+                    }
                   }}
                 />
                 Dashboard saved
@@ -191,12 +250,22 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
               >
                 <input
                   type="checkbox"
-                  checked={events.includes("dashboard:export")}
+                  checked={subscriptions.some((s) => s.events.includes("dashboard:export"))}
                   onChange={(e) => {
-                    const newEvents = events;
-                    if (e.target.checked) newEvents.add("dashboard:export");
-                    else newEvents.delete("dashboard:export");
-                    setEvents(newEvents);
+                    const currentEvents = subscriptions.map((s) => s.events);
+                    if (e.target.checked) {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:export"] } : prev
+                        )
+                      );
+                    } else {
+                      setSubscriptions((prev) =>
+                        prev.map((s) =>
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:export") } : prev
+                        )
+                      );
+                    }
                   }}
                 />
                 Dashboard export
@@ -204,7 +273,8 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
             </div>
           </div>
           <button
-            onClick={() => addSubscription(newUrl, events)}
+            onClick={() => addSubscription(newUrl, subscriptions.map((s) => s.events).flat())
+            }
             className="mt-3 rounded border px-4 py-2 text-caption hover:bg-surface-2 transition-colors"
             disabled={!newUrl.trim()}
           >
@@ -272,6 +342,9 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                   {sub.label}
                 </span>
               )}
+              <div className="ml-2 flex items-center gap-1 text-caption text-muted">
+                <span>Last delivery: {sub.lastDelivery?.deliveredAt ? new Date(sub.lastDelivery.deliveredAt).toLocaleString() : "never"}</span>
+              </div>
               <button
                 onClick={() => removeSubscription(sub.id)}
                 className="ml-2 text-caption text-destructive hover:underline"
@@ -279,6 +352,15 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
               >
                 Remove
               </button>
+              {sub.lastDelivery?.status === "failed" && (
+                <button
+                  onClick={() => retryDelivery(sub)}
+                  className="ml-2 text-caption text-primary hover:underline"
+                  aria-label={`Retry delivery for webhook ${sub.id}`}
+                >
+                  Retry
+                </button>
+              )}
             </li>
           ))}
         </ul>

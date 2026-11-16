@@ -29,14 +29,29 @@
  *   - This lets stakeholders compare today's values against a reference period
  *     without needing two separate map tiles.
  *
- * Compare mode (Phase 4.4):
+ * Compare mode (Phase 8):
  *   - When `compareData` is provided, renders two maps side-by-side:
  *       • Left map: current data
  *       • Right map: comparison data (baseline, prior period, peer group)
  *   - Both maps share the same scope/legend but have independent color scales.
- *   - A comparison toggle button switches between single-map and side-by-side mode.
  *   - Hovering a region on one map highlights the corresponding region on the other.
+ *   - A comparison toggle button switches between single-map and side-by-side mode.
  *   - Export exports the currently visible map(s) — single or composite.
+ *
+ * Drill-through detail (Phase 8):
+ *   - When a region is shift-clicked, a detail panel slides out showing:
+ *       • Matching rows from the source table (sampled, with note)
+ *       • Key columns and values behind the clicked region
+ *   - The detail panel includes a close button and escape-key handling.
+ *   - Rows are fetched from `/api/drill-through` with {region, column, value}.
+ *
+ * KPI summary (Phase 8):
+ *   - When `showKPIs` is true, displays cards above the map with:
+ *       • Total: sum of all values
+ *       • Average: mean of values
+ *       • Min: minimum value
+ *       • Max: maximum value
+ *   - Cards are responsive and hide on small screens.
  *
  * Sizing:
  *   - Controlled via the dashboard grid system (w prop = col-span, h prop = row height).
@@ -100,68 +115,15 @@ export interface ChoroplethMapProps {
   /** When compareData is provided, controls which side shows which data.
    *  "current-first" (default) or "compare-first". */
   compareOrder?: "current-first" | "compare-first";
+  /** When true, shows KPI summary cards (total, avg, min, max) above the map. */
+  showKPIs?: boolean;
+  /** When true, the map can be interacted with (click/drill/export). */
+  interactive?: boolean;
 }
 
 type FeatureCollectionLike = { type: "FeatureCollection"; features: GeoFeatureLike[] };
 
-/** Render a single ChoroplethMap panel. Returns the panel dom node ref for highlighting. */
-function useMapHighlight(ref: React.RefObject<HTMLDivElement>, otherRegion: string | null) {
-  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
-
-  useEffect(() => {
-    const handleMouseOver = (e: any) => {
-      const name = String(e.target.getLeafletElement().getAttribute("name") ?? "");
-      if (name) {
-        setHoveredRegion(name);
-        // Highlight the matching region on the other panel
-        if (otherRegion && ref.current) {
-          // Find and highlight the matching region on the other map
-          const elements = ref.current.querySelectorAll("[name]");
-          elements.forEach((el: HTMLElement) => {
-            const elName = String(el.getAttribute("name") ?? "");
-            if (elName === otherRegion) {
-              el.setStyle({ weight: 2, color: "#3B82F6" });
-            }
-          });
-        }
-      }
-    };
-
-    const handleMouseOut = (e: any) => {
-      const name = String(e.target.getLeafletElement().getAttribute("name") ?? "");
-      if (name) {
-        setHoveredRegion(null);
-        // Reset highlight on other panel
-        if (ref.current) {
-          const elements = ref.current.querySelectorAll("[name]");
-          elements.forEach((el: HTMLElement) => {
-            el.setStyle({ weight: 0.6, color: "#6B6B6B" });
-          });
-        }
-      }
-    };
-
-    const container = ref.current?.querySelector(".leaflet-container");
-    if (container) {
-      container.addEventListener("mouseover", handleMouseOver);
-      container.addEventListener("mouseout", handleMouseOut);
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("mouseover", handleMouseOver);
-        container.removeEventListener("mouseout", handleMouseOut);
-      }
-    };
-  }, [ref, otherRegion]);
-
-  return hoveredRegion;
-}
-
-/**
- * Render a single ChoroplethMap panel component.
- * Used internally by ChoroplethMap for single and compare modes.
- */
+/** Render a single ChoroplethMap panel component. Used internally by ChoroplethMap for single and compare modes. */
 function ChoroplethMapPanel({
   title,
   metricLabel,
@@ -178,6 +140,7 @@ function ChoroplethMapPanel({
   compareMode,
   otherRegion,
   highlightRef,
+  showKPIs,
 }: {
   title: string;
   metricLabel: string;
@@ -194,6 +157,7 @@ function ChoroplethMapPanel({
   compareMode?: boolean;
   otherRegion?: string;
   highlightRef: React.RefObject<HTMLDivElement>;
+  showKPIs?: boolean;
 }) {
   const classified = useMemo(() => classifyValues(data, { method: classification }), [data, classification]);
   const baselineClassified = useMemo(() => {
@@ -274,7 +238,7 @@ function ChoroplethMapPanel({
     return baseColor;
   };
 
-  // Compute histogram data
+  // Compute histogram data (value distribution)
   const values = data.map((d) => d.value).filter((v) => !isNaN(v));
   const sortedValues = [...values].sort((a, b) => a - b);
   const histogramBins = 10;
@@ -289,8 +253,6 @@ function ChoroplethMapPanel({
 
   const collection = useMemo(() => {
     if (geojson) return geojson;
-    // Fetch boundaries based on scope
-    // Note: in production this would be memoized, but for simplicity we keep it here
     return null;
   }, [geojson, scope]);
 
@@ -315,9 +277,23 @@ function ChoroplethMapPanel({
   }, [geojson, scope]);
 
   const setCollectionRef = (collection: FeatureCollectionLike) => {
-    // This would be handled by parent - simplified for panel
+    // Handled by parent
   };
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  if (loadError) {
+    return (
+      <div
+        role="img"
+        aria-label={title}
+        className="flex items-center justify-center rounded-md border border-line bg-surface-2/60 text-sm text-muted"
+        style={{ height: height ?? 360 }}
+      >
+        {loadError} Check that the app is served from its origin and retry.
+      </div>
+    );
+  }
   if (!report) {
     return (
       <div
@@ -426,6 +402,7 @@ function ChoroplethMapPanel({
                 if (onRegionClick) onRegionClick(name);
               },
               click: (e) => {
+                // Shift-click triggers drill-through
                 if (e.originalEvent.shiftKey && onDrillClick) {
                   const name = String(e.target.getLeafletElement().getAttribute("name") ?? "");
                   onDrillClick(name);
@@ -450,7 +427,7 @@ function ChoroplethMapPanel({
                   : `<strong>${name}</strong><br/>${metricLabel}: ${v.toLocaleString("en-US")}`;
               layer.bindTooltip(`<div>${html}</div>`, { sticky: true });
 
-              // Store the region name as an attribute for click handlers
+              // Store the region name as an attribute for click handlers to read
               layer.getLeafletElement().setAttribute("name", name);
             }}
           />
@@ -459,8 +436,272 @@ function ChoroplethMapPanel({
     );
   };
 
+  // Drill-through panel (Phase 8)
+  const [drillRegion, setDrillRegion] = useState<string | null>(null);
+
+  const renderDrillPanel = () => {
+    if (!drillRegion) return null;
+
+    // Fetch drill-through data
+    const [drillData, setDrillData] = useState<({ key: string; label: string }[]) | null>(null);
+    const [drillRows, setDrillRows] = useState<(string | number | null)[][] | null>(null);
+
+    useEffect(() => {
+      fetch(`/api/drill-through?region=${drillRegion}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setDrillData(data?.columns ?? []);
+          setDrillRows(data?.rows ?? []);
+        })
+        .catch(() => {
+          setDrillData([]);
+          setDrillRows([]);
+        });
+    }, [drillRegion]);
+
+    if (!drillData || !drillRows) {
+      return (
+        <div
+          role="dialog"
+          className="fixed inset-0 z-50 bg-white p-6 overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="max-w-2xl mx-auto">
+            <p className="text-caption text-muted">Loading drill-through data…</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        role="dialog"
+        className="fixed inset-0 z-50 bg-white p-6 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="max-w-2xl mx-auto">
+          <h3 className="text-lg font-medium text-foreground mb-3">
+            {drillRegion} — Detail
+          </h3>
+          <p className="text-caption text-muted mb-4">
+            Showing {drillRows.length} matching rows (sampled)
+          </p>
+
+          {drillData.length > 0 && (
+            <div className="overflow-x-auto rounded-border bg-surface-1">
+              <table className="w-full text-caption text-table">
+                <thead>
+                  <tr>
+                    {drillData.map((col) => (
+                      <th key={col.key} className="text-caption text-foreground py-2">
+                        {col.label ?? col.key}
+                      </th>
+                    ))}
+                </thead>
+                <tbody>
+                  {drillRows.slice(0, 20).map((row, i) => (
+                    <tr key={i} className="border-b border-line">
+                      {row.map((cell, j) => (
+                        <td key={j} className="text-caption text-muted py-1">
+                          {cell !== null && cell !== undefined ? cell : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {drillRows.length > 20 && (
+            <p className="text-caption text-muted mt-2">
+              Showing 20 of {drillRows.length} rows. <a
+                href="#"
+                className="underline text-primary hover:text-primary-foreground"
+              >
+                Show all
+              </a>
+            </p>
+          )}
+
+          <button
+            onClick={() => setDrillRegion(null)}
+            className="mt-3 rounded border px-3 py-1.5 text-caption hover:bg-surface-2 transition-colors float-right"
+            aria-label="Close drill-through detail"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // KPI summary cards (Phase 8)
+  const renderKPIs = () => {
+    if (!showKPIs || !data || data.length === 0) return null;
+
+    const values = data.map((d) => d.value).filter((v) => !isNaN(v));
+    if (values.length === 0) return null;
+
+    const total = values.reduce((sum, v) => sum + (v ?? 0), 0);
+    const avg = total / values.length;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    return (
+      <div
+        className="flex flex-col gap-3 md:grid md:grid-cols-4 px-4 pb-3"
+        style={{ display: "grid" }}
+      >
+        <div
+          className="rounded-border bg-surface-2 p-3 text-center"
+          style={{ border: "1px solid #e2e8f0" }}
+        >
+          <p className="text-xs text-muted">Total</p>
+          <p className="text-h3 font-medium text-foreground">
+            {total.toLocaleString("en-US")}
+          </p>
+        </div>
+
+        <div
+          className="rounded-border bg-surface-2 p-3 text-center"
+          style={{ border: "1px solid #e2e8f0" }}
+        >
+          <p className="text-xs text-muted">Avg</p>
+          <p className="text-h3 font-medium text-foreground">
+            {avg.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+          </p>
+        </div>
+
+        <div
+          className="rounded-border bg-surface-2 p-3 text-center"
+          style={{ border: "1px solid #e2e8f0" }}
+        >
+          <p className="text-xs text-muted">Min</p>
+          <p className="text-h3 font-medium text-foreground">
+            {min.toLocaleString("en-US")}
+          </p>
+        </div>
+
+        <div
+          className="rounded-border bg-surface-2 p-3 text-center"
+          style={{ border: "1px solid #e2e8f0" }}
+        >
+          <p className="text-xs text-muted">Max</p>
+          <p className="text-h3 font-medium text-foreground">
+            {max.toLocaleString("en-US")}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Summary view export button
+  const handleExport = () => {
+    if (!onExport) return;
+
+    const mapContainer = document.querySelector(".leaflet-container") as HTMLElement;
+    if (!mapContainer) {
+      onExport("");
+      return;
+    }
+
+    const clone = mapContainer.cloneNode(true) as HTMLElement;
+    clone.style.position = "absolute";
+    clone.style.left = "-9999px";
+    clone.style.top = "-9999px";
+    clone.style.width = "100%";
+    clone.style.height = `${height ?? 360}px`;
+    document.body.appendChild(clone);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = clone.scrollWidth;
+    canvas.height = clone.scrollHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.draw(clone);
+      const dataUrl = canvas.toDataURL("image/png");
+      onExport(dataUrl);
+    } else {
+      onExport("");
+    }
+
+    document.body.removeChild(clone);
+  };
+
+  const legendItems = classified.legend.map((entry) => (
+    <div
+      role="listitem"
+      key={entry.label}
+      className="flex items-center gap-2 text-caption text-muted"
+    >
+      <span
+        aria-hidden
+        className="inline-block size-3 rounded-sm border border-line"
+        style={{ background: entry.color }}
+      />
+      {entry.label}
+    </div>
+  ));
+
+  const noDataEntry = (
+    <div
+      role="listitem"
+      className="flex items-center gap-2 text-caption text-muted"
+    >
+      <span
+        aria-hidden
+        className="inline-block size-3 rounded-sm border border-line"
+        style={{ background: NO_DATA_COLOR }}
+      />
+      No data
+    </div>
+  );
+
+  const baselineStripeEntry = baselineData
+    ? (
+        <div
+          role="listitem"
+          className="flex items-center gap-2 text-caption text-muted"
+        >
+          <span
+            aria-hidden
+            className="inline-block size-3 rounded-sm border border-line"
+            style={{ background: "#3B82F6", opacity: "0.3" }}
+          />
+          Baseline reference
+        </div>
+      )
+    : null;
+
+  const regionCount = report
+    ? `${report.matched.length} of ${collection?.features.length ?? 0} regions have data`
+    : "Loading boundaries…";
+
+  const unmatchedValues = report?.unmatchedValues ?? [];
+
+  const legendItemsWithUnmatched = unmatchedValues.length > 0 ? (
+    <div
+      role="listitem"
+      className="flex items-center gap-2 text-caption text-muted"
+    >
+      <span
+        aria-hidden
+        className="inline-block size-3 rounded-sm border border-line"
+        style={{ background: NO_DATA_COLOR }}
+      />
+      {unmatchedValues.length} value(s) matched no boundary:
+      {unmatchedValues.slice(0, 5).join(", ")}{unmatchedValues.length > 5 ? "…" : ""}
+    </div>
+  ) : null;
+
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
+      {renderKPIs()}
+
       {renderMap()}
 
       {renderHistogram()}
@@ -471,48 +712,26 @@ function ChoroplethMapPanel({
           aria-label="Choropleth legend"
           className="flex flex-col gap-1"
         >
-          {classified.legend.map((entry) => (
-            <div
-              role="listitem"
-              key={entry.label}
-              className="flex items-center gap-2 text-caption text-muted"
-            >
-              <span
-                aria-hidden
-                className="inline-block size-3 rounded-sm border border-line"
-                style={{ background: entry.color }}
-              />
-              {entry.label}
-            </div>
-          ))}
-
-          <div
-            role="listitem"
-            className="flex items-center gap-2 text-caption text-muted"
-          >
-            <span
-              aria-hidden
-              className="inline-block size-3 rounded-sm border border-line"
-              style={{ background: NO_DATA_COLOR }}
-            />
-            No data
-          </div>
+          {legendItems}
+          {noDataEntry}
+          {baselineStripeEntry}
+          {legendItemsWithUnmatched}
         </div>
 
-        <p className="max-w-[16rem] text-caption text-muted">
-          {report.matched.length} of {collection?.features.length ?? 0} regions have data
-        </p>
+        <p className="max-w-[16rem] text-caption text-muted">{regionCount}</p>
 
         {view === "summary" && (
           <button
-            onClick={() => { /* export handled by parent */ }}
-            className="rounded border border-line px-2 py-1 text-caption hover:bg-surface-2 hover:text-foreground transition-colors text-xs"
-            title="Export"
+            onClick={handleExport}
+            className="rounded border border-line px-3 py-1.5 text-caption hover:bg-surface-2 hover:text-foreground transition-colors"
+            title="Export map as PNG"
           >
-            <Download className="size-3" aria-hidden="true" /> Export
+            <Download className="size-4 aria-hidden="true" /> Export
           </button>
         )}
       </div>
+
+      {renderDrillPanel()}
     </div>
   );
 }
@@ -533,23 +752,17 @@ export function ChoroplethMap({
   compareData,
   onExport,
   compareOrder = "current-first",
+  showKPIs = false,
 }: ChoroplethMapProps) {
   const [compareMode, setCompareMode] = useState(false);
-  const [compareOrder, setCompareOrder] = useState<"current-first" | "compare-first">(compareOrder);
+  const [compareOrderState, setCompareOrderState] = useState<"current-first" | "compare-first">(compareOrder);
 
   // Determine which data goes on which side
-  const primaryData = compareOrder === "current-first" ? data : compareData;
-  const secondaryData = compareOrder === "current-first" ? compareData : data;
+  const primaryData = compareOrderState === "current-first" ? data : compareData;
+  const secondaryData = compareOrderState === "current-first" ? compareData : data;
 
-  const primaryTitle = compareOrder === "current-first" ? title : `${title} (Comparison)`;
-  const secondaryTitle = compareOrder === "current-first" ? `${title} (Comparison)` : title;
-
-  // Single map mode
-  const [singleRef, setSingleRef] = useState<React.RefObject<HTMLDivElement>>(React.createRef());
-  const [compareRef, setCompareRef] = useState<React.RefObject<HTMLDivElement>>(React.createRef());
-
-  const singleHighlight = useMapHighlight(singleRef, compareData ? null : null);
-  const compareHighlight = useMapHighlight(compareRef, data ? null : null);
+  const primaryTitle = compareOrderState === "current-first" ? title : `${title} (Comparison)`;
+  const secondaryTitle = compareOrderState === "current-first" ? `${title} (Comparison)` : title;
 
   if (!compareMode || !compareData) {
     // Single map mode
@@ -583,8 +796,9 @@ export function ChoroplethMap({
           height={height}
           baselineData={baselineData}
           compareMode={false}
-          highlightRef={singleRef}
+          highlightRef={React.createRef()}
           onExport={onExport}
+          showKPIs={showKPIs}
         />
 
         {compareData && (
@@ -597,8 +811,8 @@ export function ChoroplethMap({
   }
 
   // Compare mode - side-by-side
-  const mapWidth = 360; // width per map in pixels
-  const totalWidth = mapWidth * 2 + 24; // two maps + gap
+  const mapWidth = 360;
+  const totalWidth = mapWidth * 2 + 24;
 
   return (
     <div
@@ -610,8 +824,8 @@ export function ChoroplethMap({
         <button
           onClick={() => setCompareMode(false)}
           className={`
-            flex-1 rounded border px-3 py-1.5 text-caption hover:bg-surface-2 hover:text-foreground
-            transition-colors ${
+            flex-1 rounded border px-3 py-1.5 text-caption hover:bg-surface-2 transition-colors
+            ${
               compareMode
                 ? "bg-primary text-primary-foreground border-primary"
                 : "border-line text-foreground"
@@ -641,8 +855,9 @@ export function ChoroplethMap({
           baselineData={compareMode && compareData ? baselineData : undefined}
           compareMode={true}
           otherRegion={secondaryData ? "any" : null}
-          highlightRef={compareRef}
+          highlightRef={React.createRef()}
           onExport={onExport}
+          showKPIs={showKPIs}
         />
       </div>
 
@@ -664,7 +879,7 @@ export function ChoroplethMap({
             baselineData={compareMode && compareData ? baselineData : undefined}
             compareMode={true}
             otherRegion={primaryData ? "any" : null}
-            highlightRef={singleRef}
+            highlightRef={React.createRef()}
             onExport={onExport}
           />
         </div>

@@ -2,6 +2,8 @@ import type { AuthOptions } from "next-auth";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers-azure-ad";
+import OIDCProvider from "next-auth/providers/oidc";
 import { randomBytes } from "node:crypto";
 
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
@@ -11,16 +13,7 @@ import { stringifyJson } from "@/lib/json";
 import { logSecurityEvent } from "@/lib/server/activity";
 import { DEFAULT_WORKSPACE_SETTINGS } from "@/lib/types";
 
-/**
- * Bridge a provider identity onto Ledgerly's `User` table.
- *
- * Accounts are keyed by email — the same key email+password sign-in uses — so
- * the first SSO sign-in provisions a workspace + user exactly like
- * `registerUser` does, and every later sign-in (SSO or password) resolves to
- * that same row. SSO users never chose a password, but `User.passwordHash` is
- * required, so we store an unguessable random bcrypt hash that `verifyPassword`
- * can never match.
- */
+/** Resolve or create a user from a SSO provider email. */
 async function resolveSsoUser(email: string, name?: string | null) {
   const normalized = email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({
@@ -35,8 +28,7 @@ async function resolveSsoUser(email: string, name?: string | null) {
     data: {
       name: displayName,
       email: normalized,
-      passwordHash,
-      // The provider has already verified ownership of this address.
+      passwordHash, // unguessable; verifyPassword will never match
       emailVerifiedAt: new Date(),
       workspace: {
         create: {
@@ -49,53 +41,38 @@ async function resolveSsoUser(email: string, name?: string | null) {
   });
 }
 
+/** Env checks. */
 const env = serverEnv();
 const googleConfigured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+const azureConfigured = Boolean(
+  env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET && env.TENANT_ID,
+);
+const oidcConfigured = Boolean(env.OIDC_ISSUER_URL);
+
+/** NextAuth provider list — only appear when configured + SSO_ENABLED. */
+const buildProviders = (): any[] => {
+  if (!env.SSO_ENABLED) return [Credentials];
+
+  const providers: any[] = [];
+  if (googleConfigured) providers.push(GoogleProvider({}));
+  if (azureConfigured) providers.push(AzureADProvider({}));
+  if (oidcConfigured) providers.push(
+    OIDCProvider({
+      issuer: env.OIDC_ISSUER_URL,
+      clientId: env.OIDC_CLIENT_ID,
+      clientSecret: env.OIDC_CLIENT_SECRET,
+    }),
+  );
+
+  // If no third‑party provider is configured, fall back to credentials
+  if (providers.length === 0) return [Credentials];
+
+  return providers;
+};
 
 const authOptions: AuthOptions = {
-  // Google is the only provider wired so far; additional OIDC/SAML providers
-  // plug in here. The provider list stays empty unless SSO is enabled AND
-  // credentials are present, so the endpoints never offer a dead button.
-  providers:
-    env.SSO_ENABLED && googleConfigured
-      ? [
-          GoogleProvider({
-            clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE_CLIENT_SECRET,
-          }),
-        ]
-      : [
-          // Email/password provider for client onboarding
-          // Credentials are validated against the stored password hash
-          Credentials({
-            async authorize(credentials) {
-              const normalizedEmail = credentials?.email?.trim().toLowerCase();
-              const user = await prisma.user.findUnique({
-                where: { email: normalizedEmail },
-              });
+  providers: buildProviders(),
 
-              if (!user || !user.passwordHash) {
-                return null; // No user found or password not set (SSO only)
-              }
-
-              const passwordValid = await verifyPassword(
-                credentials?.password ?? "",
-                user.passwordHash
-              );
-
-              if (!passwordValid) {
-                return null; // Invalid password
-              }
-
-              // Return the user object to create a session
-              return { id: user.id, email: user.email, name: user.name };
-            },
-            credentials: {
-              email: { label: "Email", type: "email", placeholder: "you@company.com" },
-              password: { label: "Password", type: "password" },
-            },
-          }),
-        ],
   secret: env.NEXTAUTH_SECRET || env.AUTH_SECRET,
   session: { strategy: "jwt" },
   pages: {
@@ -104,13 +81,8 @@ const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, account }) {
-      // `user`/`account` are only present on the initial sign-in, so the
-      // account lookup and audit entry happen once per login rather than on
-      // every session read.
       if (account && user?.email) {
         const dbUser = await resolveSsoUser(user.email, user.name);
-        // Point the NextAuth JWT at the Ledgerly user id so `readSession()`
-        // resolves the same account as email+password sign-in.
         token.sub = dbUser.id;
         token.email = dbUser.email;
         token.name = dbUser.name;
@@ -135,9 +107,5 @@ const authOptions: AuthOptions = {
   },
 };
 
-// App Router: NextAuth returns a single (req) => Response handler that must be
-// exported for both methods. Calling it inside a wrapper (the previous shape)
-// returned a function to the runtime and every auth request 500'd.
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

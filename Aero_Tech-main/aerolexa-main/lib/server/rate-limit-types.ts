@@ -1,32 +1,22 @@
 /**
- * Rate Limiting Types
+ * Phase 10: Rate Limit Types
+ *
+ * Enum of preset rate limits for common use cases.
+ * Used by the rate-limit middleware to configure per-endpoint limits.
  */
+export enum RATE_LIMITS {
+  /** 10 login attempts per 15 minutes per IP */
+  login = 10,
 
-export interface RateLimitConfig {
-  /** Maximum number of allowed calls per window */
-  limit: number;
-  /** Window length in milliseconds */
-  windowMs: number;
-}
+  /** 200 API requests per 15 minutes per IP */
+  api = 200,
 
-export interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-  retryAfterSeconds: number;
-}
+  /** 20 burst requests per 1 minute (for short bursts) */
+  burst = 20,
 
-export type PrincipalType = "user" | "api_key";
+  /** 100 dashboard requests per 15 minutes per IP */
+  dashboard = 100,
 
-export interface RateLimitContext {
-  principalId: string;
-  principalType: PrincipalType;
-}
-
-export interface RateLimitedError extends Error {
-  statusCode: 429;
-  retryAfterSeconds: number;
-  retryAfter: string;
-  principalId: string;
-  principalType: PrincipalType;
-  bucketName: string;
+  /** 50 report export requests per 15 minutes per IP */
+  reportExport = 50,
 }

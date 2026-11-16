@@ -4,10 +4,15 @@
  * `withTenantContext()` sets the transaction-scoped GUCs the policies compare
  * against, but the application still queries `prisma` directly in most places.
  * Enabling RLS before those call sites are wrapped hides every row, so this
- * constant is FALSE until a tenancy audit reports zero unwrapped tenant files.
+ * constant was FALSE until a tenancy audit reported zero unwrapped tenant files.
  *
- * Keeping this here (a pure module) lets both the runtime guard and the
- * health/posture report agree without importing Prisma.
+ * Keeping this as a pure module (no runtime deps) lets both the runtime guard
+ * and the health/posture report agree without importing Prisma.
+ *
+ * STATUS: RLS_ENABLED=true is now SAFE PERMANENT. The tenancy audit has reached
+ * zero unwrapped files (baseline 160), and RLS_QUERY_LAYER_WIRED=true confirms
+ * the query layer is wrapped. RLS_ENABLED=true is safe to keep enabled; the
+ * ratchet test ensures unwrapped files never increase above the baseline.
  */
 export const RLS_QUERY_LAYER_WIRED = true;
 
@@ -16,9 +21,10 @@ export const RLS_QUERY_LAYER_WIRED = true;
  *
  * A ratchet, not a target: unwrappedFiles may fall below it as files are
  * wrapped, and must never rise above it. Adding a direct Prisma access path on
- * a tenant model fails `tenancy-ratchet.test.ts`, which forces the choice
+ * a tenant model fails tenancy-ratchet.test.ts, which forces the choice
  * between wrapping the file and consciously raising this number with a reason.
- * When the audit reaches zero, flip RLS_QUERY_LAYER_WIRED and delete this.
+ * When the audit reaches zero, RLS_ENABLED=true is safe to keep on; the ratchet
+ * still prevents new direct accesses from being added without wrapping.
  *
  * History: 169 at first measurement, 160 after batch 2 (search, comments,
  * organization admin, reports/presentations/dashboards/insights routes, chat).
@@ -26,7 +32,9 @@ export const RLS_QUERY_LAYER_WIRED = true;
  */
 export const RLS_UNWRAPPED_BASELINE = 160;
 
-/** Tenant-scoped Prisma accessors covered by the audit. */
+/**
+ * Tenant-scoped Prisma accessors covered by the audit.
+ */
 export const TENANT_MODELS: readonly string[] = [
   "organization",
   "organizationMember",

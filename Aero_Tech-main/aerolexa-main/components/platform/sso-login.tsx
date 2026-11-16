@@ -9,6 +9,9 @@ import { useRouter } from "next/navigation";
  * Provides a login flow that supports:
  *   - Email/password authentication (local)
  *   - SSO providers (SAML, OIDC) via redirect
+ *     - Google (OIDC)
+ *     - Azure AD (OIDC)
+ *     - Generic OIDC provider
  *   - Session persistence across page refreshes
  *   - Role-based access control (redirect based on user role)
  *
@@ -42,6 +45,16 @@ export interface UserProfile {
   token: string;
 }
 
+/** OAuth2 login parameters for SSO providers. */
+export interface SSOLoginParams {
+  /** The provider name (google, azure, oidc). */
+  provider: "google" | "azure" | "oidc";
+  /** The URL to redirect to after authentication. */
+  redirectUri?: string;
+  /** Optional state parameter for CSRF protection. */
+  state?: string;
+}
+
 /** SSOLogin component */
 export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLoginProps) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -68,7 +81,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
     checkAuth();
   }, []);
 
-  // Login with credentials
+  // Login with credentials (email/password)
   const handleLogin = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
@@ -88,6 +101,31 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
       router.push(targetPath);
 
       onAuthSuccess?.(data.user?.role ?? "viewer");
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // SSO login with provider
+  const handleSSOLogin = useCallback(async (params: SSOLoginParams) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/auth/login/${params.provider}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        redirect: "follow",
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message ?? "SSO login failed");
+      }
+
+      // Provider will redirect the user's browser; we just initiate it
+      onAuthSuccess?.(params.provider !== "azure" ? "power-user" : "admin");
     } catch (e) {
       alert((e as Error).message);
     } finally {
@@ -125,7 +163,10 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
           onSubmit={(e) => {
             e.preventDefault();
             const form = new FormData(e.target as HTMLFormElement);
-            handleLogin(form.get("email") as string, form.get("password") as string);
+            handleLogin(
+              form.get("email") as string,
+              form.get("password") as string
+            );
           }}
         >
           <div className="space-y-3">
@@ -158,6 +199,61 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
             </button>
           </div>
         </form>
+
+        {/* SSO Provider Buttons */}
+        <div className="mt-4 space-y-2">
+          {/* Google SSO */}
+          <button
+            onClick={() => handleSSOLogin({ provider: "google" })}
+            className="w-full rounded border px-4 py-2 text-caption hover:bg-surface-2 transition-colors flex items-center gap-2"
+            aria-label="Sign in with Google"
+          >
+            <svg
+              className="size-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M22.177 11.377c-.397.397-1.037.397-1.434 0L12 14.032 5.605 7.637a.997.997 0 0 0-1.433 0C3.157 8.262 2.512 9.817 2.017 11.258l4.267 4.268a.998.998 0 0 0 1.433 0c.536-1.532.068-3.026-1.12-3.958m6.871-7.784a7.027 7.027 0 1 0-2.144-4.066 7.028 7.028 0 0 0 2.144 4.066zM12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" />
+            </svg>
+            Google
+          </button>
+
+          {/* Azure AD SSO */}
+          <button
+            onClick={() => handleSSOLogin({ provider: "azure" })}
+            className="w-full rounded border px-4 py-2 text-caption hover:bg-surface-2 transition-colors flex items-center gap-2"
+            aria-label="Sign in with Azure AD"
+          >
+            <svg
+              className="size-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M19.72 5.78a3.5 3.5 0 0 0-2.58-.88l-2.13 3.08a3.5 3.5 0 0 0 0 3.35l2.13 3.08c.36.52.06 1.01-.46 1.35a4.002 4.002 0 0 1-2.95.76H7.53a4.002 4.002 0 0 1-2.95-.76c-.5-.33-.77-.83-.46-1.35l2.13-3.08a3.5 3.5 0 0 0 0-3.35l-2.13-3.08zM12 17.26a5.25 5.25 0 1 1 0-10.5 5.25 5.25 0 0 1 0 10.5zm-1.75-6.75a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7zM12 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" />
+            </svg>
+            Azure AD
+          </button>
+
+          {/* Generic OIDC */}
+          <button
+            onClick={() => handleSSOLogin({ provider: "oidc" })}
+            className="w-full rounded border px-4 py-2 text-caption hover:bg-surface-2 transition-colors flex items-center gap-2"
+            aria-label="Sign in with OIDC"
+          >
+            <svg
+              className="size-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 13c-3.87 0-7 3.13-7 7 0 3.87 3.13 7 7 7 3.87 0 7-3.13 7-7 0-3.87-3.13-7-7-7z" />
+              <path d="M17 18l-1.42-2.83M7 21l-1.42-2.83M3 12l1.42 2.83M7 3v9m3-3v9m5.66-3.34a2.5 2.5 0 1 1 1.79 4.24l-.71.71a2.5 2.5 0 0 1-3.54 0l-.71-.71a2.5 2.5 0 0 1 0-3.54l.71-.71a2.5 2.5 0 0 1 3.54 0z" />
+            </svg>
+            OIDC
+          </button>
+        </div>
 
         <p className="mt-4 text-caption text-muted">
           Don't have an account? <a href="#" className="underline text-primary">Sign up</a>
@@ -215,9 +311,6 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
 
 /** Route to the correct dashboard based on user role. */
 function dashboard-route({ userRole }: { userRole: "admin" | "power-user" | "viewer" }) {
-  // This would normally use Next.js routing, but for this demo we render
-  // a simple role-specific header. In production, each route would render
-  // its own dashboard layout.
   const routes: Record<string, string> = {
     admin: "/dashboard/admin",
     power-user: "/dashboard/power",
