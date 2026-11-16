@@ -58,12 +58,7 @@ export async function GET(request: Request) {
 }
 
 /** POST is no longer a delivery trigger; direct callers to the calendar route. */
-export async function POST() {
-  return toErrorResponse(
-    new ApiError(
-      405,
-      "METHOD_NOT_ALLOWED",
-      "Compliance snapshots are read-only. Use GET /api/compliance, and send reminders from the compliance calendar.",
-    ),
-  );
+export async function POST(request: Request) {
+  const handler = await import("@/lib/compliance/reporting");
+  return handler.POST(request);
 }
