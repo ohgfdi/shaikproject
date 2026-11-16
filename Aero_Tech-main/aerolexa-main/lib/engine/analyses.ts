@@ -1737,6 +1737,8 @@ export function runAnalysis(input: RunAnalysisInput, cfg: AnalysisConfig): Analy
       return runIvCalculus(ctx, cfg);
     case "geospatial":
       return runGeospatial(ctx, cfg);
+    case "map":
+      return runMap(ctx, cfg);
     default:
       throw new AnalysisInputError(`Unsupported analysis kind.`);
   }
@@ -6865,9 +6867,77 @@ export function requiredColumnsFor(kind: AnalysisKind): { type: ColumnDef["type"
         { type: "number", role: "lon" },
         { type: "number", role: "metric" },
       ];
+    case "map":
+      return [{ type: "string", role: "region" }];
     default:
       return [];
   }
+}
+
+
+
+/** Choropleth map analysis - classifies region/metric pairs and returns chart specs. */
+function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): AnalysisResult {
+  const regionCol = cfg.regionCol;
+  const metricCol = cfg.metricCol;
+
+  const regionIdx = columnIndex(ctx.columns, regionCol);
+  if (regionIdx < 0) throw new AnalysisInputError(`Column "${regionCol}" not found in the dataset.`);
+
+  const metricIdx = columnIndex(ctx.columns, metricCol);
+  if (metricIdx < 0) throw new AnalysisInputError(`Column "${metricCol}" not found in the dataset.`);
+
+  const regions = ctx.rows.map((r) => cellString(r[regionIdx]));
+  const values = ctx.rows.map((r) => cellNumber(r[metricIdx]));
+
+  // Filter out rows with missing region or metric
+  const validRows: { region: string; value: number }[] = [];
+  for (let i = 0; i < ctx.rows.length; i++) {
+    if (regions[i] && Number.isFinite(values[i])) {
+      validRows.push({ region: regions[i], value: values[i] });
+    }
+  }
+
+  if (validRows.length === 0) {
+    throw new AnalysisInputError("No valid region-value pairs found. Ensure the region and metric columns contain data.");
+  }
+
+  const classified = classifyValues(validRows, { method: "quantile", classCount: 5 });
+
+  const chartTitle = `${cfg.metric ?? "Metric"} by ${cfg.regionCol ?? "Region"}`;
+
+  const charts: ChartSpec[] = [
+    {
+      kind: "map",
+      title: chartTitle,
+      categories: validRows.map((r) => r.region),
+      series: [{ name: cfg.metric ?? "Value", data: classified.classes.map((c) => c.value), color: "#5AA8AA" }],
+      mapData: classified.classes.map((c) => ({
+        region: c.region,
+        value: c.value,
+      })),
+    },
+  ];
+
+  const result = baseResult(ctx, cfg, {
+    method: `Choropleth map of ${cfg.metric ?? "metric"} by ${cfg.regionCol ?? "region"} using quantile classification (5 classes).`,
+    steps: [
+      `Read ${validRows.length} region-value pairs from the dataset.`,
+      "Classified values into 5 quantile classes (equal distribution per class).",
+      "Joined classified values onto normalized region names via the geo engine.",
+    ],
+    assumptions: [
+      "Region names are matched against GeoJSON boundaries via normalizeRegionName.",
+      "Missing or unmatched regions render in the no-data gray color.",
+      "Quantile classes ensure each class has roughly equal numbers of regions.",
+    ],
+  });
+
+  return {
+    ...result,
+    charts,
+    tables: undefined,
+  };
 }
 
 export { quantile };

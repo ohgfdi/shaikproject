@@ -236,7 +236,7 @@ export type AnalysisKind =
   // Advanced causal: IV / do-calculus for policy evaluation.
   | "iv-calculus"
   // Geospatial / advanced mapping and regional analysis.
-  | "geospatial";
+  | "geospatial" | "map";
 
 export interface AnalysisBaseConfig {
   dateCol?: string | null;
@@ -656,6 +656,14 @@ export interface GeospatialConfig extends AnalysisBaseConfig {
   bandKm: number;
   /** Permutation replicates for the inference tests. */
   permutations: number;
+}
+
+/** Choropleth map analysis config — one region column + one metric column. */
+export interface MapConfig extends AnalysisBaseConfig {
+  /** Column holding the region name (e.g. "USA", "Maharashtra", "England"). */
+  regionCol: string;
+  /** Column holding the numeric metric value (e.g. revenue, count, profit). */
+  metricCol: string;
 }
 
 /**
@@ -1415,7 +1423,7 @@ export type AnalysisConfig =
   | ({ kind: "real-time-serving" } & RealTimeServingConfig)
   | ({ kind: "hte" } & HteConfig)
   | ({ kind: "iv-calculus" } & IvCalculusConfig)
-  | ({ kind: "geospatial" } & GeospatialConfig);
+  | ({ kind: "geospatial" } & GeospatialConfig) | ({ kind: "map" } & MapConfig);
 
 export type Granularity = "day" | "week" | "month" | "quarter" | "year";
 
