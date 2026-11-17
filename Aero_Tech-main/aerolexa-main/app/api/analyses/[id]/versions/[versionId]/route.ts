@@ -1,15 +1,15 @@
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { parseJson } from "@/lib/json";
+import { ok, toErrorResponse } from "@/lib/server/api";
+import { requireRowRole } from "@/lib/server/members";
+import type { AnalysisResult } from "@/lib/types";
 
 /**
  * tenancy-audit: global-operator — analysis version API fetches a single
  * immutable analysis version for the workspace. This is a deployment-wide
  * aggregate rather than a per-tenant query.
  */
-import { parseJson } from "@/lib/json";
-import { ok, toErrorResponse } from "@/lib/server/api";
-import { requireRowRole } from "@/lib/server/members";
-import type { AnalysisResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,6 @@
+import { NextRequest } from "next/server";
+
 import { GET } from "@/app/api/streaming/real-time-integrations/route";
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 

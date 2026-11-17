@@ -17,6 +17,8 @@
  */
 import { createClient, RedisClientType } from "redis";
 
+import { prisma } from "@/lib/db";
+
 let redisClient: RedisClientType | null = null;
 
 /** Initialize Redis client. */

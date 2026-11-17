@@ -24,7 +24,6 @@ import { createHash, randomBytes } from "node:crypto";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withOrganization, withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -37,6 +36,7 @@ import { serverEnv } from "@/lib/env";
 import { renderDeliverableVersion } from "@/lib/server/deliverable-render";
 import { canManageAccess, requireEngagementRole } from "@/lib/server/engagement";
 import { readFile, saveFile } from "@/lib/server/storage";
+import { withOrganization, withTenantDb } from "@/lib/server/tenant-db";
 import type { PracticeRole } from "@/lib/types";
 
 import { signApprovalReceipt } from "./approval-receipt-signing";

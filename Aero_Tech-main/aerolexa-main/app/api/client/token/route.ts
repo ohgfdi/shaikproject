@@ -2,20 +2,20 @@ import { NextRequest } from "next/server";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { ok, toErrorResponse } from "@/lib/server/api";
 
 /**
  * tenancy-audit: global-operator — client token API generates engagement
  * access tokens for the workspace. This is a deployment-wide aggregate rather
  * than a per-tenant query.
  */
-import { ok, toErrorResponse } from "@/lib/server/api";
-
 /**
  * Generate a client engagement access token.
  *
  * The engagementId is passed as a query parameter (e.g. /api/client/token?engagementId=eng_123)
  * The user must have ENGAGEMENTMEMBER VIEWER role on the engagement to access the client portal.
  */
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth();

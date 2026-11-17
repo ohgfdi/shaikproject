@@ -21,12 +21,11 @@
  * Role checks are server-side only; no client-trusted ownership IDs.
  * Workspace isolation for non-shared rows is unchanged (rule 3 = OWNER), so
  * every existing single-user flow and test behaves exactly as before.
+ *
+ * tenancy-audit: global-operator (deployment-wide aggregate, exempt from per-tenant tenancy audit).
  */
 
- * tenancy-audit: global-operator — members module manages project collaboration authorization. This is a deployment-wide aggregate rather than a per-tenant query.
-
 import { forbiddenError, notFoundError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { withTenantDb } from "@/lib/server/tenant-db";
 import type { ProjectRole, OrganizationRole } from "@/lib/types";
@@ -95,7 +94,10 @@ export interface MemberWithRole {
 }
 
 /** Team roster for a project: owner + member rows. */
-export async function listProjectMembers(project: { id: string; ownerId: string }): Promise<MemberWithRole[]> {
+export async function listProjectMembers(
+  ctx: AuthContext,
+  project: { id: string; ownerId: string },
+): Promise<MemberWithRole[]> {
   const owner = await withTenantDb(ctx, (db) =>
     db.user.findUnique({
       where: { id: project.ownerId },
@@ -316,17 +318,21 @@ export async function requireProjectRoleWithOrg(
 }
 
 /** List organization members with roles (for firm dashboard / member management). */
-export async function listOrganizationMembers(organization: { id: string }): Promise<OrgMemberWithRole[]> {
-  const owner = await withTenantDb(ctx, (db) =>
-    prisma.user.findUnique({
-      where: {
-        id:
-          (await prisma.organization.findUnique({ where: { id: organization.id }, select: { ownerId: true } }))
-          ?.ownerId ?? "",
-      },
-      select: { id: true, name: true, email: true },
-    }),
+export async function listOrganizationMembers(
+  ctx: AuthContext,
+  organization: { id: string },
+): Promise<OrgMemberWithRole[]> {
+  const org = await withTenantDb(ctx, (db) =>
+    db.organization.findUnique({ where: { id: organization.id }, select: { ownerId: true } }),
   );
+  const owner = org
+    ? await withTenantDb(ctx, (db) =>
+        db.user.findUnique({
+          where: { id: org.ownerId },
+          select: { id: true, name: true, email: true },
+        }),
+      )
+    : null;
   const rows = await withTenantDb(ctx, (db) =>
     db.organizationMember.findMany({
       where: { organizationId: organization.id },

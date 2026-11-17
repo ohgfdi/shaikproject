@@ -6,8 +6,9 @@
  * and business outcomes without exposing customer data. Integrates with
  * tenancy audit system (0 unwrapped baseline) and RLS enforcement.
  */
-import { prisma } from "../lib/db";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type FeatureKey = 
   | "predictive_analytics"

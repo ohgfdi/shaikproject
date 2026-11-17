@@ -4,8 +4,9 @@
  * Enhanced partner program with deal registration, co-selling workflows,
  * partner pipeline management, and revenue share tracking across all tiers.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type PartnershipTier = "startup" | "growth" | "enterprise" | "strategic";
 

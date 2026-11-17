@@ -1,15 +1,15 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { isAlertRuleConfig } from "@/lib/engine/alerts";
+import { ConnectorError } from "@/lib/engine/connectors/errors";
+import { logActivity } from "@/lib/server/activity";
+import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 
 /**
  * tenancy-audit: global-operator — data alerts API lists workspace-wide
  * alerts for the firm. This is a deployment-wide aggregate rather than a
  * per-tenant query.
  */
-import { isAlertRuleConfig } from "@/lib/engine/alerts";
-import { ConnectorError } from "@/lib/engine/connectors/errors";
-import { logActivity } from "@/lib/server/activity";
-import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 
 export const dynamic = "force-dynamic";
 

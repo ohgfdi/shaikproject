@@ -11,6 +11,7 @@ import { logActivity, notify } from "@/lib/server/activity";
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { applyRowSecurity } from "@/lib/server/dataset-access";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { ColumnDef, InsightInput } from "@/lib/types";
 
 export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {

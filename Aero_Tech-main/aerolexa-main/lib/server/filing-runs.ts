@@ -22,7 +22,6 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { filingChannel, resolveFilingGateway } from "@/lib/engine/filing/gateway";
 import { signFilingPayload, type FilingSignatureEnvelope } from "@/lib/engine/filing/signing";
@@ -33,6 +32,7 @@ import { requireEngagementRole } from "@/lib/server/engagement";
 import { buildFilingProof, filingProofDigest, portalIdentityFrom } from "@/lib/server/filing-proof";
 import { assertFilingSubmissionAllowed } from "@/lib/server/filing-rollout";
 import { requireOrgRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { PracticeRole } from "@/lib/types";
 
 export const FILING_STAGES = ["computed", "prepared", "reviewed", "client-approved", "filed", "acknowledged"] as const;
@@ -174,7 +174,8 @@ async function viewRuns(ctx: AuthContext, runs: Awaited<ReturnType<typeof loadRu
         db.user.findMany({
           where: { id: { in: userIds } },
           select: { id: true, name: true, email: true },
-        })
+        }),
+      )
       : [];
   const nameById = new Map(users.map((user) => [user.id, user.name || user.email]));
 
@@ -227,6 +228,7 @@ function loadRuns(ctx: AuthContext, organizationId: string, opts: { stage?: stri
       take: 400,
     }),
   );
+}
 
 /**
  * The board: in-flight runs plus obligations that have no run yet.

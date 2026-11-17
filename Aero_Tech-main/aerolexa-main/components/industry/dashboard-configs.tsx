@@ -5,9 +5,10 @@
  * Integrates with the industry templates (Phases 33-36) and compliance mappings (Phase 37).
  */
 import React from "react";
-import { prisma } from "../lib/db";
-import { getIndustryTemplate, getComplianceRequirements } from "../lib/industry";
-import type { Industry } from "../lib/industry/finance";
+
+import { prisma } from "@/lib/db";
+import { getIndustryTemplate, getComplianceRequirements } from "@/lib/industry";
+import type { Industry } from "@/lib/industry/finance";
 
 export type DashboardLayout = "finance" | "saas" | "retail" | "manufacturing";
 

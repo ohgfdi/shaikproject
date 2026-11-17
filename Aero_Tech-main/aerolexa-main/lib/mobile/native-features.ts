@@ -5,8 +5,9 @@
  * authentication, offline caching, and device-specific optimizations. Builds
  * on the React Native mobile dashboard (Phase 29) with native feature integration.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type MobilePlatform = "ios" | "android" | "web";
 

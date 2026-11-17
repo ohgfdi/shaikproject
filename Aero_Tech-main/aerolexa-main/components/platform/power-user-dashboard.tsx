@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QuickFilter } from "@/components/charts/quick-filter";
+
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { MapTemplateGallery } from "@/components/charts/map-template-gallery";
+import { QuickFilter } from "@/components/charts/quick-filter";
 import { WebhookManager } from "@/components/platform/webhook-manager";
 import { DashboardWidget } from "@/lib/types";
 

@@ -22,7 +22,6 @@
 
 import { ApiError, forbiddenError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import {
   engagementRetention,
   orgPrivacySettings,
@@ -35,6 +34,7 @@ import {
 } from "@/lib/server/engagement";
 import { appendLedgerEntry, changeLogRowToView, type ChangeLogEntryView } from "@/lib/server/governance";
 import { crossBorderTransfer, jurisdictionProfile } from "@/lib/server/jurisdiction";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { ClientConsentPurpose, DataClassification } from "@/lib/types";
 
 const CLIENT_CONSENT_PURPOSES: readonly ClientConsentPurpose[] = [
@@ -119,6 +119,7 @@ async function workspaceIdsForEngagement(ctx: AuthContext, organizationId: strin
     }),
   );
   return [...new Set(projects.map((p) => p.workspaceId))];
+}
 
 /** Count what an erasure would remove, and what statute requires keeping. */
 export async function erasureChecklistForEngagement(

@@ -13,8 +13,9 @@
  *   const config = getWhiteLabelConfig(tenantId);
  *   applyWhiteLabel(document.body, config);
  */
-import { prisma } from "./db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type BrandColor = {
   primary: string;

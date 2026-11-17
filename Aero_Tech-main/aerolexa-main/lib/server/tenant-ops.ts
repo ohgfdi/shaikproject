@@ -10,7 +10,6 @@
  */
 
 import { prisma } from "@/lib/db";
-
 import { withTenantDb } from "@/lib/server/tenant-db";
 
 export type TenantAttention = "ok" | "watch" | "critical";

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 
 /**
  * SSOLogin — handles user authentication and session management.
@@ -256,7 +256,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
         </div>
 
         <p className="mt-4 text-caption text-muted">
-          Don't have an account? <a href="#" className="underline text-primary">Sign up</a>
+          Don&apos;t have an account? <a href="#" className="underline text-primary">Sign up</a>
         </p>
       </div>
     );
@@ -310,10 +310,10 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
 }
 
 /** Route to the correct dashboard based on user role. */
-function dashboard-route({ userRole }: { userRole: "admin" | "power-user" | "viewer" }) {
+function dashboardRoute({ userRole }: { userRole: "admin" | "power-user" | "viewer" }) {
   const routes: Record<string, string> = {
     admin: "/dashboard/admin",
-    power-user: "/dashboard/power",
+    "power-user": "/dashboard/power",
     viewer: "/dashboard",
   };
 

@@ -7,7 +7,7 @@ export const metadata = { title: "Notifications" };
 
 export default async function NotificationsPage() {
   const ctx = await requirePageAuth();
-  const rows = await withTenantDb(ctx, (db)
+  const rows = await withTenantDb(ctx, (db) =>
     db.notification.findMany({
       where: { userId: ctx.user.id },
       orderBy: { createdAt: "desc" },

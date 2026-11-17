@@ -9,7 +9,7 @@ export const metadata = { title: "Models" };
 
 export default async function ModelsPage() {
   const ctx = await requirePageAuth();
-  const models = await withTenantDb(ctx, (db)
+  const models = await withTenantDb(ctx, (db) =>
     db.modelVersion.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { createdAt: "desc" },

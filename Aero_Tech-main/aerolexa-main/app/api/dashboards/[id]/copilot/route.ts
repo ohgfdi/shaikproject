@@ -1,11 +1,5 @@
 import { SemanticLayerManager } from "@/lib/analytics/semantic-layer";
 import { ApiError, requireAuth } from "@/lib/auth/guard";
-
-/**
- * tenancy-audit: global-operator — dashboard copilot API provides
- * workspace-wide dashboard insights via the data copilot. This is a deployment-wide
- * aggregate rather than a per-tenant query.
- */
 import { runCopilotAgent } from "@/lib/copilot/agent";
 import { dashboardFilterPair, type DashboardContextInput } from "@/lib/copilot/dashboard-tools";
 import { buildExplanation, detectSmallTalk, matchMetrics, schemaContext, suggestActions } from "@/lib/copilot/engine";
@@ -22,7 +16,14 @@ import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { applyRowSecurity } from "@/lib/server/dataset-access";
 import { requireRowRole } from "@/lib/server/members";
 import { RATE_LIMITS, enforceUserRateLimit } from "@/lib/server/rate-limit";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { AnalysisConfig, DashboardWidget } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — dashboard copilot API provides
+ * workspace-wide dashboard insights via the data copilot. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -1,15 +1,15 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { notFoundError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { runHypothesisTest, type HypothesisInput } from "@/lib/engine/hypothesis";
+import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
+import { requireRowRole } from "@/lib/server/members";
 
 /**
  * tenancy-audit: global-operator — dataset hypothesis API runs hypothesis
  * tests for the workspace. This is a deployment-wide aggregate rather than a
  * per-tenant query.
  */
-import { runHypothesisTest, type HypothesisInput } from "@/lib/engine/hypothesis";
-import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { requireRowRole } from "@/lib/server/members";
 
 export const dynamic = "force-dynamic";
 

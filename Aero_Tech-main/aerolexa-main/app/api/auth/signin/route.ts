@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
  *  The provider's login endpoint sets cookies/redirects the user's browser.
  *  We 302 to the provider's authorize URL; NextAuth handles the redirect flow.
  */
-export async function GET(request: Request, { params }: { params: { provider: string } }) {
-  const { provider } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ provider: string }> }) {
+  const { provider } = await params;
 
   // Only allow known providers
   const allowed = ["google", "azure", "oidc"];
@@ -31,8 +31,8 @@ export async function GET(request: Request, { params }: { params: { provider: st
  *  NextAuth's /api/auth/callback/[provider] route handles this, but we
  *  expose a simple endpoint here for the frontend to POST to.
  */
-export async function POST(request: Request, { params }: { params: { provider: string } }) {
-  const { provider } = params;
+export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
+  const { provider } = await params;
 
   if (!["google", "azure", "oidc"].includes(provider)) {
     return NextResponse.json({ ok: false, error: "Unknown provider" }, { status: 400 });

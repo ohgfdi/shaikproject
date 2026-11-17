@@ -1,13 +1,6 @@
 import { z } from "zod";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
-
-/**
- * tenancy-audit: global-operator — dataset analyses API runs analyses
- * against workspace datasets. This is a deployment-wide aggregate rather than a
- * per-tenant query.
- */
 import { prisma } from "@/lib/db";
 import { runAnalysis } from "@/lib/engine/analyses";
 import { loadParsedDataset, ndjsonPath } from "@/lib/engine/dataset";
@@ -17,8 +10,15 @@ import { parseJsonArray, stringifyJson } from "@/lib/json";
 import { logActivity, notify } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { createAnalysisVersion, datasetRowsAtVersion } from "@/lib/server/versioning";
 import type { AnalysisConfig, ColumnDef } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — dataset analyses API runs analyses
+ * against workspace datasets. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 
 const configSchema = z
   .object({
@@ -61,7 +61,7 @@ const configSchema = z
       "real-time-serving",
       "hte",
       "iv-calculus",
-      "geospatial" |
+      "geospatial",
       "map",
     ]),
     title: z.string().max(200).optional(),
@@ -293,8 +293,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           db.analysis.update({
             where: { id: existingAnalysis.id },
             data: { result: stringifyJson(result), config: stringifyJson(cfg) },
-          })
-        : await withTenantDb(ctx, (db) =>
+          }),
+        )
+      : await withTenantDb(ctx, (db) =>
           db.analysis.create({
             data: {
               workspaceId: ctx.workspace.id,
@@ -307,7 +308,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
               createdById: ctx.user.id,
             },
           }),
-  );
+        );
     const analysisVersion = await createAnalysisVersion({
       analysisId: analysis.id,
       workspaceId: ctx.workspace.id,
@@ -341,7 +342,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
               extra: insight.extra ? stringifyJson(insight.extra) : null,
             },
           }),
-        );
+        ),
+      );
     }
 
     await logActivity(ctx, "ANALYSIS_RUN", `Analysis “${result.title}” completed`, dataset!.projectId, {

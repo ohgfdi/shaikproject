@@ -1,12 +1,12 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { ok, toErrorResponse } from "@/lib/server/api";
 
 /**
  * tenancy-audit: global-operator — audit API lists workspace-wide activity
  * for the firm. This is a deployment-wide aggregate rather than a per-tenant
  * query.
  */
-import { ok, toErrorResponse } from "@/lib/server/api";
 
 export const dynamic = "force-dynamic";
 

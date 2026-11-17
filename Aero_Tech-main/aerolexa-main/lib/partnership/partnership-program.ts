@@ -5,8 +5,9 @@
  * OEM partners, and system integrators. Includes tiered partnerships,
  * revenue sharing, and referral tracking.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type PartnershipTier = "startup" | "growth" | "enterprise" | "strategic";
 

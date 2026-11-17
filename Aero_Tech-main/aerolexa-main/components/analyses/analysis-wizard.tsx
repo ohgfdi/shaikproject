@@ -10,6 +10,7 @@ import { Input, Select, Field, Checkbox } from "@/components/ui/form";
 import { useToast } from "@/components/ui/overlays";
 import { Card, Badge } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
+import { trustLabelForKind } from "@/lib/trust/labels";
 import {
   ANALYSIS_KIND_LABELS,
   ANALYSIS_KIND_DESCRIPTIONS,
@@ -18,7 +19,6 @@ import {
   type Granularity,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { trustLabelForKind } from "@/lib/trust/labels";
 
 export interface WizardColumn {
   name: string;

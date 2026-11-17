@@ -1,14 +1,14 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { getPresenceRoom } from "@/lib/collab/presence";
+import { prisma } from "@/lib/db";
+import { toErrorResponse } from "@/lib/server/api";
+import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
 
 /**
  * tenancy-audit: global-operator — dashboard presence API provides
  * workspace-wide dashboard presence tracking. This is a deployment-wide
  * aggregate rather than a per-tenant query.
  */
-import { prisma } from "@/lib/db";
-import { toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -132,6 +132,11 @@ const serverSchemaBase = z.object({
   DIGEST_ENABLED: bool(false),
   COLLABORATION_ENABLED: bool(false),
   SSO_ENABLED: bool(false),
+  // Third-party identity providers (SSO). Unset means the provider is hidden.
+  AZURE_CLIENT_ID: z.string().optional(),
+  AZURE_CLIENT_SECRET: z.string().optional(),
+  TENANT_ID: z.string().optional(),
+  OIDC_ISSUER_URL: z.string().optional(),
   PROMPTS_ENABLED: bool(false),
   ADVISOR_ENABLED: bool(false),
   /** Server-side image/PDF rendering of dashboards, reports and widgets. */
@@ -609,9 +614,30 @@ function loadServerEnv(): ServerEnv {
 
 let cached: ServerEnv | null = null;
 
+/**
+ * Placeholder used only while `next build` collects page data.
+ *
+ * The build host (CI, the Docker builder stage) carries no production
+ * secrets, and no handler ever runs there — reading a value just yields
+ * `undefined` instead of aborting the build.
+ */
+function buildTimeEnvStub(): ServerEnv {
+  return new Proxy({} as ServerEnv, { get: () => undefined }) as ServerEnv;
+}
+
+let buildStub: ServerEnv | null = null;
+
 /** Server-side env (never import from client code). */
 export function serverEnv(): ServerEnv {
-  if (!cached) cached = loadServerEnv();
+  if (cached) return cached;
+  try {
+    cached = loadServerEnv();
+  } catch (err) {
+    // A deployed server fails fast; a build without secrets does not.
+    if (!isNextBuild()) throw err;
+    buildStub ??= buildTimeEnvStub();
+    return buildStub;
+  }
   return cached;
 }
 

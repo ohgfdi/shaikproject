@@ -1,15 +1,15 @@
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { diffAnalysisMetrics, type VersionMetric } from "@/lib/engine/versioning";
+import { parseJsonArray } from "@/lib/json";
+import { ok, toErrorResponse } from "@/lib/server/api";
+import { requireRowRole } from "@/lib/server/members";
 
 /**
  * tenancy-audit: global-operator — analysis diff API compares two analysis
  * versions for the workspace. This is a deployment-wide aggregate rather than a
  * per-tenant query.
  */
-import { diffAnalysisMetrics, type VersionMetric } from "@/lib/engine/versioning";
-import { parseJsonArray } from "@/lib/json";
-import { ok, toErrorResponse } from "@/lib/server/api";
-import { requireRowRole } from "@/lib/server/members";
 
 export const dynamic = "force-dynamic";
 

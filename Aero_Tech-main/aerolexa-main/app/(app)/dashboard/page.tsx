@@ -10,12 +10,6 @@ import {
   UploadCloud,
   BarChart3,
 } from "lucide-react";
-
-/**
- * tenancy-audit: global-operator — dashboard page aggregates
- * workspace-wide metrics and recent activity for the firm home view.
- * This is a deployment-wide aggregate rather than a per-tenant query.
- */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -27,10 +21,16 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { fmtDate, timeAgo } from "@/lib/format";
 import { insightCard } from "@/lib/serialize";
 import { getFirmCockpit } from "@/lib/server/firm-cockpit";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — dashboard page aggregates
+ * workspace-wide metrics and recent activity for the firm home view.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 export const metadata = { title: "Home" };
 
@@ -65,11 +65,11 @@ export default async function DashboardHome() {
     errorRunCount,
     unmatchedInvoiceCount,
   ] = await Promise.all([
-    await withTenantDb(ctx, (db) => prisma.dataset.count({ where: { workspaceId } })),
-    await withTenantDb(ctx, (db) => prisma.dataset.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 5 })),
-    await withTenantDb(ctx, (db) => prisma.insight.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 4 })),
-    await withTenantDb(ctx, (db) => prisma.project.findMany({ where: { workspaceId }, orderBy: { updatedAt: "desc" }, take: 6 })),
-    await withTenantDb(ctx, (db) => prisma.activity.findMany({
+    await withTenantDb(ctx, (db) => db.dataset.count({ where: { workspaceId } })),
+    await withTenantDb(ctx, (db) => db.dataset.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 5 })),
+    await withTenantDb(ctx, (db) => db.insight.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 4 })),
+    await withTenantDb(ctx, (db) => db.project.findMany({ where: { workspaceId }, orderBy: { updatedAt: "desc" }, take: 6 })),
+    await withTenantDb(ctx, (db) => db.activity.findMany({
       where: { workspaceId },
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -77,14 +77,14 @@ export default async function DashboardHome() {
     })),
     // CA-firm work queue. Every value below is read from this workspace; an
     // empty list renders an empty state rather than a sample figure.
-    await withTenantDb(ctx, (db) => prisma.book.findMany({
+    await withTenantDb(ctx, (db) => db.book.findMany({
       where: { workspaceId },
       orderBy: { updatedAt: "desc" },
       take: 3,
       select: { id: true, name: true, gstin: true },
     })),
-    await withTenantDb(ctx, (db) => prisma.book.count({ where: { workspaceId } })),
-    await withTenantDb(ctx, (db) => prisma.gstFilingCampaign.findMany({
+    await withTenantDb(ctx, (db) => db.book.count({ where: { workspaceId } })),
+    await withTenantDb(ctx, (db) => db.gstFilingCampaign.findMany({
       where: { book: { workspaceId }, status: { not: "filed" } },
       orderBy: { dueDate: "asc" },
       take: 4,
@@ -98,16 +98,16 @@ export default async function DashboardHome() {
         book: { select: { id: true, name: true } },
       },
     })),
-    await withTenantDb(ctx, (db) => prisma.gstFilingCampaign.count({ where: { book: { workspaceId }, status: { not: "filed" } } })),
-    await withTenantDb(ctx, (db) => prisma.caSource.findMany({
+    await withTenantDb(ctx, (db) => db.gstFilingCampaign.count({ where: { book: { workspaceId }, status: { not: "filed" } } })),
+    await withTenantDb(ctx, (db) => db.caSource.findMany({
       where: { workspaceId },
       orderBy: { updatedAt: "desc" },
       take: 3,
       select: { id: true, sourceLabel: true, displayName: true, sourceKind: true, lastError: true },
     })),
-    await withTenantDb(ctx, (db) => prisma.caSource.count({ where: { workspaceId } })),
-    await withTenantDb(ctx, (db) => prisma.caSource.count({ where: { workspaceId, lastError: { not: null } } })),
-    await withTenantDb(ctx, (db) => prisma.caIngestRun.findMany({
+    await withTenantDb(ctx, (db) => db.caSource.count({ where: { workspaceId } })),
+    await withTenantDb(ctx, (db) => db.caSource.count({ where: { workspaceId, lastError: { not: null } } })),
+    await withTenantDb(ctx, (db) => db.caIngestRun.findMany({
       where: { workspaceId },
       orderBy: { startedAt: "desc" },
       take: 4,
@@ -121,8 +121,8 @@ export default async function DashboardHome() {
         caSource: { select: { sourceLabel: true, displayName: true } },
       },
     })),
-    await withTenantDb(ctx, (db) => prisma.caIngestRun.count({ where: { workspaceId, status: "ERROR" } })),
-    await withTenantDb(ctx, (db) => prisma.gstInvoice.count({ where: { book: { workspaceId }, matched2a2b: false } })),
+    await withTenantDb(ctx, (db) => db.caIngestRun.count({ where: { workspaceId, status: "ERROR" } })),
+    await withTenantDb(ctx, (db) => db.gstInvoice.count({ where: { book: { workspaceId }, matched2a2b: false } })),
   ]);
 
   const kpis: KpiSlab[] = [

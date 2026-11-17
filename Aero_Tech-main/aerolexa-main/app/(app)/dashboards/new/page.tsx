@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "New dashboard" };
 

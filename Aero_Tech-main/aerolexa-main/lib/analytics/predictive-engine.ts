@@ -6,9 +6,10 @@
  * verticals. Builds on the predictive analytics (Phase 21) with enterprise-grade
  * scoring, real-time updates, and industry-specific models.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
-import { getIndustryTemplate } from "../lib/industry";
+
+import { prisma } from "@/lib/db";
+import { getIndustryTemplate } from "@/lib/industry";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

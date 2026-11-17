@@ -5,7 +5,8 @@
  * Supports filtering by type and user.
  */
 import React, { useEffect, useState } from "react";
-import { prisma } from "../lib/db";
+
+import { prisma } from "@/lib/db";
 
 export interface ActivityEvent {
   id: string;

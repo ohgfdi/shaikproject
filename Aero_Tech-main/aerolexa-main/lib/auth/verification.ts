@@ -10,8 +10,8 @@
  *   await sendVerificationEmail(userId, userEmail);
  *   await resendVerificationEmail(userId, userEmail);
  */
-import { prisma } from "./db";
-import { MailOutbox } from "./db"; // Type reference
+import { prisma } from "@/lib/db";
+import { MailOutbox } from "@/lib/db"; // Type reference
 
 /** Send a verification email to a user. */
 export async function sendVerificationEmail(userId: string, email: string) {

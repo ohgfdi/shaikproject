@@ -4,8 +4,9 @@
  * Domain-specific query languages and API extensions optimized for each industry vertical.
  * Provides expressive, industry-tailored APIs for common operations beyond standard CRUD.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

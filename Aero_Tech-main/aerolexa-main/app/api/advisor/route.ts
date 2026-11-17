@@ -2,13 +2,6 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { ApiError } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
-
-/**
- * tenancy-audit: global-operator — advisor API aggregates
- * dataset insights for the firm.
- * This is a deployment-wide aggregate rather than a per-tenant query.
- */
 import { prisma } from "@/lib/db";
 import { answerAdvisorQuestion } from "@/lib/engine/advisor";
 import { loadParsedDataset } from "@/lib/engine/dataset";
@@ -19,7 +12,14 @@ import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { applyRowSecurity } from "@/lib/server/dataset-access";
 import { requireRowRole } from "@/lib/server/members";
 import { requireModule } from "@/lib/server/modules";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { ColumnDef } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — advisor API aggregates
+ * dataset insights for the firm.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 const schema = z.object({
   question: z.string().min(4).max(1000),

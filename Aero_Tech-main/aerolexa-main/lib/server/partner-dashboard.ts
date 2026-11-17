@@ -13,7 +13,6 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { logActivity } from "@/lib/server/activity";
 import { requireOrgRole } from "@/lib/server/members";
@@ -24,6 +23,7 @@ import {
   type EconomicsInvoice,
   type PracticeEconomics,
 } from "@/lib/server/practice-economics";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { PracticeRole } from "@/lib/types";
 
 const DAY_MS = 86_400_000;
@@ -252,7 +252,7 @@ export async function loadPartnerDashboard(
       where: { organizationId },
       select: { userId: true, role: true, user: { select: { name: true, email: true } } },
       take: 200,
-    }),
+    })),
   ]);
 
   const economicsEntries: EconomicsEntry[] = entries.map((entry) => ({

@@ -5,6 +5,7 @@ import { requirePageAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { stringifyJson, parseJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { buildReportTemplate } from "@/lib/templates";
 import type { AnalysisResult, DatasetProfile, InsightCard } from "@/lib/types";
 

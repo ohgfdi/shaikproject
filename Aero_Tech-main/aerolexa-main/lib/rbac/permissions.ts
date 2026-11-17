@@ -1,1 +1,215 @@
-/**\n * Phase 65: Advanced RBAC & Granular Permissions\n *\n * Role-Based Access Control with fine-grained permission system.\n * Supports hierarchical roles, resource-level permissions, and attribute-based rules.\n */\nimport { prisma } from \"../lib/db\";\nimport type { NextRequest } from \"next/server\";\n\nexport type Permission = \n  | \"read:own profile\"\n  | \"update:own profile\"\n  | \"delete:own profile\"\n  | \"read:own data\"\n  | \"update:own data\"\n  | \"delete:own data\"\n  | \"read:team data\"\n  | \"update:team data\"\n  | \"delete:team data\"\n  | \"read:all data\"\n  | \"manage:users\"\n  | \"manage:organizations\"\n  | \"manage:reports\"\n  | \"manage:settings\"\n  | \"view:analytics\"\n  | \"export:reports\"\n  | \"impersonate:users\";\n\nexport type RoleKey = \"super-admin\" | \"admin\" | \"team-lead\" | \"member\" | \"viewer\";\n\nexport interface RoleDefinition {\n  key: RoleKey;\n  name: string;\n  description: string;\n  permissions: Permission[];\n  resourceScope: \"own\" | \"team\" | \"organization\" | \"all\";\n  inherits?: RoleKey[];\n  metadata?: Record<string, unknown>;\n}\n\nexport const ROLE_DEFINITIONS: Record<RoleKey, RoleDefinition> = {\n  super-admin: {\n    key: \"super-admin\",\n    name: \"Super Administrator\",\n    description: \"Full system access, all features, administrative controls\",\n    permissions: [\n      // All permissions\n      \"read:own profile\", \"update:own profile\", \"delete:own profile\",\n      \"read:own data\", \"update:own data\", \"delete:own data\",\n      \"read:team data\", \"update:team data\", \"delete:team data\",\n      \"read:all data\", \"manage:users\", \"manage:organizations\",\n      \"manage:reports\", \"manage:settings\", \"view:analytics\",\n      \"export:reports\", \"impersonate:users\"\n    ],\n    resourceScope: \"all\",\n    inherits: [],\n  },\n  admin: {\n    key: \"admin\",\n    name: \"Organization Administrator\",\n    description: \"Full organizational management, limited to org scope\",\n    permissions: [\n      \"read:own profile\", \"update:own profile\",\n      \"read:team data\", \"update:team data\",\n      \"manage:users\", \"manage:organizations\",\n      \"manage:reports\", \"view:analytics\"\n    ],\n    resourceScope: \"organization\",\n    inherits: [],\n  },\n  team-lead: {\n    key: \"team-lead\",\n    name: \"Team Lead\",\n    description: \"Team management and data access within assigned team\",\n    permissions: [\n      \"read:own profile\", \"update:own profile\",\n      \"read:team data\", \"update:team data\",\n      \"view:analytics\"\n    ],\n    resourceScope: \"team\",\n    inherits: [],\n  },\n  member: {\n    key: \"member\",\n    name: \"Team Member\",\n    description: \"Core contributor role, own data and team-scoped resources\",\n    permissions: [\n      \"read:own profile\", \"update:own profile\",\n      \"read:own data\", \"update:own data\",\n      \"view:analytics\"\n    ],\n    resourceScope: \"own\",\n    inherits: [],\n  },\n  viewer: {\n    key: \"viewer\",\n    name: \"Viewer\",\n    description: \"Read-only access, no modification capabilities\",\n    permissions: [\n      \"read:own profile\", \"view:analytics\"\n    ],\n    resourceScope: \"own\",\n    inherits: [],\n  },\n};\n\nexport function hasPermission(\n  role: RoleKey,\n  permission: Permission,\n  resourceScope: \"own\" | \"team\" | \"organization\" | \"all\" = \"own\"\n): boolean {\n  const roleDef = ROLE_DEFINITIONS[role];\n  if (!roleDef) return false;\n\n  // Check direct permission\n  if (roleDef.permissions.includes(permission)) return true;\n\n  // Check inherited roles (simplified - would check chain in production)\n  // if (roleDef.inherits) {\n  //   for (const inherited of roleDef.inherits) {\n  //     if (hasPermission(inherited, permission, resourceScope)) return true;\n  //   }\n  // }\n\n  // Resource scope check\n  const scopeMatches = \n    resourceScope === \"all\" ||\n    resourceScope === \"organization\" ||\n    (resourceScope === \"team\" && roleDef.resourceScope !== \"own\") ||\n    (resourceScope === \"own\" && roleDef.resourceScope === \"own\");\n\n  return scopeMatches; // Permission exists but scope may restrict\n}\n\nexport function getEffectivePermissions(\n  role: RoleKey,\n  resourceScope: \"own\" | \"team\" | \"organization\" | \"all\" = \"own\"\n): { permissions: Permission[]; resourceScope: string } {\n  const roleDef = ROLE_DEFINITIONS[role];\n  if (!roleDef) return { permissions: [], resourceScope: \"own\" };\n\n  // If role inherits, merge inherited permissions\n  let allPermissions = [...roleDef.permissions];\n  // if (roleDef.inherits) {\n  //   for (const inheritedKey of roleDef.inherits) {\n  //     const inheritedDef = ROLE_DEFINITIONS[inheritedKey];\n  //     if (inheritedDef) {\n  //       allPermissions = [...allPermissions, ...inheritedDef.permissions];\n  //     }\n  //   }\n  // }\n\n  return {\n    permissions: allPermissions,\n    resourceScope: roleDef.resourceScope,\n  };\n}\n\nexport async function GET(\n  request: NextRequest\n): Promise<Response> {\n  try {\n    const { searchParams } = new URL(request.url);\n    const action = searchParams.get(\"action\") || \"roles\";\n\n    if (action === \"roles\") {\n      const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({\n        key,\n        ...ROLE_DEFINITIONS[key],\n      }));\n      return new Response(JSON.stringify({ roles }), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    if (action === \"check\") {\n      const role = searchParams.get(\"role\") as RoleKey || \"member\";\n      const permission = searchParams.get(\"permission\") as Permission || \"read:own profile\";\n      const scope = searchParams.get(\"scope\") as any || \"own\";\n      const result = hasPermission(role, permission, scope);\n      return new Response(JSON.stringify({ role, permission, scope, hasPermission: result }), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    if (action === \"effective\") {\n      const role = searchParams.get(\"role\") as RoleKey || \"member\";\n      const scope = searchParams.get(\"scope\") as any || \"own\";\n      const result = getEffectivePermissions(role, scope);\n      return new Response(JSON.stringify(result), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    // Default: list roles\n    const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({\n      key,\n      ...ROLE_DEFINITIONS[key],\n    }));\n    return new Response(JSON.stringify({ roles }), {\n      status: 200,\n      headers: { \"Content-Type\": \"application/json\" },\n    });\n  } catch (error) {\n    console.error(\"RBAC error:\", error);\n    return new Response(\n      JSON.stringify({ error: \"Failed to retrieve RBAC data\" }),\n      { status: 500, headers: { \"Content-Type\": \"application/json\" } }\n    );\n  }\n}\n", "allowMultiple": true}
+/**
+ * Phase 65: Advanced RBAC & Granular Permissions
+ *
+ * Role-Based Access Control with fine-grained permission system.
+ * Supports hierarchical roles, resource-level permissions, and attribute-based rules.
+ */
+import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
+export type Permission = 
+  | "read:own profile"
+  | "update:own profile"
+  | "delete:own profile"
+  | "read:own data"
+  | "update:own data"
+  | "delete:own data"
+  | "read:team data"
+  | "update:team data"
+  | "delete:team data"
+  | "read:all data"
+  | "manage:users"
+  | "manage:organizations"
+  | "manage:reports"
+  | "manage:settings"
+  | "view:analytics"
+  | "export:reports"
+  | "impersonate:users";
+
+export type RoleKey = "super-admin" | "admin" | "team-lead" | "member" | "viewer";
+
+export interface RoleDefinition {
+  key: RoleKey;
+  name: string;
+  description: string;
+  permissions: Permission[];
+  resourceScope: "own" | "team" | "organization" | "all";
+  inherits?: RoleKey[];
+  metadata?: Record<string, unknown>;
+}
+
+export const ROLE_DEFINITIONS: Record<RoleKey, RoleDefinition> = {
+  "super-admin": {
+    key: "super-admin",
+    name: "Super Administrator",
+    description: "Full system access, all features, administrative controls",
+    permissions: [
+      // All permissions
+      "read:own profile", "update:own profile", "delete:own profile",
+      "read:own data", "update:own data", "delete:own data",
+      "read:team data", "update:team data", "delete:team data",
+      "read:all data", "manage:users", "manage:organizations",
+      "manage:reports", "manage:settings", "view:analytics",
+      "export:reports", "impersonate:users"
+    ],
+    resourceScope: "all",
+    inherits: [],
+  },
+  admin: {
+    key: "admin",
+    name: "Organization Administrator",
+    description: "Full organizational management, limited to org scope",
+    permissions: [
+      "read:own profile", "update:own profile",
+      "read:team data", "update:team data",
+      "manage:users", "manage:organizations",
+      "manage:reports", "view:analytics"
+    ],
+    resourceScope: "organization",
+    inherits: [],
+  },
+  "team-lead": {
+    key: "team-lead",
+    name: "Team Lead",
+    description: "Team management and data access within assigned team",
+    permissions: [
+      "read:own profile", "update:own profile",
+      "read:team data", "update:team data",
+      "view:analytics"
+    ],
+    resourceScope: "team",
+    inherits: [],
+  },
+  member: {
+    key: "member",
+    name: "Team Member",
+    description: "Core contributor role, own data and team-scoped resources",
+    permissions: [
+      "read:own profile", "update:own profile",
+      "read:own data", "update:own data",
+      "view:analytics"
+    ],
+    resourceScope: "own",
+    inherits: [],
+  },
+  viewer: {
+    key: "viewer",
+    name: "Viewer",
+    description: "Read-only access, no modification capabilities",
+    permissions: [
+      "read:own profile", "view:analytics"
+    ],
+    resourceScope: "own",
+    inherits: [],
+  },
+};
+
+export function hasPermission(
+  role: RoleKey,
+  permission: Permission,
+  resourceScope: "own" | "team" | "organization" | "all" = "own"
+): boolean {
+  const roleDef = ROLE_DEFINITIONS[role];
+  if (!roleDef) return false;
+
+  // Check direct permission
+  if (roleDef.permissions.includes(permission)) return true;
+
+  // Check inherited roles (simplified - would check chain in production)
+  // if (roleDef.inherits) {
+  //   for (const inherited of roleDef.inherits) {
+  //     if (hasPermission(inherited, permission, resourceScope)) return true;
+  //   }
+  // }
+
+  // Resource scope check
+  const scopeMatches = 
+    resourceScope === "all" ||
+    resourceScope === "organization" ||
+    (resourceScope === "team" && roleDef.resourceScope !== "own") ||
+    (resourceScope === "own" && roleDef.resourceScope === "own");
+
+  return scopeMatches; // Permission exists but scope may restrict
+}
+
+export function getEffectivePermissions(
+  role: RoleKey,
+  resourceScope: "own" | "team" | "organization" | "all" = "own"
+): { permissions: Permission[]; resourceScope: string } {
+  const roleDef = ROLE_DEFINITIONS[role];
+  if (!roleDef) return { permissions: [], resourceScope: "own" };
+
+  // If role inherits, merge inherited permissions
+  const allPermissions = [...roleDef.permissions];
+  // if (roleDef.inherits) {
+  //   for (const inheritedKey of roleDef.inherits) {
+  //     const inheritedDef = ROLE_DEFINITIONS[inheritedKey];
+  //     if (inheritedDef) {
+  //       allPermissions = [...allPermissions, ...inheritedDef.permissions];
+  //     }
+  //   }
+  // }
+
+  return {
+    permissions: allPermissions,
+    resourceScope: roleDef.resourceScope,
+  };
+}
+
+export async function GET(
+  request: NextRequest
+): Promise<Response> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action") || "roles";
+
+    if (action === "roles") {
+      const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
+        key,
+        ...ROLE_DEFINITIONS[key],
+      }));
+      return new Response(JSON.stringify({ roles }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "check") {
+      const role = searchParams.get("role") as RoleKey || "member";
+      const permission = searchParams.get("permission") as Permission || "read:own profile";
+      const scope = searchParams.get("scope") as any || "own";
+      const result = hasPermission(role, permission, scope);
+      return new Response(JSON.stringify({ role, permission, scope, hasPermission: result }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "effective") {
+      const role = searchParams.get("role") as RoleKey || "member";
+      const scope = searchParams.get("scope") as any || "own";
+      const result = getEffectivePermissions(role, scope);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: list roles
+    const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
+      key,
+      ...ROLE_DEFINITIONS[key],
+    }));
+    return new Response(JSON.stringify({ roles }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("RBAC error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve RBAC data" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}

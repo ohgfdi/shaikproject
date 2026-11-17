@@ -13,6 +13,7 @@ export const metadata = { title: "Presentations" };
  * presentations for the firm home view.
  * This is a deployment-wide aggregate rather than a per-tenant query.
  */
+export default async function PresentationsPage() {
   const ctx = await requirePageAuth();
   const presentations = await prisma.presentation.findMany({
     where: { workspaceId: ctx.workspace.id },

@@ -4,8 +4,9 @@
  * Pre-built metrics, KPIs, and compliance mappings for Manufacturing.
  * Focuses on operational efficiency, quality, downtime, and productivity.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export interface ManufacturingKPI {
   id: string;

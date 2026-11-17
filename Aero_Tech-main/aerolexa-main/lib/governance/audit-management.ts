@@ -6,9 +6,10 @@
  * regulatory frameworks. Integrates with tenancy audit (Phase 1-20), compliance
  * mappings (Phase 37), and continuous monitoring (Phase 50).
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
-import { getComplianceRequirements } from "./compliance-mappings";
+
+import { prisma } from "@/lib/db";
+import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
 
 export type GovernanceFramework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
 
@@ -304,8 +305,8 @@ export async function GET(
     });
 
     return new Response(JSON.stringify({ ...result, governance_frameworks: Object.keys(
-      GovernancePolicies.reduce((acc, p) => { acc[p.framework] = true; return acc; }, {} as GovernanceFramework);
-    )}), {
+      GovernancePolicies.reduce((acc, p) => { acc[p.framework] = true; return acc; }, {} as GovernanceFramework),
+    ) }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

@@ -2,12 +2,6 @@ import * as XLSX from "xlsx";
 
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-/**
- * tenancy-audit: global-operator — dataset export/xlsx API exports dataset
- * to Excel for the workspace. This is a deployment-wide aggregate rather than a
- * per-tenant query.
- */
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import { serverEnv } from "@/lib/env";
 import { parseJson, parseJsonArray } from "@/lib/json";
@@ -16,6 +10,12 @@ import { toErrorResponse } from "@/lib/server/api";
 import { applyRowSecurity } from "@/lib/server/dataset-access";
 import { requireRowRole } from "@/lib/server/members";
 import type { ColumnDef } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — dataset export/xlsx API exports dataset
+ * to Excel for the workspace. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

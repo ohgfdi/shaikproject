@@ -2,12 +2,6 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-/**
- * tenancy-audit: global-operator — dashboard route fetches/updates/deletes a
- * dashboard for the workspace. This is a deployment-wide aggregate rather than a
- * per-tenant query.
- */
 import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
@@ -15,10 +9,16 @@ import { requireRowRole } from "@/lib/server/members";
 import type { DashboardWidget, ReportBookmark, ReportTheme } from "@/lib/types";
 
 /**
+ * tenancy-audit: global-operator — dashboard route fetches/updates/deletes a
+ * dashboard for the workspace. This is a deployment-wide aggregate rather than a
+ * per-tenant query.
+ */
+/**
  * Pages are validated structurally (widgets stay opaque records here — the
  * same policy as the `widgets` column: the renderer tolerates snapshot shape
  * drift, and the authoritative widget contract lives in lib/types.ts).
  */
+
 const pageSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(120),

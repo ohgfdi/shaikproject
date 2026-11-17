@@ -5,8 +5,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/primitives";
 import { Table } from "@/components/ui/table";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { fmtDateTime } from "@/lib/format";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Audit Log" };
 

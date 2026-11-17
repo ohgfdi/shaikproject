@@ -5,8 +5,9 @@
  * and publish-subscribe patterns for live dashboard updates, alert streaming,
  * and collaborative analytics across all industry verticals.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type StreamType = "kpi-updates" | "alerts" | "chart-updates" | "data-changes" | "collaborative";
 

@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/db";
+import { ConnectorError } from "@/lib/engine/connectors/errors";
+import { verifyConnectorWebhookSignature } from "@/lib/server/alerts";
+import { ok, toErrorResponse } from "@/lib/server/api";
+import { runConnectorSync } from "@/lib/server/connector-sync";
 
 /**
  * tenancy-audit: global-operator — connector webhook API processes
  * inbound webhooks for workspace connectors. This is a deployment-wide
  * aggregate rather than a per-tenant query.
  */
-import { ConnectorError } from "@/lib/engine/connectors/errors";
-import { verifyConnectorWebhookSignature } from "@/lib/server/alerts";
-import { ok, toErrorResponse } from "@/lib/server/api";
-import { runConnectorSync } from "@/lib/server/connector-sync";
 
 export const dynamic = "force-dynamic";
 

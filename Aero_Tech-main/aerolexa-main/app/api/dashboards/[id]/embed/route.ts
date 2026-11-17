@@ -2,16 +2,16 @@ import { randomUUID } from "node:crypto";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+import { ConnectorError } from "@/lib/engine/connectors/errors";
+import { logActivity } from "@/lib/server/activity";
+import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
+import { embedUrl, mintEmbedToken } from "@/lib/server/embed";
 
 /**
  * tenancy-audit: global-operator — dashboard embed API minting signed
  * embed tokens for workspace dashboards. This is a deployment-wide aggregate
  * rather than a per-tenant query.
  */
-import { ConnectorError } from "@/lib/engine/connectors/errors";
-import { logActivity } from "@/lib/server/activity";
-import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { embedUrl, mintEmbedToken } from "@/lib/server/embed";
 
 export const dynamic = "force-dynamic";
 

@@ -5,7 +5,8 @@
  * for dataset insights. Uses statistical methods for trend analysis.
  */
 import React, { useEffect, useState } from "react";
-import { prisma } from "../lib/db";
+
+import { prisma } from "@/lib/db";
 
 export interface ForecastPoint {
   x: Date; // time period

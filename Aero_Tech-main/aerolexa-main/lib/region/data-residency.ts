@@ -5,8 +5,9 @@
  * Ensures data is stored and processed in compliance with regional
  * regulations (GDPR EU, CCPA US, PDPA APAC, etc.).
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Region = "us-east-1" | "eu-central-1" | "ap-southeast-1" | "sa-east-1" | "ap-northeast-1" | "eu-west-1";
 

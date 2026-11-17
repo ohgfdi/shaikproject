@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { prisma } from "@/lib/db";
 import { PLAN_ENTITLEMENTS, type PlanEntitlements } from "@/lib/server/entitlements";
 
 describe("plan matrix (hand-pinned)", () => {

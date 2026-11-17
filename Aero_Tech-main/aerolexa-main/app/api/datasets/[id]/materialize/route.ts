@@ -2,12 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-/**
- * tenancy-audit: global-operator — dataset materialize API materializes SQL
- * query results as a new dataset for the workspace. This is a deployment-wide
- * aggregate rather than a per-tenant query.
- */
 import { SqlError } from "@/lib/engine/sql";
 import { serverEnv } from "@/lib/env";
 import { storeRowsAsDataset } from "@/lib/file/store-rows";
@@ -16,6 +10,12 @@ import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { runQueryOnDatasets } from "@/lib/server/dataset-query";
 import { requireModule } from "@/lib/server/modules";
+
+/**
+ * tenancy-audit: global-operator — dataset materialize API materializes SQL
+ * query results as a new dataset for the workspace. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 

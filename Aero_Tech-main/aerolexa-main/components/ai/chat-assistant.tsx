@@ -5,6 +5,7 @@
  * Integrates with predictive analytics, plugin SDK, and existing dashboard data.
  */
 import React, { useState, useEffect } from "react";
+
 import { prisma } from "../../lib/db";
 import { executePlugin } from "../../lib/extensions/plugin-sdk";
 
@@ -203,14 +204,14 @@ export const AIChatAssistant: React.FC = () => {
     }
 
     // Pattern: "What's the trend for [metric]?"
-    const trendMatch = lower.match/(?:what.?s the trend|trend for| trend of)(.+)/i);
+    const trendMatch = lower.match(/(?:what.?s the trend|trend for| trend of)(.+)/i);
     if (trendMatch) {
       const metric = trendMatch[1] || "the data";
       return `Auto-insight: The trend analysis for ${metric} would show direction, rate of change, and key inflection points over the selected time period.`;
     }
 
     // Pattern: "Compare [A] and [B]"
-    const compareMatch = lower.match/(?:compare|vs|against)\s+(.+)/i);
+    const compareMatch = lower.match(/(?:compare|vs|against)\s+(.+)/i);
     if (compareMatch) {
       const comparison = compareMatch[1] || "datasets";
       return `Auto-insight: Comparison between ${comparison} would highlight differences in performance, growth rates, and relative positioning.`;
@@ -224,11 +225,11 @@ export const AIChatAssistant: React.FC = () => {
     const lower = text.toLowerCase();
 
     // Look for specific metric mentions
-    const metricMatch = lower.match/(?:revenue|sales|users|traffic|profit|growth|churn|ARR|MRR)/i);
+    const metricMatch = lower.match(/(?:revenue|sales|users|traffic|profit|growth|churn|ARR|MRR)/i);
     const metric = metricMatch ? metricMatch[0].toLowerCase() : "value";
 
     // Look for time horizon
-    const horizonMatch = lower.match/(?:next\s+(\d+)\s+(day|week|month|year)|over the next|for the|in the)(\d+)/i);
+    const horizonMatch = lower.match(/(?:next\s+(\d+)\s+(day|week|month|year)|over the next|for the|in the)(\d+)/i);
     const horizon = horizonMatch ? parseInt(horizonMatch[1] || "10", 10) : 10;
 
     // In a full implementation, this would use the predictive analytics from Phase 21
@@ -307,9 +308,9 @@ export const AIChatAssistant: React.FC = () => {
           <div className="message message-assistant">
             <div className="message-content">
               <div className="typing-indicator">
-                <span /></span>
-                <span /></span>
-                <span /></span>
+                <span />
+                <span />
+                <span />
               </div>
               <span>AI is thinking...</span>
             </div>

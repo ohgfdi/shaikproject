@@ -1,1 +1,177 @@
-/**\n * Phase 64: SOX Compliance Module\n *\n * Sarbanes-Oxley Act compliance financial reporting, audit trails,\n * and executive dashboards for public company customers.\n */\nimport { prisma } from \"../lib/db\";\nimport type { NextRequest } from \"next/server\";\n\nexport type SoxSection = \"302\" | \"404\" | \"409\" | \"802\" | \"906\";\n\nexport type SoxStatus = \"compliant\" | \"partial\" | \"non_compliant\" | \"not_applicable\";\n\nexport interface SoxControl {\n  id: string;\n  section: SoxSection;\n  title: string;\n  description: string;\n  requirement: string;\n  testing_procedure: string;\n  frequency: \"daily\" | \"weekly\" | \"monthly\" | \"quarterly\" | \"annually\";\n  last_tested?: Date;\n  next_due?: Date;\n  status: SoxStatus;\n  tested_by?: string;\n  evidence_path?: string;\n  deficiencies: SoxDeficiency[];\n}\n\nexport interface SoxDeficiency {\n  id: string;\n  control_id: string;\n  severity: \"critical\" | \"high\" | \"medium\" | \"low\";\n  description: string;\n  remediation_required: boolean;\n  resolved_at?: Date;\n  resolved_by?: string;\n}\n\nexport interface SoxDashboard {\n  overallScore: number; // 0-100\n  sectionScores: Record<SoxSection, number>;\n  atRiskCount: number;\n  fullyCompliantCount: number;\n  totalControls: number;\n  criticalDeficiencies: number;\n  lastUpdated: Date;\n  details: SoxControl[];\n}\n\nexport function runSoxCheck(): SoxDashboard {\n  const sections: SoxSection[] = [\"302\", \"404\", \"409\", \"802\", \"906\"];\n\n  let totalScore = 0;\n  let fullyCompliantCount = 0;\n  let atRiskCount = 0;\n  let criticalDeficiencies = 0;\n  const detailControls: SoxControl[] = [];\n\n  for (const section of sections) {\n    // Mock compliance check - in production this would query actual controls\n    const baseScore = 85; // Baseline score per section\n    const totalControls = 10; // Typical controls per section\n    const criticalDeficiencyCount = Math.floor(Math.random() * 3); // 0-2 random\n\n    const sectionScore = Math.max(0, baseScore - criticalDeficiencyCount * 15);\n    const isFullyCompliant = sectionScore >= 80;\n    const isAtRisk = sectionScore >= 60 && sectionScore < 80;\n\n    totalScore += sectionScore;\n    if (isFullyCompliant) {\n      fullyCompliantCount++;\n    }\n    if (isAtRisk) {\n      atRiskCount++;\n    }\n    if (criticalDeficiencyCount > 0) {\n      criticalDeficiencies++;\n    }\n\n    const deficiencies: SoxDeficiency[] = [];\n    for (let i = 0; i < criticalDeficiencyCount; i++) {\n      deficiencies.push({\n        id: `def_${section}_${i}`,\n        control_id: `ctrl_${section}_${i}`,\n        severity: \"critical\",\n        description: `Critical deficiency in section ${section}`,\n        remediation_required: true,\n        resolved_at: undefined,\n        resolved_by: undefined,\n      });\n    }\n\n    // Add some high severity deficiencies too\n    const highDeficiencyCount = Math.floor(Math.random() * 2); // 0-1\n    for (let i = 0; i < highDeficiencyCount; i++) {\n      deficiencies.push({\n        id: `def_high_${section}_${i}`,\n        control_id: `ctrl_high_${section}_${i}`,\n        severity: \"high\",\n        description: `High severity issue in section ${section}`,\n        remediation_required: true,\n        resolved_at: undefined,\n        resolved_by: undefined,\n      });\n    }\n\n    detailControls.push({\n      id: `ctrl_${section}`,\n      section,\n      title: `SOX Section ${section} Control`,\n      description: `SOX Section ${section} compliance requirement`,\n      requirement: `Documentation and testing for section ${section}`,\n      testing_procedure: `Perform ${section} testing quarterly`,\n      frequency: \"quarterly\",\n      last_tested: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),\n      next_due: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),\n      status: isFullyCompliant ? \"compliant\" : isAtRisk ? \"at_risk\" : \"non_compliant\",\n      tested_by: \"Compliance Team\",\n      evidence_path: `/evidence/sox/${section}.md`,\n      deficiencies,\n    });\n  }\n\n  const overallScore = Math.round(totalScore / sections.length);\n\n  return {\n    overallScore,\n    sectionScores: detailControls.reduce((acc, curr) => {\n      acc[curr.section] = curr.overallScore;\n      return acc;\n    }, {} as Record<SoxSection, number>),\n    atRiskCount,\n    fullyCompliantCount:\n      fullyCompliantCount,\n    totalControls: sections.length * 10,\n    criticalDeficiencies,\n    lastUpdated: new Date(),\n    details: detailControls,\n  };\n}\n\nexport async function GET(\n  request: NextRequest\n): Promise<Response> {\n  try {\n    const { searchParams } = new URL(request.url);\n    const action = searchParams.get(\"action\") || \"dashboard\";\n\n    if (action === \"check\") {\n      const section = (searchParams.get(\"section\") || \"302\") as SoxSection;\n\n      const dashboard = runSoxCheck();\n      const sectionResult = dashboard.details.find(d => d.section === section);\n\n      return new Response(JSON.stringify({ sectionResult }), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    // Default: dashboard\n    const dashboard = runSoxCheck();\n\n    return new Response(JSON.stringify(dashboard), {\n      status: 200,\n      headers: { \"Content-Type\": \"application/json\" },\n    });\n  } catch (error) {\n    console.error(\"SOX compliance error:\", error);\n    return new Response(\n      JSON.stringify({ error: \"Failed to retrieve SOX compliance data\" }),\n      { status: 500, headers: { \"Content-Type\": \"application/json\" } }\n    );\n  }\n}\n", "allowMultiple": true}
+/**
+ * Phase 64: SOX Compliance Module
+ *
+ * Sarbanes-Oxley Act compliance financial reporting, audit trails,
+ * and executive dashboards for public company customers.
+ */
+import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
+export type SoxSection = "302" | "404" | "409" | "802" | "906";
+
+export type SoxStatus = "compliant" | "partial" | "non_compliant" | "not_applicable";
+
+export interface SoxControl {
+  id: string;
+  section: SoxSection;
+  title: string;
+  description: string;
+  requirement: string;
+  testing_procedure: string;
+  frequency: "daily" | "weekly" | "monthly" | "quarterly" | "annually";
+  last_tested?: Date;
+  next_due?: Date;
+  status: SoxStatus;
+  tested_by?: string;
+  evidence_path?: string;
+  deficiencies: SoxDeficiency[];
+}
+
+export interface SoxDeficiency {
+  id: string;
+  control_id: string;
+  severity: "critical" | "high" | "medium" | "low";
+  description: string;
+  remediation_required: boolean;
+  resolved_at?: Date;
+  resolved_by?: string;
+}
+
+export interface SoxDashboard {
+  overallScore: number; // 0-100
+  sectionScores: Record<SoxSection, number>;
+  atRiskCount: number;
+  fullyCompliantCount: number;
+  totalControls: number;
+  criticalDeficiencies: number;
+  lastUpdated: Date;
+  details: SoxControl[];
+}
+
+export function runSoxCheck(): SoxDashboard {
+  const sections: SoxSection[] = ["302", "404", "409", "802", "906"];
+
+  let totalScore = 0;
+  let fullyCompliantCount = 0;
+  let atRiskCount = 0;
+  let criticalDeficiencies = 0;
+  const detailControls: SoxControl[] = [];
+
+  for (const section of sections) {
+    // Mock compliance check - in production this would query actual controls
+    const baseScore = 85; // Baseline score per section
+    const totalControls = 10; // Typical controls per section
+    const criticalDeficiencyCount = Math.floor(Math.random() * 3); // 0-2 random
+
+    const sectionScore = Math.max(0, baseScore - criticalDeficiencyCount * 15);
+    const isFullyCompliant = sectionScore >= 80;
+    const isAtRisk = sectionScore >= 60 && sectionScore < 80;
+
+    totalScore += sectionScore;
+    if (isFullyCompliant) {
+      fullyCompliantCount++;
+    }
+    if (isAtRisk) {
+      atRiskCount++;
+    }
+    if (criticalDeficiencyCount > 0) {
+      criticalDeficiencies++;
+    }
+
+    const deficiencies: SoxDeficiency[] = [];
+    for (let i = 0; i < criticalDeficiencyCount; i++) {
+      deficiencies.push({
+        id: `def_${section}_${i}`,
+        control_id: `ctrl_${section}_${i}`,
+        severity: "critical",
+        description: `Critical deficiency in section ${section}`,
+        remediation_required: true,
+        resolved_at: undefined,
+        resolved_by: undefined,
+      });
+    }
+
+    // Add some high severity deficiencies too
+    const highDeficiencyCount = Math.floor(Math.random() * 2); // 0-1
+    for (let i = 0; i < highDeficiencyCount; i++) {
+      deficiencies.push({
+        id: `def_high_${section}_${i}`,
+        control_id: `ctrl_high_${section}_${i}`,
+        severity: "high",
+        description: `High severity issue in section ${section}`,
+        remediation_required: true,
+        resolved_at: undefined,
+        resolved_by: undefined,
+      });
+    }
+
+    detailControls.push({
+      id: `ctrl_${section}`,
+      section,
+      title: `SOX Section ${section} Control`,
+      description: `SOX Section ${section} compliance requirement`,
+      requirement: `Documentation and testing for section ${section}`,
+      testing_procedure: `Perform ${section} testing quarterly`,
+      frequency: "quarterly",
+      last_tested: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      next_due: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      status: isFullyCompliant ? "compliant" : isAtRisk ? "at_risk" : "non_compliant",
+      tested_by: "Compliance Team",
+      evidence_path: `/evidence/sox/${section}.md`,
+      deficiencies,
+    });
+  }
+
+  const overallScore = Math.round(totalScore / sections.length);
+
+  return {
+    overallScore,
+    sectionScores: detailControls.reduce((acc, curr) => {
+      acc[curr.section] = curr.overallScore;
+      return acc;
+    }, {} as Record<SoxSection, number>),
+    atRiskCount,
+    fullyCompliantCount:
+      fullyCompliantCount,
+    totalControls: sections.length * 10,
+    criticalDeficiencies,
+    lastUpdated: new Date(),
+    details: detailControls,
+  };
+}
+
+export async function GET(
+  request: NextRequest
+): Promise<Response> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action") || "dashboard";
+
+    if (action === "check") {
+      const section = (searchParams.get("section") || "302") as SoxSection;
+
+      const dashboard = runSoxCheck();
+      const sectionResult = dashboard.details.find(d => d.section === section);
+
+      return new Response(JSON.stringify({ sectionResult }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: dashboard
+    const dashboard = runSoxCheck();
+
+    return new Response(JSON.stringify(dashboard), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("SOX compliance error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve SOX compliance data" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}

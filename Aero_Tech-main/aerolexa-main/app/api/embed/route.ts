@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
 import { rlsEnabled, rlsConfigError, rlsEnforcementStatus, isPostgres } from "@/lib/server/rls-status";
@@ -71,22 +72,4 @@ export async function GET(request: Request) {
   } catch (err) {
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : "unknown" }, { status: 500 });
   }
-}
-
-/** GET /api/embed/status
- *  Return overall embed service status including RLS posture.
- */
-export async function GET2(request: Request) {
-  const posture = await rlsEnforcementStatus();
-
-  return NextResponse.json({
-    rlsEnabled: rlsEnabled(),
-    rlsConfigError: rlsConfigError(),
-    rlsPosture: {
-      severity: posture.severity,
-      summary: posture.summary,
-      remedy: posture.remedy,
-    },
-    ssoEnabled: Boolean(process.env.SSO_ENABLED),
-  });
 }

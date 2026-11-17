@@ -35,7 +35,7 @@ export const ResponsiveGrid: React.FC<{
 
   return (
     <div
-      className`
+      className={`
         grid
         grid-cols-1
         grid-cols-sm-${columns.sm}
@@ -44,7 +44,7 @@ export const ResponsiveGrid: React.FC<{
         grid-cols-xl-${columns.xl}
         gap-4
         ${className}
-      `
+      `}
     >
       {children}
     </div>

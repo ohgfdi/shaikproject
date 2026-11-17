@@ -13,6 +13,7 @@ export const metadata = { title: "Dashboards" };
  * dashboards for the firm home view.
  * This is a deployment-wide aggregate rather than a per-tenant query.
  */
+export default async function DashboardsPage() {
   const ctx = await requirePageAuth();
   const dashboards = await prisma.dashboard.findMany({
     where: { workspaceId: ctx.workspace.id },

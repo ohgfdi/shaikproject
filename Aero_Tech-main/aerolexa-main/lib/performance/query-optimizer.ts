@@ -16,6 +16,8 @@
  */
 import { Prisma } from "@prisma/client";
 
+import { prisma } from "@/lib/db";
+
 /** Add commonly used WHERE filters as AND conditions. */
 export function addCommonFilters<
   ModelName extends keyof Prisma.ModelTree,

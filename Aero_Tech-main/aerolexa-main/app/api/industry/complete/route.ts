@@ -6,11 +6,12 @@
  - Compliance requirements - Vertical integrations config
  * - Dashboard configuration - Tenant-specific customization
  */
-import { prisma } from "@/lib/db";
 import type { NextRequest } from "next/server";
+
+import { getIndustryDashboardConfig } from "@/components/industry/dashboard-configs";
+import { prisma } from "@/lib/db";
 import { getIndustryTemplate as getIndustryTemplateFn } from "@/lib/industry";
 import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
-import { getIndustryDashboardConfig } from "@/components/industry/dashboard-configs";
 import { getIntegrationConfig } from "@/lib/industry/integrations";
 
 export const dynamic = "force-dynamic";

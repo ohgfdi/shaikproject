@@ -5,10 +5,11 @@
  * for each industry vertical. Integrates with the industry data models (Phase 41)
  * and dashboard configurations (Phase 39) for end-to-end report generation.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
-import { getIndustryTemplate } from "./";
-import { getIndustryDashboardConfig } from "../components/industry/dashboard-configs";
+
+import { getIndustryDashboardConfig } from "@/components/industry/dashboard-configs";
+import { prisma } from "@/lib/db";
+import { getIndustryTemplate } from "@/lib/industry";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

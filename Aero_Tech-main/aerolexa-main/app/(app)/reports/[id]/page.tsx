@@ -5,9 +5,9 @@ import { CommentsPanel } from "@/components/comments/comments-panel";
 import { ReportEditor } from "@/components/reports/report-editor";
 import { PublishButton } from "@/components/ui/publish-button";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { analysisResult, insightCard, reportSections } from "@/lib/serialize";
 import { artifactRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Report" };
 
@@ -27,18 +27,20 @@ export default async function ReportDetailPage(props: { params: Promise<{ id: st
 
   const [analyses, insights] = await Promise.all([
     withTenantDb(ctx, (db) =>
-    db.analysis.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: report.projectId ?? undefined },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-    }),
+      db.analysis.findMany({
+        where: { workspaceId: ctx.workspace.id, projectId: report.projectId ?? undefined },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+    ),
     withTenantDb(ctx, (db) =>
       db.insight.findMany({
         where: { workspaceId: ctx.workspace.id, projectId: report.projectId ?? undefined },
         orderBy: { createdAt: "desc" },
         take: 40,
       }),
-  ));
+    ),
+  ]);
 
   return (
     <div>

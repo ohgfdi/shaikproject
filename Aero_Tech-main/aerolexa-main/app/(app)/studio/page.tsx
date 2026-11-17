@@ -11,6 +11,7 @@ export const metadata = { title: "Visualization Studio" };
  * workspace-wide datasets. This is a deployment-wide aggregate rather than a
  * per-tenant query.
  */
+export default async function StudioPage() {
   const ctx = await requirePageAuth();
   const datasets = await prisma.dataset.findMany({
     where: { workspaceId: ctx.workspace.id, status: "READY" },

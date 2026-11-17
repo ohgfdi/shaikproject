@@ -7,10 +7,13 @@
  * knowledge bases (Phase 52), and predictive analytics (Phase 56). Features
  * model versioning, performance tracking, and automatic compliance reporting.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
+
 import { executeDecision, DecisionRiskLevel, DecisionProposal } from "./autonomous-decision-engine";
-import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "./governance/audit-management";
+
 
 export type ModelType = "predictive_score" | "anomaly_detection" | "forecasting" | "classification" | "regression";
 
@@ -41,7 +44,7 @@ export interface ModelDriftReport {
   performance_change: number; // % change in accuracy
   data_drift: number; // % change in feature distribution
   concept_drift: boolean; // True if underlying patterns changed
-  recommended_action: "monitor" | "retrain" | "replace" => "retrain" | "restart";
+  recommended_action: "monitor" | "retrain" | "replace" | "restart";
   triggered_by: "automatic" | "manual";
   audit_trail: AuditEvent[];
 }

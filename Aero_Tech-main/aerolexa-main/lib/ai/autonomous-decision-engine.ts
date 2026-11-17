@@ -7,9 +7,10 @@
  * predictive analytics (Phase 56), and governance (Phase 55). Features
  * risk-based approval workflows, escalation chains, and audit trails.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
-import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "./governance/audit-management";
+
+import { prisma } from "@/lib/db";
+import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
 
 export type DecisionRiskLevel = "low" | "medium" | "high" | "critical";
 

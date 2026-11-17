@@ -6,8 +6,9 @@
  * streaming (Phase 54) and predictive analytics (Phase 56) with workspace persistence
  * and collaboration features.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer" | "guest";
 

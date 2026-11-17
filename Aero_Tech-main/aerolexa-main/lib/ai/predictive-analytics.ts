@@ -1,3 +1,293 @@
-/**\n * Phase 82: Forecasting & Predictive Analytics\n *\n * Provides time-series forecasting and predictive modeling for key metrics.\n * Supports multiple forecasting methods and confidence intervals.\n */\nimport { prisma } from \"../lib/db\";\nimport type { NextRequest } from \"next/server\";\n\nexport type ForecastMethod = \"simple_moving_average\" | \"exponential_smoothing\" | \"linear_trend\" | \"seasonal_decomposition\";\n\nexport type ForecastConfidence = \"very_high\" | \"high\" | \"medium\" | \"low\";\n\nexport interface ForecastPoint {\n  timestamp: Date;\n  actualValue?: number;\n  forecastValue: number;\n  lowerBound: number; // confidence interval lower\n  upperBound: number; // confidence interval upper\n  residual?: number; // actual - forecast\n}\n\nexport interface ForecastResult {\n  metricId: string;\n  metricName: string;\n  horizon: number; // number of periods forecasted\n  method: ForecastMethod;\n  confidence: ForecastConfidence;\n  points: ForecastPoint[];\n  modelR2: number; // goodness of fit\n  meanAbsoluteError?: number;\n  generatedAt: Date;\n}\n\nexport function simpleMovingAverage(\n  historicalValues: number[],\n  periods: number = 5:\n  { forecastPoints: number = 5, confidenceLevel: number = 0.95 } = { forecastPoints: 5, confidenceLevel: 0.95 }:\n  ForecastResult {\n    const windowSize = Math.min(periods, historicalValues.length);\n    const window = historicalValues.slice(-windowSize);\n    const average = window.reduce((sum, val) => sum + val, 0) / windowSize;\n    const variance = window.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / (windowSize - 1);\n    const stdDev = Math.sqrt(variance);\n    const zScore = 1.96; // for 95% confidence\n    const marginOfError = zScore * stdDev / Math.sqrt(windowSize);\n\n    const forecastPoints = Math.min(periods, 10);\n    const points: ForecastPoint[] = [];\n    const lastTimestamp = new Date();\n\n    for (let i = 1; i <= forecastPoints; i++) {\n      const timestamp = new Date(lastTimestamp.getTime() + i * 24 * 60 * 60 * 1000);\n      points.push({\n        timestamp,\n        forecastValue: Math.round(average * 100) / 100,\n        lowerBound: Math.round((average - marginOfError) * 100) / 100,\n        upperBound: Math.round((average + marginOfError) * 100) / 100,\n      });\n    }\n\n    const r2 = historicalValues.length > 1 ? 0.7 : 0; // simplified R2\n\n    return {\n      metricId: `forecast_sma_${Date.now()}`,\n      metricName: \"Metrics\",\n      horizon: forecastPoints,\n      method: \"simple_moving_average\",\n      confidence: stdDev > 0 ? \"medium\" : \"high\",\n      points,\n      modelR2: r2,\n      generatedAt: new Date(),\n    };\n  }\n}\n\nexport function exponentialSmoothing(\n  historicalValues: number[],\n  alpha: number = 0.3,\n  forecastPoints: number = 5:\n  ): ForecastResult {\n    if (historicalValues.length === 0) {\n      return {
-        metricId: `forecast_es_${Date.now()}`,\n        metricName: \"Metrics\",\n        horizon: 0,\n        method: \"exponential_smoothing\",\n        confidence: \"low\",\n        points: [],\n        modelR2: 0,\n        generatedAt: new Date(),\n      };\n    }\n\n    const n = historicalValues.length;\n    const values = [...historicalValues];\n    let S = values[0]; // initial smoothed value\n\n    // Apply exponential smoothing\n    for (let t = 1; t < n; t++) {\n      S = alpha * values[t] + (1 - alpha) * S;\n    }\n\n    // Generate forecast points\n    const points: ForecastPoint[] = [];\n    let lastSmoothed = S;\n\n    for (let i = 1; i <= forecastPoints; i++) {\n      // Simple extrapolation - forecast remains at last smoothed value\n      lastSmoothed = S; // In a full implementation, would decay\n      const timestamp = new Date(Date.now() + i * 24 * 60 * 60 * 1000);\n      points.push({\n        timestamp,\n        forecastValue: Math.round(lastSmoothed * 100) / 100,\n        lowerBound: Math.round(S * 0.95 * 100) / 100,\n        upperBound: Math.round(S * 1.05 * 100) / 100,\n      });\n    }\n\n    const forecastValue = Math.round(S * 100) / 100;\n    const mape = historicalValues.slice(1).reduce((sum, val, i) => {\n      const fitted = S; // simplified fit\n      const error = Math.abs(val - fitted) / Math.max(val, 1);\n      return sum + error;\n    }, 0) / (n - 1);\n    const ma = Math.abs(mape) * 100; // Mean Absolute Percentage Error\n    const confidence = ma < 10 ? \"high\" : ma < 20 ? \"medium\" : \"low\";\n\n    return {\n      metricId: `forecast_es_${Date.now()}`,\n      metricName: \"Metrics\",\n      horizon: forecastPoints,\n      method: \"exponential_smoothing\",\n      confidence: confidence as ForecastConfidence,\n      points,\n      modelR2: 0.8, // simplified R2 for ES\n      meanAbsoluteError: Math.round((S * mape) * 100) / 100,\n      generatedAt: new Date(),\n    };\n  }\n}\n\nexport function linearTrendForecast(\n  historicalValues: number[],\n  forecastPoints: number = 5:\n  ): ForecastResult {\n    if (historicalValues.length < 2) {\n      return {
-        metricId: `forecast_lt_${Date.now()}`,\n        metricName: \"Metrics\",\n        horizon: 0,\n        method: \"linear_trend\",\n        confidence: \"low\",\n        points: [],\n        modelR2: 0,\n        generatedAt: new Date(),\n      };\n    }\n\n    const n = historicalValues.length;\n    const xValues = Array.from({ length: n }, (_, i) => i + 1);\n\n    // Calculate linear regression (least squares)\n    const sumX = xValues.reduce((sum, x) => sum + x, 0);\n    const sumY = historicalValues.reduce((sum, y) => sum + y, 0);\n    const sumXY = xValues.reduce((sum, x, i) => sum + x * historicalValues[i], 0);\n    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);\n\n    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);\n    const intercept = (sumY - slope * sumX) / n;\n\n    // Calculate R2\n    const yMean = sumY / n;\n    const ssTotal = historicalValues.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);\n    const ssResidual = historicalValues.reduce((sum, y, i) => {\n      const predicted = slope * (i + 1) + intercept;\n      return sum + Math.pow(y - predicted, 2);\n    }, 0);\n    const r2 = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;\n\n    const points: ForecastPoint[] = [];\n    const lastX = n;\n\n    for (let i = 1; i <= forecastPoints; i++) {\n      const forecastX = lastX + i;\n      const forecastY = slope * forecastX + intercept;\n      const timestamp = new Date(Date.now() + i * 24 * 60 * 60 * 1000);\n      const residual = historicalValues[i - 1] - (slope * i + intercept); // simplified\n\n      points.push({\n        timestamp,\n        actualValue: i - 1 < historicalValues.length ? historicalValues[i - 1] : undefined,\n        forecastValue: Math.round(forecastY * 100) / 100,\n        lowerBound: Math.round((forecastY - 5) * 100) / 100, // simplified CI\n        upperBound: Math.round((forecastY + 5) * 100) / 100,\n        residual: residual !== undefined ? Math.round(residual * 100) / 100 : undefined,\n      });\n    }\n\n    const lastActual = historicalValues[historicalValues.length - 1];\n    const lastForecast = slope * lastX + intercept;\n    const mape = lastActual !== 0 ? Math.abs(lastActual - lastForecast) / Math.max(lastActual, 1) * 100 : 0;\n    const confidence = mape < 5 ? \"high\" : mape < 10 ? \"medium\" : \"low\";\n\n    return {\n      metricId: `forecast_lt_${Date.now()}`,\n      metricName: \"Metrics\",\n      horizon: forecastPoints,\n      method: \"linear_trend\",\n      confidence: confidence as ForecastConfidence,\n      points,\n      modelR2: r2,\n      meanAbsoluteError: Math.round(mape * lastActual * 0.01 * 100) / 100,\n      generatedAt: new Date(),\n    };\n  }\n}\n\nexport async function GET(\n  request: NextRequest\n): Promise<Response> {\n  try {\n    const { searchParams } = new URL(request.url);\n    const action = searchParams.get(\"action\") || \"forecast\";\n\n    if (action === \"forecast\") {\n      const metricId = searchParams.get(\"metricId\") || \"metrics_001\";\n      const metricName = searchParams.get(\"metricName\") || \"Revenue\";\n      const historicalStr = searchParams.get(\"historical\");\n      const historicalValues = historicalStr\n        ? historicalStr.split(\",\").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))\n        : [120, 135, 130, 145, 150, 160, 155, 170, 165, 180];\n      const forecastPoints = parseInt(searchParams.get(\"horizon\") || \"5\", 10);\n      const method = (searchParams.get(\"method\") || \"linear_trend\") as ForecastMethod;\n\n      let result: ForecastResult;\n\n      switch (method) {\n        case \"exponential_smoothing\":\n          result = exponentialSmoothing(historicalValues, 0.3, forecastPoints);\n          break;\n        case \"linear_trend\":\n          result = linearTrendForecast(historicalValues, forecastPoints);\n          break;\n        case \"seasonal_decomposition\":\n          // Simplified - use linear trend as fallback\n          result = linearTrendForecast(historicalValues, forecastPoints);\n          break;\n        default:\n          result = linearTrendForecast(historicalValues, forecastPoints);\n          break;\n      }\n\n      // Override metric name if provided\n      result.metricName = metricName;\n      result.metricId = metricId;\n      return new Response(JSON.stringify(result), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    if (action === \"methods\") {\n      return new Response(JSON.stringify({\n        methods: [\n          { key: \"simple_moving_average\", name: \"Simple Moving Average\", description: \"Average of recent periods\" },\n          { key: \"exponential_smoothing\", name: \"Exponential Smoothing\", description: \"Weighted average favoring recent values\" },\n          { key: \"linear_trend\", name: \"Linear Trend\", description: \"Straight-line projection\" },\n          { key: \"seasonal_decomposition\", name: \"Seasonal Decomposition\", description: \"Captures seasonal patterns\" }\n        ],\n      }), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    // Default: forecast result\n    const historicalStr = searchParams.get(\"historical\") || \"120,135,130,145,150,160,155,170,165,180\";\n    const historicalValues = historicalStr.split(\",\").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v));\n    const forecastPoints = parseInt(searchParams.get(\"horizon\") || \"5\", 10);\n    const method = (searchParams.get(\"method\") || \"linear_trend\") as ForecastMethod;\n\n    const result = linearTrendForecast(historicalValues, forecastPoints);\n    result.metricName = searchParams.get(\"metricName\") || \"Revenue\";\n    result.metricId = searchParams.get(\"metricId\") || \"metrics_001\";\n    return new Response(JSON.stringify(result), {\n      status: 200,\n      headers: { \"Content-Type\": \"application/json\" },\n    });\n  } catch (error) {\n    console.error(\"Predictive analytics error:\", error);\n    return new Response(\n      JSON.stringify({ error: \"Failed to retrieve predictive analytics data\" }),\n      { status: 500, headers: { \"Content-Type\": \"application/json\" } }\n    );\n  }\n}\n", "allowMultiple": true}
+/**
+ * Phase 82: Forecasting & Predictive Analytics
+ *
+ * Provides time-series forecasting and predictive modeling for key metrics.
+ * Supports multiple forecasting methods and confidence intervals.
+ */
+import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
+export type ForecastMethod = "simple_moving_average" | "exponential_smoothing" | "linear_trend" | "seasonal_decomposition";
+
+export type ForecastConfidence = "very_high" | "high" | "medium" | "low";
+
+export interface ForecastPoint {
+  timestamp: Date;
+  actualValue?: number;
+  forecastValue: number;
+  lowerBound: number; // confidence interval lower
+  upperBound: number; // confidence interval upper
+  residual?: number; // actual - forecast
+}
+
+export interface ForecastResult {
+  metricId: string;
+  metricName: string;
+  horizon: number; // number of periods forecasted
+  method: ForecastMethod;
+  confidence: ForecastConfidence;
+  points: ForecastPoint[];
+  modelR2: number; // goodness of fit
+  meanAbsoluteError?: number;
+  generatedAt: Date;
+}
+
+export function simpleMovingAverage(
+  historicalValues: number[],
+  periods: number = 5,
+  { forecastPoints = 5, confidenceLevel = 0.95 }: { forecastPoints?: number; confidenceLevel?: number } = {},
+): ForecastResult {
+    const windowSize = Math.min(periods, historicalValues.length);
+    const window = historicalValues.slice(-windowSize);
+    const average = window.reduce((sum, val) => sum + val, 0) / windowSize;
+    const variance = window.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / (windowSize - 1);
+    const stdDev = Math.sqrt(variance);
+    const zScore = 1.96; // for 95% confidence
+    const marginOfError = zScore * stdDev / Math.sqrt(windowSize);
+    const points: ForecastPoint[] = [];
+    const lastTimestamp = new Date();
+
+    for (let i = 1; i <= forecastPoints; i++) {
+      const timestamp = new Date(lastTimestamp.getTime() + i * 24 * 60 * 60 * 1000);
+      points.push({
+        timestamp,
+        forecastValue: Math.round(average * 100) / 100,
+        lowerBound: Math.round((average - marginOfError) * 100) / 100,
+        upperBound: Math.round((average + marginOfError) * 100) / 100,
+      });
+    }
+
+    const r2 = historicalValues.length > 1 ? 0.7 : 0; // simplified R2
+
+    return {
+      metricId: `forecast_sma_${Date.now()}`,
+      metricName: "Metrics",
+      horizon: forecastPoints,
+      method: "simple_moving_average",
+      confidence: stdDev > 0 ? "medium" : "high",
+      points,
+      modelR2: r2,
+      generatedAt: new Date(),
+    };
+  }
+
+export function exponentialSmoothing(
+  historicalValues: number[],
+  alpha: number = 0.3,
+  forecastPoints: number = 5,
+): ForecastResult {
+    if (historicalValues.length === 0) {
+      return {
+        metricId: `forecast_es_${Date.now()}`,
+        metricName: "Metrics",
+        horizon: 0,
+        method: "exponential_smoothing",
+        confidence: "low",
+        points: [],
+        modelR2: 0,
+        generatedAt: new Date(),
+      };
+    }
+
+    const n = historicalValues.length;
+    const values = [...historicalValues];
+    let S = values[0]; // initial smoothed value
+
+    // Apply exponential smoothing
+    for (let t = 1; t < n; t++) {
+      S = alpha * values[t] + (1 - alpha) * S;
+    }
+
+    // Generate forecast points
+    const points: ForecastPoint[] = [];
+    let lastSmoothed = S;
+
+    for (let i = 1; i <= forecastPoints; i++) {
+      // Simple extrapolation - forecast remains at last smoothed value
+      lastSmoothed = S; // In a full implementation, would decay
+      const timestamp = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
+      points.push({
+        timestamp,
+        forecastValue: Math.round(lastSmoothed * 100) / 100,
+        lowerBound: Math.round(S * 0.95 * 100) / 100,
+        upperBound: Math.round(S * 1.05 * 100) / 100,
+      });
+    }
+
+    const forecastValue = Math.round(S * 100) / 100;
+    const mape = historicalValues.slice(1).reduce((sum, val, i) => {
+      const fitted = S; // simplified fit
+      const error = Math.abs(val - fitted) / Math.max(val, 1);
+      return sum + error;
+    }, 0) / (n - 1);
+    const ma = Math.abs(mape) * 100; // Mean Absolute Percentage Error
+    const confidence = ma < 10 ? "high" : ma < 20 ? "medium" : "low";
+
+    return {
+      metricId: `forecast_es_${Date.now()}`,
+      metricName: "Metrics",
+      horizon: forecastPoints,
+      method: "exponential_smoothing",
+      confidence: confidence as ForecastConfidence,
+      points,
+      modelR2: 0.8, // simplified R2 for ES
+      meanAbsoluteError: Math.round((S * mape) * 100) / 100,
+      generatedAt: new Date(),
+    };
+  }
+
+export function linearTrendForecast(
+  historicalValues: number[],
+  forecastPoints: number = 5,
+): ForecastResult {
+    if (historicalValues.length < 2) {
+      return {
+        metricId: `forecast_lt_${Date.now()}`,
+        metricName: "Metrics",
+        horizon: 0,
+        method: "linear_trend",
+        confidence: "low",
+        points: [],
+        modelR2: 0,
+        generatedAt: new Date(),
+      };
+    }
+
+    const n = historicalValues.length;
+    const xValues = Array.from({ length: n }, (_, i) => i + 1);
+
+    // Calculate linear regression (least squares)
+    const sumX = xValues.reduce((sum, x) => sum + x, 0);
+    const sumY = historicalValues.reduce((sum, y) => sum + y, 0);
+    const sumXY = xValues.reduce((sum, x, i) => sum + x * historicalValues[i], 0);
+    const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Calculate R2
+    const yMean = sumY / n;
+    const ssTotal = historicalValues.reduce((sum, y) => sum + Math.pow(y - yMean, 2), 0);
+    const ssResidual = historicalValues.reduce((sum, y, i) => {
+      const predicted = slope * (i + 1) + intercept;
+      return sum + Math.pow(y - predicted, 2);
+    }, 0);
+    const r2 = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
+
+    const points: ForecastPoint[] = [];
+    const lastX = n;
+
+    for (let i = 1; i <= forecastPoints; i++) {
+      const forecastX = lastX + i;
+      const forecastY = slope * forecastX + intercept;
+      const timestamp = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
+      const residual = historicalValues[i - 1] - (slope * i + intercept); // simplified
+
+      points.push({
+        timestamp,
+        actualValue: i - 1 < historicalValues.length ? historicalValues[i - 1] : undefined,
+        forecastValue: Math.round(forecastY * 100) / 100,
+        lowerBound: Math.round((forecastY - 5) * 100) / 100, // simplified CI
+        upperBound: Math.round((forecastY + 5) * 100) / 100,
+        residual: residual !== undefined ? Math.round(residual * 100) / 100 : undefined,
+      });
+    }
+
+    const lastActual = historicalValues[historicalValues.length - 1];
+    const lastForecast = slope * lastX + intercept;
+    const mape = lastActual !== 0 ? Math.abs(lastActual - lastForecast) / Math.max(lastActual, 1) * 100 : 0;
+    const confidence = mape < 5 ? "high" : mape < 10 ? "medium" : "low";
+
+    return {
+      metricId: `forecast_lt_${Date.now()}`,
+      metricName: "Metrics",
+      horizon: forecastPoints,
+      method: "linear_trend",
+      confidence: confidence as ForecastConfidence,
+      points,
+      modelR2: r2,
+      meanAbsoluteError: Math.round(mape * lastActual * 0.01 * 100) / 100,
+      generatedAt: new Date(),
+    };
+  }
+
+export async function GET(
+  request: NextRequest
+): Promise<Response> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action") || "forecast";
+
+    if (action === "forecast") {
+      const metricId = searchParams.get("metricId") || "metrics_001";
+      const metricName = searchParams.get("metricName") || "Revenue";
+      const historicalStr = searchParams.get("historical");
+      const historicalValues = historicalStr
+        ? historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))
+        : [120, 135, 130, 145, 150, 160, 155, 170, 165, 180];
+      const forecastPoints = parseInt(searchParams.get("horizon") || "5", 10);
+      const method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
+
+      let result: ForecastResult;
+
+      switch (method) {
+        case "exponential_smoothing":
+          result = exponentialSmoothing(historicalValues, 0.3, forecastPoints);
+          break;
+        case "linear_trend":
+          result = linearTrendForecast(historicalValues, forecastPoints);
+          break;
+        case "seasonal_decomposition":
+          // Simplified - use linear trend as fallback
+          result = linearTrendForecast(historicalValues, forecastPoints);
+          break;
+        default:
+          result = linearTrendForecast(historicalValues, forecastPoints);
+          break;
+      }
+
+      // Override metric name if provided
+      result.metricName = metricName;
+      result.metricId = metricId;
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "methods") {
+      return new Response(JSON.stringify({
+        methods: [
+          { key: "simple_moving_average", name: "Simple Moving Average", description: "Average of recent periods" },
+          { key: "exponential_smoothing", name: "Exponential Smoothing", description: "Weighted average favoring recent values" },
+          { key: "linear_trend", name: "Linear Trend", description: "Straight-line projection" },
+          { key: "seasonal_decomposition", name: "Seasonal Decomposition", description: "Captures seasonal patterns" }
+        ],
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: forecast result
+    const historicalStr = searchParams.get("historical") || "120,135,130,145,150,160,155,170,165,180";
+    const historicalValues = historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v));
+    const forecastPoints = parseInt(searchParams.get("horizon") || "5", 10);
+    const method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
+
+    const result = linearTrendForecast(historicalValues, forecastPoints);
+    result.metricName = searchParams.get("metricName") || "Revenue";
+    result.metricId = searchParams.get("metricId") || "metrics_001";
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Predictive analytics error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve predictive analytics data" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}

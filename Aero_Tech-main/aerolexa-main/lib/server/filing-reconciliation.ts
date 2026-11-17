@@ -17,15 +17,14 @@
  * Dedupe is the append-only filing event log plus a conditional update on
  * `verificationStatus`, so restarts and multiple replicas cannot double-notify.
  */
-
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { filingChannel, filingProviderKind, resolveFilingGateway } from "@/lib/engine/filing/gateway";
 import type { FilingReceipt } from "@/lib/engine/filing/types";
 import { notify } from "@/lib/server/activity";
 import { requireEngagementRole } from "@/lib/server/engagement";
 import { filingSubmissionPayload } from "@/lib/server/filing-runs";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const RECONCILE_AFTER_MS = 10 * 60 * 1000;
 
@@ -90,15 +89,14 @@ export interface ReconciliationResult {
   unverifiable: number;
 }
 
-async function owners(ctx: AuthContext, organizationId: string): Promise<string[]> {
-  const members = await withTenantDb(ctx, (db) =>
-    db.organizationMember.findMany({
-      where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
-      select: { userId: true },
-      take: 25,
-    }),
-  );
+async function owners(organizationId: string): Promise<string[]> {
+  const members = await prisma.organizationMember.findMany({
+    where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
+    select: { userId: true },
+    take: 25,
+  });
   return members.map((member) => member.userId);
+}
 
 /**
  * Apply a verdict to one run. The update is conditional on the run still being
@@ -125,7 +123,7 @@ async function applyVerdict(
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date();
 
-  const claimed = await withTenantDb(ctx, (db) => db.$transaction(async (tx) => {
+  const claimed = await prisma.$transaction(async (tx) => {
     const update = await tx.complianceFilingRun.updateMany({
       where: { id: run.id, verificationStatus: "unverified" },
       data: {
@@ -203,28 +201,26 @@ export async function reconcileFilingAcknowledgements(now: Date = new Date()): P
   const cutoff = new Date(now.getTime() - RECONCILE_AFTER_MS);
   const provider = filingProviderKind();
 
-  const runs = await withTenantDb(ctx, (db) =>
-    db.complianceFilingRun.findMany({
-      where: { stage: "filed", filedAt: { lte: cutoff }, verificationStatus: "unverified" },
-      select: {
-        id: true,
-        organizationId: true,
-        engagementId: true,
-        taskId: true,
-        title: true,
-        authority: true,
-        dueDate: true,
-        stage: true,
-        acknowledgementReference: true,
-        assigneeId: true,
-        filedAt: true,
-        verificationStatus: true,
-        engagement: { select: { name: true } },
-      },
-      orderBy: { filedAt: "asc" },
-      take: 200,
-    }),
-  );
+  const runs = await prisma.complianceFilingRun.findMany({
+    where: { stage: "filed", filedAt: { lte: cutoff }, verificationStatus: "unverified" },
+    select: {
+      id: true,
+      organizationId: true,
+      engagementId: true,
+      taskId: true,
+      title: true,
+      authority: true,
+      dueDate: true,
+      stage: true,
+      acknowledgementReference: true,
+      assigneeId: true,
+      filedAt: true,
+      verificationStatus: true,
+      engagement: { select: { name: true } },
+    },
+    orderBy: { filedAt: "asc" },
+    take: 200,
+  });
   if (runs.length === 0) return result;
 
   if (provider !== "live") {

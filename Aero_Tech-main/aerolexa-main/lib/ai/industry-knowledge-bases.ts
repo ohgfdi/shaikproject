@@ -5,8 +5,9 @@
  * domain-accurate answers, terminology, and context-aware responses.
  * Integrates with the AI Chat Assistant (Phase 30) and industry models (Phases 33-36).
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
@@ -105,7 +106,7 @@ export const RetailKnowledgeBase: KnowledgeEntry[] = [
     question: "What is a good conversion rate for e-commerce?",
     answer: "Average e-commerce conversion rates typically range from 2.0% to 3.5%, with top quartile stores achieving 4.0% to 5.0% or higher. Conversion rates vary significantly by industry: Fashion (1.5-2.5%), Electronics (2.5-3.5%), Home & Garden (3.0-4.5%).",
     context: "Conversion rate optimization (CRO) techniques can improve rates by 10-50% through A/B testing, checkout optimization, and friction reduction. Mobile conversion rates are typically 0.5-1.5% lower than desktop.",
-    references": ["Adobe Digital Index", "Nielsen Norman Group CRO Guidelines"],
+    references: ["Adobe Digital Index", "Nielsen Norman Group CRO Guidelines"],
     related_topics: ["AOV", "AOV", "Cart Abandonment Rate", "Repeat Purchase Rate"],
   },
   {
@@ -115,7 +116,7 @@ export const RetailKnowledgeBase: KnowledgeEntry[] = [
     question: "How should I handle cart abandonment?",
     answer: "Best practices: 1) Abandoned email series (3-4 emails over 7 days), 2) Include product image and price, 3) Offer limited-time discount (10-15%), 4) Make checkout guest-friendly, 5) Retarget with dynamic ads, 6) Send SMS reminder for high-value carts.",
     context: "Average cart abandonment rate is 69.57%. Well-executed recovery campaigns can recover 10-15% of abandoned carts, representing significant revenue recovery for high-volume stores.",
-    references": ["Baymard Institute CRO Research", "Saleor E-commerce Benchmarks"],
+    references: ["Baymard Institute CRO Research", "Saleor E-commerce Benchmarks"],
     related_topics: ["Conversion Rate", "AOV", "Customer Lifetime Value"],
   },
 ];
@@ -129,7 +130,7 @@ export const ManufacturingKnowledgeBase: KnowledgeEntry[] = [
     question: "What is a good OEE score?",
     answer: "OEE (Overall Equipment Effectiveness) world-class scores are 85%+, but average manufacturing achieves 60%. Typical benchmarks: World-class (85%+), Best-in-class (75-84%), Average (60-74%), Lagging (below 60%).",
     context: "OEE = Availability × Performance × Quality. Each component measures different losses: Availability (downtime), Performance (slow cycles/ideals), Quality (defects/scrap). Improving any component drives overall OEE.",
-    references": ["SME Manufacturing Guidelines", "Lean Manufacturing Best Practices"],
+    references: ["SME Manufacturing Guidelines", "Lean Manufacturing Best Practices"],
     related_topics: ["Downtime", "Defect Rate", "Throughput", "OEE Components"],
   },
   {
@@ -139,8 +140,8 @@ export const ManufacturingKnowledgeBase: KnowledgeEntry[] = [
     question: "What are key strategies for reducing downtime?",
     answer: "Key strategies: 1) Predictive maintenance with sensor data and ML models, 2) Total Productive Maintenance (TPM) program, 3) Quick changeover (SMED) techniques, 4) Root cause analysis for recurring issues, 5) Critical spare parts inventory, 6) Operator training and empowerment.",
     context: "Predictive maintenance can reduce downtime by 20-50%. TPM programs typically achieve 30-50% OEE improvement within 1-2 years. SMED (Single-Minute Exchange of Die) targets under 10-minute changeovers.",
-    references": ["Plant Maintenance Management", "Lean Enterprise Institute"],
-    related_topics": ["Predictive Maintenance", "TPM", "SMED", "OEE"],
+    references: ["Plant Maintenance Management", "Lean Enterprise Institute"],
+    related_topics: ["Predictive Maintenance", "TPM", "SMED", "OEE"],
   },
 ];
 

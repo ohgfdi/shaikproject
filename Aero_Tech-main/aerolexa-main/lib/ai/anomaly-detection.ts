@@ -1,1 +1,324 @@
-/**\n * Phase 80: Real-Time Anomaly Detection\n *\n * Detects unusual patterns and anomalies in metrics, logs, and system behavior.\n * Provides real-time alerting, anomaly classification, and root cause indicators.\n */\nimport { prisma } from \"../lib/db\";\nimport type { NextRequest } from \"next/server\";\n\nexport type AnomalySeverity = \"critical\" | \"high\" | \"medium\" | \"low\";\n\nexport type AnomalyType = \n  | \"spike\"\n  | \"drop\"\n  | \"pattern_change\"\n  | \"seasonality_shift\"\n  | \"threshold_violation\"\n  | \"outlier\";\n\nexport interface AnomalyEvent {\n  id: string;\n  metricId: string;\n  metricName: string;\n  anomalyType: AnomalyType;\n  severity: AnomalySeverity;\n  currentValue: number;\n  expectedValue: number;\n  deviationPercentage: number;\n  detectedAt: Date;\n  timeRangeStart: Date;\n  timeRangeEnd: Date;\n  status: \"active\" | \"resolved\" | \" dismissed\";\n  contributingFactors?: string[];\n  resolutionNotes?: string;\n  assignedTo?: string;\n}\n\nexport interface AnomalyStats {\n  totalAnomalies: number;\n  criticalCount: number;\n  highCount: number;\n  mediumCount: number;\n  lowCount: number;\n  byType: Record<AnomalyType, number>;\n  bySeverity: Record<AnomalySeverity, number>;\n  resolvedPercentage: number;\n  meanTimeToDetect: number; // minutes\n  meanTimeToResolve?: number; // minutes\n}\n\nexport function detectAnomalies(\n  metricId: string,\n  metricName: string,\n  currentValue: number,\n  historicalValues: number[],\n  thresholds: { upper: number; lower: number } = { upper: Infinity, lower: -Infinity }:\n  AnomalyEvent[] {\n    const anomalies: AnomalyEvent[] = [];\n\n    // Check upper threshold violation\n    if (currentValue > thresholds.upper) {\n      anomalies.push({\n        id: `anom_${metricId}_upper`,\n        metricId,\n        metricName,\n        anomalyType: \"threshold_violation\",\n        severity: \"high\",\n        currentValue,\n        expectedValue: thresholds.upper,\n        deviationPercentage: Math.round(((currentValue - thresholds.upper) / thresholds.upper) * 100),\n        detectedAt: new Date(),\n        timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n        timeRangeEnd: new Date(),\n        status: \"active\",\n        contributingFactors: [\"Upper threshold exceeded\"]\n      });\n    }\n\n    // Check lower threshold violation\n    if (currentValue < thresholds.lower) {\n      anomalies.push({\n        id: `anom_${metricId}_lower`,\n        metricId,\n        metricName,\n        anomalyType: \"threshold_violation\",\n        severity: \"high\",\n        currentValue,\n        expectedValue: thresholds.lower,\n        deviationPercentage: Math.round(((thresholds.lower - currentValue) / Math.abs(thresholds.lower)) * 100),\n        detectedAt: new Date(),\n        timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n        timeRangeEnd: new Date(),\n        status: \"active\",\n        contributingFactors: [\"Lower threshold exceeded\"]\n      });\n    }\n\n    // Check spike detection (current >> historical average)\n    if (historicalValues.length > 0) {\n      const historicalAverage = historicalValues.reduce((sum, val) => sum + val, 0) / historicalValues.length;\n      const historicalStdDev = Math.sqrt(\n        historicalValues.reduce((sum, val) => sum + Math.pow(val - historicalAverage, 2), 0) / historicalValues.length\n      );\n\n      // Z-score based detection\n      const zScore = (currentValue - historicalAverage) / (historicalStdDev || 1);\n\n      // Spike: value is > 2 standard deviations above average\n      if (zScore > 2) {\n        const deviationPct = Math.round(((currentValue - historicalAverage) / historicalAverage) * 100);\n        anomalies.push({\n          id: `anom_${metricId}_spike`,\n          metricId,\n          metricName,\n          anomalyType: \"spike\",\n          severity: zScore > 3 ? \"critical\" : \"high\",\n          currentValue,\n          expectedValue: Math.round(historicalAverage),\n          deviationPercentage: deviationPct,\n          detectedAt: new Date(),\n          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n          timeRangeEnd: new Date(),\n          status: \"active\",\n          contributingFactors: [\"Statistical spike detected\", `Z-score: ${zScore.toFixed(2)}`]\n        });\n      }\n\n      // Drop: value is > 2 standard deviations below average\n      if (zScore < -2) {\n        const deviationPct = Math.round(((currentValue - historicalAverage) / historicalAverage) * 100);\n        anomalies.push({\n          id: `anom_${metricId}_drop`,\n          metricId,\n          metricName,\n          anomalyType: \"drop\",\n          severity: zScore < -3 ? \"critical\" : \"high\",\n          currentValue,\n          expectedValue: Math.round(historicalAverage),\n          deviationPercentage: deviationPct,\n          detectedAt: new Date(),\n          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n          timeRangeEnd: new Date(),\n          status: \"active\",\n          contributingFactors: [\"Statistical drop detected\", `Z-score: ${zScore.toFixed(2)}`]\n        });\n      }\n\n      // Outlier detection using IQR method\n      const sorted = [...historicalValues].sort((a, b) => a - b);\n      const q1 = sorted[Math.floor(sorted.length * 0.25)];\n      const q3 = sorted[Math.floor(sorted.length * 0.75)];\n      const iqr = q3 - q1;\n      const lowerBound = q1 - 1.5 * iqr;\n      const upperBound = q3 + 1.5 * iqr;\n\n      if (currentValue < lowerBound) {\n        anomalies.push({\n          id: `anom_${metricId}_outlier_low`,\n          metricId,\n          metricName,\n          anomalyType: \"outlier\",\n          severity: \"medium\",\n          currentValue,\n          expectedValue: Math.round(lowerBound),\n          deviationPercentage: Math.round(((lowerBound - currentValue) / Math.abs(lowerBound)) * 100),\n          detectedAt: new Date(),\n          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n          timeRangeEnd: new Date(),\n          status: \"active\",\n          contributingFactors: [\"IQR-based outlier detection\"]\n        });\n      }\n      if (currentValue > upperBound) {\n        anomalies.push({\n          id: `anom_${metricId}_outlier_high`,\n          metricId,\n          metricName,\n          anomalyType: \"outlier\",\n          severity: \"medium\",\n          currentValue,\n          expectedValue: Math.round(upperBound),\n          deviationPercentage: Math.round(((currentValue - upperBound) / upperBound) * 100),\n          detectedAt: new Date(),\n          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),\n          timeRangeEnd: new Date(),\n          status: \"active\",\n          contributingFactors: [\"IQR-based outlier detection\"]\n        });\n      }\n    }\n\n    return anomalies;\n}\n\nexport function getAnomalyStats(events: AnomalyEvent[]): AnomalyStats {\n  const total = events.length;\n  const critical = events.filter((e) => e.severity === \"critical\").length;\n  const high = events.filter((e) => e.severity === \"high\").length;\n  const medium = events.filter((e) => e.severity === \"medium\").length;\n  const low = events.filter((e) => e.severity === \"low\").length;\n\n  const byType: Record<AnomalyType, number> = {\n    spike: 0,\n    drop: 0,\n    pattern_change: 0,\n    seasonality_shift: 0,\n    threshold_violation: 0,\n    outlier: 0,\n  };\n\n  const bySeverity: Record<AnomalySeverity, number> = {\n    critical: 0,\n    high: 0,\n    medium: 0,\n    low: 0,\n  };\n\n  let resolved = 0;\n\n  for (const event of events) {\n    if (event.anomalyType) byType[event.anomalyType]++;\n    if (event.severity) bySeverity[event.severity]++;\n    if (event.status === \"resolved\") resolved++;\n  }\n\n  const meanTimeToResolve = events.length > 0\n    ? events.filter((e) => e.resolutionNotes).reduce((sum, e) => sum + (e.detectedAt.getTime() - new Date().getTime()), 0) / events.length\n    : undefined;\n\n  return {\n    totalAnomalies: total,\n    criticalCount: critical,\n    highCount: high,\n    mediumCount: medium,\n    lowCount: low,\n    byType,\n    bySeverity,\n    resolvedPercentage: total > 0 ? Math.round((resolved / total) * 100) : 100,\n    meanTimeToDetect: 0, // calculated at detection time\n    meanTimeToResolve,\n  };\n}\n\nexport async function GET(\n  request: NextRequest\n): Promise<Response> {\n  try {\n    const { searchParams } = new URL(request.url);\n    const action = searchParams.get(\"action\") || \"detect\";\n\n    if (action === \"detect\") {\n      const metricId = searchParams.get(\"metricId\") || \"metrics_001\";\n      const metricName = searchParams.get(\"metricName\") || \"Revenue\";\n      const currentValue = parseFloat(searchParams.get(\"currentValue\") || \"0\");\n      const historicalStr = searchParams.get(\"historical\");\n      const historicalValues = historicalStr\n        ? historicalStr.split(\",\").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))\n        : [];\n      const upperStr = searchParams.get(\"upperThreshold\");\n      const lowerStr = searchParams.get(\"lowerThreshold\");\n      const upperThreshold = upperStr ? parseFloat(upperStr) : Infinity;\n      const lowerThreshold = lowerStr ? parseFloat(lowerStr) : -Infinity;\n\n      const anomalies = detectAnomalies(metricId, metricName, currentValue, historicalValues, {\n        upper: upperThreshold,\n        lower: lowerThreshold,\n      });\n      const stats = getAnomalyStats(anomalies);\n      return new Response(JSON.stringify({ anomalies, stats }), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    if (action === \"stats\") {\n      // Return stats from recent anomalies (simulated)\n      const stats: AnomalyStats = {\n        totalAnomalies: 0,\n        criticalCount: 0,\n        highCount: 0,\n        mediumCount: 0,\n        lowCount: 0,\n        byType: { spike: 0, drop: 0, pattern_change: 0, seasonality_shift: 0, threshold_violation: 0, outlier: 0 },\n        bySeverity: { critical: 0, high: 0, medium: 0, low: 0 },\n        resolvedPercentage: 100,\n        meanTimeToDetect: 0,\n      };\n      return new Response(JSON.stringify(stats), {\n        status: 200,\n        headers: { \"Content-Type\": \"application/json\" },\n      });\n    }\n\n    // Default: detect anomalies\n    const metricId = searchParams.get(\"metricId\") || \"metrics_001\";\n    const metricName = searchParams.get(\"metricName\") || \"Revenue\";\n    const currentValue = parseFloat(searchParams.get(\"currentValue\") || \"0\");\n    const historicalStr = searchParams.get(\"historical\");\n    const historicalValues = historicalStr\n      ? historicalStr.split(\",\").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))\n      : [currentValue - 10, currentValue - 5, currentValue, currentValue + 5, currentValue + 10];\n    const upperStr = searchParams.get(\"upperThreshold\");\n    const lowerStr = searchParams.get(\"lowerThreshold\");\n    const upperThreshold = upperStr ? parseFloat(upperStr) : Infinity;\n    const lowerThreshold = lowerStr ? parseFloat(lowerStr) : -Infinity;\n\n    const anomalies = detectAnomalies(metricId, metricName, currentValue, historicalValues, {\n      upper: upperThreshold,\n      lower: lowerThreshold,\n    });\n    const stats = getAnomalyStats(anomalies);\n    return new Response(JSON.stringify({ anomalies, stats }), {\n      status: 200,\n      headers: { \"Content-Type\": \"application/json\" },\n    });\n  } catch (error) {\n    console.error(\"Anomaly detection error:\", error);\n    return new Response(\n      JSON.stringify({ error: \"Failed to retrieve anomaly detection data\" }),\n      { status: 500, headers: { \"Content-Type\": \"application/json\" } }\n    );\n  }\n}\n", "allowMultiple": true}
+/**
+ * Phase 80: Real-Time Anomaly Detection
+ *
+ * Detects unusual patterns and anomalies in metrics, logs, and system behavior.
+ * Provides real-time alerting, anomaly classification, and root cause indicators.
+ */
+import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
+export type AnomalySeverity = "critical" | "high" | "medium" | "low";
+
+export type AnomalyType = 
+  | "spike"
+  | "drop"
+  | "pattern_change"
+  | "seasonality_shift"
+  | "threshold_violation"
+  | "outlier";
+
+export interface AnomalyEvent {
+  id: string;
+  metricId: string;
+  metricName: string;
+  anomalyType: AnomalyType;
+  severity: AnomalySeverity;
+  currentValue: number;
+  expectedValue: number;
+  deviationPercentage: number;
+  detectedAt: Date;
+  timeRangeStart: Date;
+  timeRangeEnd: Date;
+  status: "active" | "resolved" | " dismissed";
+  contributingFactors?: string[];
+  resolutionNotes?: string;
+  assignedTo?: string;
+}
+
+export interface AnomalyStats {
+  totalAnomalies: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  byType: Record<AnomalyType, number>;
+  bySeverity: Record<AnomalySeverity, number>;
+  resolvedPercentage: number;
+  meanTimeToDetect: number; // minutes
+  meanTimeToResolve?: number; // minutes
+}
+
+export function detectAnomalies(
+  metricId: string,
+  metricName: string,
+  currentValue: number,
+  historicalValues: number[],
+  thresholds: { upper: number; lower: number } = { upper: Infinity, lower: -Infinity },
+): AnomalyEvent[] {
+    const anomalies: AnomalyEvent[] = [];
+
+    // Check upper threshold violation
+    if (currentValue > thresholds.upper) {
+      anomalies.push({
+        id: `anom_${metricId}_upper`,
+        metricId,
+        metricName,
+        anomalyType: "threshold_violation",
+        severity: "high",
+        currentValue,
+        expectedValue: thresholds.upper,
+        deviationPercentage: Math.round(((currentValue - thresholds.upper) / thresholds.upper) * 100),
+        detectedAt: new Date(),
+        timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        timeRangeEnd: new Date(),
+        status: "active",
+        contributingFactors: ["Upper threshold exceeded"]
+      });
+    }
+
+    // Check lower threshold violation
+    if (currentValue < thresholds.lower) {
+      anomalies.push({
+        id: `anom_${metricId}_lower`,
+        metricId,
+        metricName,
+        anomalyType: "threshold_violation",
+        severity: "high",
+        currentValue,
+        expectedValue: thresholds.lower,
+        deviationPercentage: Math.round(((thresholds.lower - currentValue) / Math.abs(thresholds.lower)) * 100),
+        detectedAt: new Date(),
+        timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        timeRangeEnd: new Date(),
+        status: "active",
+        contributingFactors: ["Lower threshold exceeded"]
+      });
+    }
+
+    // Check spike detection (current >> historical average)
+    if (historicalValues.length > 0) {
+      const historicalAverage = historicalValues.reduce((sum, val) => sum + val, 0) / historicalValues.length;
+      const historicalStdDev = Math.sqrt(
+        historicalValues.reduce((sum, val) => sum + Math.pow(val - historicalAverage, 2), 0) / historicalValues.length
+      );
+
+      // Z-score based detection
+      const zScore = (currentValue - historicalAverage) / (historicalStdDev || 1);
+
+      // Spike: value is > 2 standard deviations above average
+      if (zScore > 2) {
+        const deviationPct = Math.round(((currentValue - historicalAverage) / historicalAverage) * 100);
+        anomalies.push({
+          id: `anom_${metricId}_spike`,
+          metricId,
+          metricName,
+          anomalyType: "spike",
+          severity: zScore > 3 ? "critical" : "high",
+          currentValue,
+          expectedValue: Math.round(historicalAverage),
+          deviationPercentage: deviationPct,
+          detectedAt: new Date(),
+          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          timeRangeEnd: new Date(),
+          status: "active",
+          contributingFactors: ["Statistical spike detected", `Z-score: ${zScore.toFixed(2)}`]
+        });
+      }
+
+      // Drop: value is > 2 standard deviations below average
+      if (zScore < -2) {
+        const deviationPct = Math.round(((currentValue - historicalAverage) / historicalAverage) * 100);
+        anomalies.push({
+          id: `anom_${metricId}_drop`,
+          metricId,
+          metricName,
+          anomalyType: "drop",
+          severity: zScore < -3 ? "critical" : "high",
+          currentValue,
+          expectedValue: Math.round(historicalAverage),
+          deviationPercentage: deviationPct,
+          detectedAt: new Date(),
+          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          timeRangeEnd: new Date(),
+          status: "active",
+          contributingFactors: ["Statistical drop detected", `Z-score: ${zScore.toFixed(2)}`]
+        });
+      }
+
+      // Outlier detection using IQR method
+      const sorted = [...historicalValues].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - 1.5 * iqr;
+      const upperBound = q3 + 1.5 * iqr;
+
+      if (currentValue < lowerBound) {
+        anomalies.push({
+          id: `anom_${metricId}_outlier_low`,
+          metricId,
+          metricName,
+          anomalyType: "outlier",
+          severity: "medium",
+          currentValue,
+          expectedValue: Math.round(lowerBound),
+          deviationPercentage: Math.round(((lowerBound - currentValue) / Math.abs(lowerBound)) * 100),
+          detectedAt: new Date(),
+          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          timeRangeEnd: new Date(),
+          status: "active",
+          contributingFactors: ["IQR-based outlier detection"]
+        });
+      }
+      if (currentValue > upperBound) {
+        anomalies.push({
+          id: `anom_${metricId}_outlier_high`,
+          metricId,
+          metricName,
+          anomalyType: "outlier",
+          severity: "medium",
+          currentValue,
+          expectedValue: Math.round(upperBound),
+          deviationPercentage: Math.round(((currentValue - upperBound) / upperBound) * 100),
+          detectedAt: new Date(),
+          timeRangeStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          timeRangeEnd: new Date(),
+          status: "active",
+          contributingFactors: ["IQR-based outlier detection"]
+        });
+      }
+    }
+
+    return anomalies;
+}
+
+export function getAnomalyStats(events: AnomalyEvent[]): AnomalyStats {
+  const total = events.length;
+  const critical = events.filter((e) => e.severity === "critical").length;
+  const high = events.filter((e) => e.severity === "high").length;
+  const medium = events.filter((e) => e.severity === "medium").length;
+  const low = events.filter((e) => e.severity === "low").length;
+
+  const byType: Record<AnomalyType, number> = {
+    spike: 0,
+    drop: 0,
+    pattern_change: 0,
+    seasonality_shift: 0,
+    threshold_violation: 0,
+    outlier: 0,
+  };
+
+  const bySeverity: Record<AnomalySeverity, number> = {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+
+  let resolved = 0;
+
+  for (const event of events) {
+    if (event.anomalyType) byType[event.anomalyType]++;
+    if (event.severity) bySeverity[event.severity]++;
+    if (event.status === "resolved") resolved++;
+  }
+
+  const meanTimeToResolve = events.length > 0
+    ? events.filter((e) => e.resolutionNotes).reduce((sum, e) => sum + (e.detectedAt.getTime() - new Date().getTime()), 0) / events.length
+    : undefined;
+
+  return {
+    totalAnomalies: total,
+    criticalCount: critical,
+    highCount: high,
+    mediumCount: medium,
+    lowCount: low,
+    byType,
+    bySeverity,
+    resolvedPercentage: total > 0 ? Math.round((resolved / total) * 100) : 100,
+    meanTimeToDetect: 0, // calculated at detection time
+    meanTimeToResolve,
+  };
+}
+
+export async function GET(
+  request: NextRequest
+): Promise<Response> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action") || "detect";
+
+    if (action === "detect") {
+      const metricId = searchParams.get("metricId") || "metrics_001";
+      const metricName = searchParams.get("metricName") || "Revenue";
+      const currentValue = parseFloat(searchParams.get("currentValue") || "0");
+      const historicalStr = searchParams.get("historical");
+      const historicalValues = historicalStr
+        ? historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))
+        : [];
+      const upperStr = searchParams.get("upperThreshold");
+      const lowerStr = searchParams.get("lowerThreshold");
+      const upperThreshold = upperStr ? parseFloat(upperStr) : Infinity;
+      const lowerThreshold = lowerStr ? parseFloat(lowerStr) : -Infinity;
+
+      const anomalies = detectAnomalies(metricId, metricName, currentValue, historicalValues, {
+        upper: upperThreshold,
+        lower: lowerThreshold,
+      });
+      const stats = getAnomalyStats(anomalies);
+      return new Response(JSON.stringify({ anomalies, stats }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "stats") {
+      // Return stats from recent anomalies (simulated)
+      const stats: AnomalyStats = {
+        totalAnomalies: 0,
+        criticalCount: 0,
+        highCount: 0,
+        mediumCount: 0,
+        lowCount: 0,
+        byType: { spike: 0, drop: 0, pattern_change: 0, seasonality_shift: 0, threshold_violation: 0, outlier: 0 },
+        bySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+        resolvedPercentage: 100,
+        meanTimeToDetect: 0,
+      };
+      return new Response(JSON.stringify(stats), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Default: detect anomalies
+    const metricId = searchParams.get("metricId") || "metrics_001";
+    const metricName = searchParams.get("metricName") || "Revenue";
+    const currentValue = parseFloat(searchParams.get("currentValue") || "0");
+    const historicalStr = searchParams.get("historical");
+    const historicalValues = historicalStr
+      ? historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v))
+      : [currentValue - 10, currentValue - 5, currentValue, currentValue + 5, currentValue + 10];
+    const upperStr = searchParams.get("upperThreshold");
+    const lowerStr = searchParams.get("lowerThreshold");
+    const upperThreshold = upperStr ? parseFloat(upperStr) : Infinity;
+    const lowerThreshold = lowerStr ? parseFloat(lowerStr) : -Infinity;
+
+    const anomalies = detectAnomalies(metricId, metricName, currentValue, historicalValues, {
+      upper: upperThreshold,
+      lower: lowerThreshold,
+    });
+    const stats = getAnomalyStats(anomalies);
+    return new Response(JSON.stringify({ anomalies, stats }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Anomaly detection error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to retrieve anomaly detection data" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}

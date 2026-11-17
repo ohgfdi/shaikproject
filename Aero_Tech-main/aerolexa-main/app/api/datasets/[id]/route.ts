@@ -3,7 +3,6 @@ import path from "node:path";
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { dataDir } from "@/lib/engine/dataset";
 import { applyColumnOps } from "@/lib/file/parse";
@@ -12,6 +11,7 @@ import { stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
 import { ok, toErrorResponse, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { createDatasetVersion } from "@/lib/server/versioning";
 import type { ColumnDef } from "@/lib/types";
 
@@ -71,7 +71,8 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     if (name && name !== dataset!.name) {
       await withTenantDb(ctx, (db) =>
         db.dataset.update({ where: { id: dataset!.id }, data: { name, updatedAt: new Date() } }),
-    );
+      );
+    }
 
     await logActivity(ctx, "DATASET_UPDATED", `Dataset “${name ?? dataset!.name}” updated`, dataset!.projectId, {
       datasetId: dataset!.id,

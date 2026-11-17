@@ -7,9 +7,10 @@ import { ProjectCreateButton } from "@/components/projects/project-create-dialog
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge, Card } from "@/components/ui/primitives";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
+import { prisma } from "@/lib/db";
 import { timeAgo, fmtDate } from "@/lib/format";
 import { insightCard } from "@/lib/serialize";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "My Projects" };
 

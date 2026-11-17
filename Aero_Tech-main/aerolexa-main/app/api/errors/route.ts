@@ -2,9 +2,9 @@ import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-import { log, newRequestId, currentRequestId } from "@/lib/server/logger";
-import { redact, fingerprint, toReport } from "@/lib/server/error-tracking";
 import { ok, toErrorResponse } from "@/lib/server/api";
+import { redact, fingerprint, toReport } from "@/lib/server/error-tracking";
+import { log, newRequestId, currentRequestId } from "@/lib/server/logger";
 
 export const dynamic = "force-dynamic";
 

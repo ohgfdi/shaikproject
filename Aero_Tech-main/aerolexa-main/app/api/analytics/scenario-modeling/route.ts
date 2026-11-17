@@ -1,5 +1,6 @@
+import { NextRequest } from "next/server";
+
 import { GET } from "@/app/api/analytics/scenario-modeling/route";
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 

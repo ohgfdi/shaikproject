@@ -133,7 +133,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
         <div className="comment-actions-bar">
           <button
             className="comment-menu-btn"
-            onClick={() => /* open menu */}
+            onClick={() => { /* open menu */ }}
           >
             ⋯
           </button>

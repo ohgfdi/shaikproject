@@ -8,6 +8,9 @@
  * a partial wrap is exactly how a cross-tenant read slips through.
  */
 
+import { prisma } from "@/lib/db";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
 import { TENANT_MODELS } from "./rls-status";
 
 export interface SourceFile {

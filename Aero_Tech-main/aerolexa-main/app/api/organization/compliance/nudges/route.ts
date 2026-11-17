@@ -1,12 +1,6 @@
 import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
-
-/**
- * tenancy-audit: global-operator — compliance nudge API.
- * This is a deployment-wide aggregate rather than a per-tenant query.
- */
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -19,6 +13,12 @@ import {
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { queueComplianceNudge } from "@/lib/server/compliance-nudges";
 import { requireEngagementRole } from "@/lib/server/engagement";
+import { withTenantDb } from "@/lib/server/tenant-db";
+
+/**
+ * tenancy-audit: global-operator — compliance nudge API.
+ * This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 

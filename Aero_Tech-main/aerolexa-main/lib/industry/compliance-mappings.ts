@@ -4,8 +4,9 @@
  * Maps industry-specific compliance requirements (HIPAA, SOC2, PCI-DSS, GDPR)
  * to tenant configurations and audit logging requirements.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type ComplianceFramework = "HIPAA" | "SOC2" | "PCI_DSS" | "GDPR";
 

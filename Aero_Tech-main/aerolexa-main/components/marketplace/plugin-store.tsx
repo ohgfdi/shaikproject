@@ -5,8 +5,9 @@
  * Supports creator profiles, revenue sharing, and version management.
  */
 import React, { useEffect, useState } from "react";
-import { prisma } from "../lib/db";
-import { getInstalledPlugins, executePlugin } from "../lib/extensions/plugin-sdk";
+
+import { prisma } from "@/lib/db";
+import { getInstalledPlugins, executePlugin } from "@/lib/extensions/plugin-sdk";
 
 export interface PluginCard {
   id: string;

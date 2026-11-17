@@ -2,9 +2,8 @@
  * tenancy-audit: global-operator — dataset dax-eval API evaluates DAX
  * expressions over workspace datasets. This is a deployment-wide aggregate
  * rather than a per-tenant query.
- */
-
-* POST /api/datasets/[id]/dax-eval
+ *
+ * POST /api/datasets/[id]/dax-eval
  *
  * Power BI-style measure evaluation over a dataset: an arbitrary DAX
  * expression evaluated in the caller's filter context (cross-filter

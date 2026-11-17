@@ -32,7 +32,6 @@
  */
 
 import { ApiError, forbiddenError, notFoundError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { jurisdictionProfile, retentionFloorDays, retentionUntilFor } from "@/lib/server/jurisdiction";
@@ -401,9 +400,10 @@ export async function grantEngagementAccess(
         userId: input.userId,
         practiceRole,
         assignedById: ctx.user.id,
-    },
-    update: { practiceRole, assignedById: ctx.user.id },
-  });
+      },
+      update: { practiceRole, assignedById: ctx.user.id },
+    }),
+  );
 
   await logOrgActivity(ctx, "ENGAGEMENT_ACCESS_GRANTED", `${member.user.name} → ${practiceRole} on this engagement`, {
     engagementId: engagement.id,
@@ -442,7 +442,8 @@ export async function revokeEngagementAccess(
   if (!existing) throw notFoundError("That user has no explicit assignment on this engagement.");
 
   await withTenantDb(ctx, (db) =>
-    db.engagementMember.delete({ where: { id: existing.id } });
+    db.engagementMember.delete({ where: { id: existing.id } }),
+  );
   await logOrgActivity(ctx, "ENGAGEMENT_ACCESS_REVOKED", `Explicit engagement access revoked`, {
     engagementId: engagement.id,
     userId,
@@ -709,6 +710,7 @@ export async function updateOrgPrivacy(
       where: { id: ctx.organization.id },
       select: { settings: true },
     }),
+  );
 
   const currentSettings = orgPrivacySettings(current?.settings ?? null);
   const mergedPrivacy: OrganizationPrivacySettings = { ...currentSettings.privacy, ...input };
@@ -729,9 +731,10 @@ export async function updateOrgPrivacy(
   const merged = { ...currentSettings, privacy: mergedPrivacy };
   await withTenantDb(ctx, (db) =>
     db.organization.update({
-    where: { id: ctx.organization.id },
-    data: { settings: stringifyJson(merged) },
-  });
+      where: { id: ctx.organization.id },
+      data: { settings: stringifyJson(merged) },
+    }),
+  );
   await logOrgActivity(ctx, "ORGANIZATION_PRIVACY_UPDATED", "Organization privacy/retention settings updated", {
     privacy: mergedPrivacy,
   });
@@ -751,15 +754,16 @@ export async function logOrgActivity(
 ): Promise<void> {
   await withTenantDb(ctx, (db) =>
     db.activity.create({
-    data: {
-      workspaceId: ctx.workspace.id,
-      actorId: ctx.user.id,
-      organizationId: ctx.organization?.id ?? null,
-      type: kind,
-      message,
-      targetType: "organization",
-      targetId: ctx.organization?.id ?? null,
-      meta: stringifyJson(meta),
-    },
-  });
+      data: {
+        workspaceId: ctx.workspace.id,
+        actorId: ctx.user.id,
+        organizationId: ctx.organization?.id ?? null,
+        type: kind,
+        message,
+        targetType: "organization",
+        targetId: ctx.organization?.id ?? null,
+        meta: stringifyJson(meta),
+      },
+    }),
+  );
 }

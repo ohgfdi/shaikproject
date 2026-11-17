@@ -4,8 +4,9 @@
  * Pre-built workflow automations optimized for each industry vertical.
  * Triggers, conditions, and actions are tailored to industry-specific business processes.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

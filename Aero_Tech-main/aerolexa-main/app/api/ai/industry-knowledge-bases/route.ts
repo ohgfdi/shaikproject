@@ -1,5 +1,6 @@
+import { NextRequest } from "next/server";
+
 import { GET } from "@/app/api/ai/industry-knowledge-bases/route";
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 

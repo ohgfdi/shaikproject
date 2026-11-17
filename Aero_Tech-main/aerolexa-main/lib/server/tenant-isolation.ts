@@ -18,8 +18,9 @@
  *     where: { tenantId: tenant?.id },
  *   });
  */
-import { prisma } from "./db";
 import { v4 as uuidv4 } from "uuid";
+
+import { prisma } from "@/lib/db";
 
 export type TenantStatus = "active" | "suspended" | "deleted";
 

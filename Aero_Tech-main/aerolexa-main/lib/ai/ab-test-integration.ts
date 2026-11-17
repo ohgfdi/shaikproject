@@ -1,3 +1,6 @@
+import { NextRequest } from "next/server";
+import { createHash } from "node:crypto";
+
 /**
  * Phase 50+ Enhancement: A/B Test Integration with AI Model Validation
  *
@@ -7,9 +10,10 @@
  * existing deterministic A/B allocation (SHA-256 hash-based) and Bayesian
  * posterior analysis.
  */
+
+import { prisma } from "@/lib/db";
 import { twoProportionZTest, bayesianAbTest, evaluateAbTest, AbArm, AbEvaluation } from "@/lib/engine/abtest";
-import { prisma } from "../lib/db";
-import type { NextRequest } from "next/server";
+
 import { executeDecision, DecisionProposal, DecisionRiskLevel } from "./autonomous-decision-engine";
 import { runWhatIfScenario, ScenarioParameter, ScenarioConfig } from "../analytics/scenario-modeling";
 
@@ -88,10 +92,7 @@ export function assignVariant(
 ): ABTestAssignment {
   // Deterministic assignment using SHA-256 hash
   const hashInput = `${testId}:${userId}`;
-  const assignmentHash = require("crypto")
-    .createHash("sha256")
-    .update(hashInput)
-    .digest("hex");
+  const assignmentHash = createHash("sha256").update(hashInput).digest("hex");
 
   // Convert hex to [0, 1) fraction
   const hashFraction = parseInt(assignmentHash, 16) / Number("0xffffffffffffffff");

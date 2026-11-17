@@ -1,19 +1,19 @@
-import { requireAuth } from "@/lib/auth/guard";
-import { complianceTaskState, ComplianceTaskState, daysUntil } from "@/lib/engine/compliance-calendar";
-import { ok, toErrorResponse } from "@/lib/server/api";
-import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
-import { mapOrgRoleToProjectRole } from "@/lib/server/members";
-import { runSoxCheck } from "@/lib/compliance/sox";
-import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
-import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
-import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
-import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
-import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
-import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
 import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
 import { interpretQuery, generateInsight, InsightType, InsightConfidence, Insight, ChartConfig, InsightAction } from "@/lib/ai/natural-language-insight";
 import { linearTrendForecast, exponentialSmoothing, ForecastResult, ForecastMethod, ForecastPoint } from "@/lib/ai/predictive-analytics";
+import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
+import { requireAuth } from "@/lib/auth/guard";
+import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
+import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
+import { runSoxCheck } from "@/lib/compliance/sox";
+import { complianceTaskState, ComplianceTaskState, daysUntil } from "@/lib/engine/compliance-calendar";
+import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
+import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
+import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
 import { getSecurityControls, BugBountyProgram, SecurityHardening, SecurityControl } from "@/lib/security/security-hardening";
+import { ok, toErrorResponse } from "@/lib/server/api";
+import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
+import { mapOrgRoleToProjectRole } from "@/lib/server/members";
 
 export const dynamic = "force-dynamic";
 
@@ -212,7 +212,9 @@ export async function GET(request: Request) {
           ? eventsStr.split(";").map((e: string) => {
               const [id, metricId, metricName, type, severity, current, expected, devPct, detected, status] = e.split("|");
               return { id, metricId, metricName, type: type as AnomalyType, severity: severity as AnomalySeverity, currentValue: parseFloat(current), expectedValue: parseFloat(expected), deviationPercentage: parseFloat(devPct), detectedAt: new Date(detected), status: status as "active" | "resolved" | "dismissed" };
-            }).filter((e) => e.metricId) || [];
+            })
+            .filter((e) => e.metricId)
+          : [];
         const stats = getAnomalyStats(events);
         return new Response(JSON.stringify({ events, stats }), {
           status: 200,

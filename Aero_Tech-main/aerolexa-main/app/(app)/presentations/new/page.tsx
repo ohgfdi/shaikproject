@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { parseJson, stringifyJson } from "@/lib/json";
 import { logActivity } from "@/lib/server/activity";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import { buildPresentationTemplate } from "@/lib/templates";
 import type { AnalysisResult, InsightCard } from "@/lib/types";
 
@@ -24,20 +24,26 @@ export default async function NewPresentationPage(props: {
   );
   if (!project || project.workspaceId !== ctx.workspace.id) redirect("/projects");
 
-  const dataset = await withTenantDb(ctx, (db) => db.dataset.findFirst({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-  }),
-  const analyses = await withTenantDb(ctx, (db) => db.analysis.findMany({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  }),
-  const insights = await withTenantDb(ctx, (db) => db.insight.findMany({
-    where: { workspaceId: ctx.workspace.id, projectId: project.id },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  }));
+  const dataset = await withTenantDb(ctx, (db) =>
+    db.dataset.findFirst({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+  const analyses = await withTenantDb(ctx, (db) =>
+    db.analysis.findMany({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  );
+  const insights = await withTenantDb(ctx, (db) =>
+    db.insight.findMany({
+      where: { workspaceId: ctx.workspace.id, projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  );
 
   const slides = buildPresentationTemplate({
     datasetName: dataset?.name,

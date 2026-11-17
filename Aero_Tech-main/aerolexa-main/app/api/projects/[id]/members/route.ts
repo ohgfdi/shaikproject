@@ -17,7 +17,7 @@ export async function GET(_request: Request, props: { params: Promise<{ id: stri
     const project = await prisma.project.findUnique({ where: { id: params.id } });
     const myRole = await requireProjectRole(ctx, project, "VIEWER");
     if (!project) return ok({ members: [], myRole: "VIEWER" });
-    const members = await listProjectMembers(project);
+    const members = await listProjectMembers(ctx, project);
     return ok({
       members: members.map((m) =>
         myRole === "OWNER" || m.userId === ctx.user.id

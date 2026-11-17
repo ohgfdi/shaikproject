@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { AnalysisWizard } from "@/components/analyses/analysis-wizard";
 import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
+import { prisma } from "@/lib/db";
 import { datasetColumns } from "@/lib/serialize";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Analysis Lab" };
 

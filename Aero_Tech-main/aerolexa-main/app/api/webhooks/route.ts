@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
 import { rlsEnabled, rlsConfigError } from "@/lib/server/rls-status";
-import { z } from "zod";
 
 /** Schema for a webhook subscription. */
 const subscriptionSchema = z.object({
@@ -16,7 +17,7 @@ const subscriptionSchema = z.object({
 /** GET /api/webhooks?dashboardId=...
  *  List subscriptions for a dashboard.
  */
-export async function GET(request: Request, { params }: { params: { dashboardId: string } }) {
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const dashboardId = searchParams.get("dashboardId") ?? "";
@@ -46,12 +47,13 @@ export async function GET(request: Request, { params }: { params: { dashboardId:
 /** POST /api/webhooks
  *  Create a new webhook subscription.
  */
-export async function POST(request: Request, { params }: { params: { dashboardId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ dashboardId: string }> }) {
+  const { dashboardId } = await params;
   try {
     const body = await request.json();
     const result = subscriptionSchema.safeParse({
       ...body,
-      dashboardId: params.dashboardId,
+      dashboardId: dashboardId,
     });
 
     if (!result.success) {
@@ -86,7 +88,7 @@ export async function POST(request: Request, { params }: { params: { dashboardId
       data: {
         url,
         events,
-        dashboardId: params.dashboardId,
+        dashboardId: dashboardId,
         idempotencyKey,
         createdAt: new Date().toISOString(),
       },
@@ -100,7 +102,7 @@ export async function POST(request: Request, { params }: { params: { dashboardId
           user.workspace?.id ?? "",
           user.id ?? "",
           "WEBHOOK_CREATED",
-          `Webhook created for dashboard ${params.dashboardId}`,
+          `Webhook created for dashboard ${dashboardId}`,
         );
       }
     } catch {}
@@ -126,11 +128,12 @@ export async function POST(request: Request, { params }: { params: { dashboardId
 /** PUT /api/webhooks/[id]
  *  Update a webhook subscription.
  */
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const body = await request.json();
     const result = subscriptionSchema.partial().safeParse({
-      id: params.id,
+      id: id,
       ...body,
     });
 
@@ -139,7 +142,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const subscription = await prisma.webhookSubscription.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         url: result.data.url,
         events: result.data.events,
@@ -167,10 +170,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 /** DELETE /api/webhooks/[id]
  *  Remove a webhook subscription.
  */
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     await prisma.webhookSubscription.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     return NextResponse.json({ ok: true });
@@ -179,17 +183,18 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 }
 
-/** POST /api/webhooks/[id]/retry
+/** PATCH /api/webhooks?id=…
  *  Retry a failed webhook delivery.
  */
-export async function POSTretry(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const body = await request.json();
     const { idempotencyKey } = body;
 
     // Find the subscription
     const subscription = await prisma.webhookSubscription.findFirst({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!subscription) {
@@ -198,7 +203,7 @@ export async function POSTretry(request: Request, { params }: { params: { id: st
 
     // Mark as pending retry
     await prisma.webhookSubscription.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         lastDelivery: {
           status: "pending",
@@ -214,7 +219,7 @@ export async function POSTretry(request: Request, { params }: { params: { id: st
 
     // Mark as successful
     await prisma.webhookSubscription.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         lastDelivery: {
           status: "success",
@@ -232,7 +237,7 @@ export async function POSTretry(request: Request, { params }: { params: { id: st
           user.workspace?.id ?? "",
           user.id ?? "",
           "WEBHOOK_RETRY",
-          `Webhook retry for subscription ${params.id}`,
+          `Webhook retry for subscription ${id}`,
         );
       }
     } catch {}

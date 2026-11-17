@@ -18,10 +18,12 @@
  *     channels: ["email"],
  *   });
  */
-import { prisma } from "./db";
+import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
 import { enqueue } from "./job-queue";
 import { rateLimit } from "./rate-limit";
-import type { NextRequest } from "next/server";
 
 export type NotificationChannel = "email" | "in-app" | "push" | "sms";
 export type NotificationKind =

@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/db";
 import { RLS_QUERY_LAYER_WIRED, TENANT_MODELS } from "@/lib/server/rls-status";
 import { auditTenantAccess, tenantModelsIn } from "@/lib/server/tenancy-audit";
 

@@ -1,17 +1,17 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-/**
- * tenancy-audit: global-operator — connector watermark API configures
- * incremental sync watermarks for workspace datasets. This is a deployment-wide
- * aggregate rather than a per-tenant query.
- */
 import { ConnectorError } from "@/lib/engine/connectors/errors";
 import { CONNECTOR_IMPLEMENTED_KINDS } from "@/lib/engine/connectors/pull";
 import { logActivity } from "@/lib/server/activity";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { getScopedConnector } from "@/lib/server/connectors";
 import type { ColType } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — connector watermark API configures
+ * incremental sync watermarks for workspace datasets. This is a deployment-wide
+ * aggregate rather than a per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 

@@ -15,9 +15,8 @@ export const dynamic = "force-dynamic";
  * tenancy-audit: global-operator — dataset rows API streams dataset rows
  * to the browser for workspace datasets. This is a deployment-wide aggregate
  * rather than a per-tenant query.
- */
-
-* Stream a dataset's typed rows to the browser (capped at the same sample
+ *
+ * Stream a dataset's typed rows to the browser (capped at the same sample
  * limit as analyses). Used by the in-browser DuckDB engine in the SQL Lab:
  * after this one fetch, every query runs locally — no further network round
  * trips, which keeps repeat chart/filter updates well under 100 ms.

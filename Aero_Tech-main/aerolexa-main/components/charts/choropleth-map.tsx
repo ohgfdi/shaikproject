@@ -69,6 +69,7 @@
 
 import "leaflet/dist/leaflet.css";
 
+import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer } from "react-leaflet";
 
@@ -121,8 +122,6 @@ export interface ChoroplethMapProps {
   interactive?: boolean;
 }
 
-type FeatureCollectionLike = { type: "FeatureCollection"; features: GeoFeatureLike[] };
-
 /** Render a single ChoroplethMap panel component. Used internally by ChoroplethMap for single and compare modes. */
 function ChoroplethMapPanel({
   title,
@@ -137,10 +136,8 @@ function ChoroplethMapPanel({
   classification,
   height,
   baselineData,
-  compareMode,
-  otherRegion,
-  highlightRef,
   showKPIs,
+  onExport,
 }: {
   title: string;
   metricLabel: string;
@@ -154,16 +151,17 @@ function ChoroplethMapPanel({
   classification?: ClassificationMethod;
   height?: number;
   baselineData?: { region: string; value: number }[];
-  compareMode?: boolean;
-  otherRegion?: string;
-  highlightRef: React.RefObject<HTMLDivElement>;
   showKPIs?: boolean;
+  onExport?: (dataUrl: string) => void;
 }) {
   const classified = useMemo(() => classifyValues(data, { method: classification }), [data, classification]);
-  const baselineClassified = useMemo(() => {
-    if (!baselineData) return null;
-    return classifyValues(baselineData, { method: classification });
-  }, [baselineData, classification]);
+
+  const [collection, setCollection] = useState<FeatureCollectionLike | null>(geojson ?? null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [drillRegion, setDrillRegion] = useState<string | null>(null);
+  const [drillColumns, setDrillColumns] = useState<{ key: string; label?: string }[]>([]);
+  const [drillRows, setDrillRows] = useState<(string | number | null)[][]>([]);
+  const [drillStatus, setDrillStatus] = useState<"idle" | "loading" | "ready">("idle");
 
   const report = useMemo(
     () => (collection ? buildChoropleth(collection.features, classified.classes) : null),
@@ -215,7 +213,7 @@ function ChoroplethMapPanel({
     }
 
     // colorBy === "region": base color per region
-    const baseMatch = report.matched.find((m) => m.region === name);
+    const baseMatch = report?.matched.find((m) => m.region === name);
     const baseColor = baseMatch?.color ?? NO_DATA_COLOR;
 
     // If baseline data is provided, overlay a subtle stripe at baseline position
@@ -251,36 +249,59 @@ function ChoroplethMapPanel({
     return sortedValues.filter((v) => v > binMin && v <= binMax).length;
   });
 
-  const collection = useMemo(() => {
-    if (geojson) return geojson;
-    return null;
-  }, [geojson, scope]);
-
   useEffect(() => {
     // Fetch boundaries if not provided via geojson
     let cancelled = false;
-    if (!geojson) {
-      const url = scope === "us-states" ? "/geo/us-states.json" : "/geo/countries.json";
-      fetch(url)
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json() as Promise<FeatureCollectionLike>;
-        })
-        .then((gj) => {
-          if (!cancelled) setCollectionRef(gj);
-        })
-        .catch(() => {
-          if (!cancelled) setLoadError("Map boundaries could not be loaded.");
-        });
+    if (geojson) {
+      setCollection(geojson);
+      return () => { cancelled = true; };
     }
+    const url = scope === "us-states" ? "/geo/us-states.json" : "/geo/countries.json";
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<FeatureCollectionLike>;
+      })
+      .then((gj) => {
+        if (!cancelled) setCollection(gj);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError("Map boundaries could not be loaded.");
+      });
     return () => { cancelled = true; };
   }, [geojson, scope]);
 
-  const setCollectionRef = (collection: FeatureCollectionLike) => {
-    // Handled by parent
-  };
+  // Drill-through detail rows for the shift-clicked region.
+  useEffect(() => {
+    if (!drillRegion) return;
+    let cancelled = false;
+    setDrillStatus("loading");
+    fetch(`/api/drill-through?region=${encodeURIComponent(drillRegion)}`)
+      .then((res) => res.json())
+      .then((payload: { columns?: { key: string; label?: string }[]; rows?: (string | number | null)[][] }) => {
+        if (cancelled) return;
+        setDrillColumns(payload?.columns ?? []);
+        setDrillRows(payload?.rows ?? []);
+        setDrillStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDrillColumns([]);
+          setDrillRows([]);
+          setDrillStatus("ready");
+        }
+      });
+    return () => { cancelled = true; };
+  }, [drillRegion]);
 
-  const [loadError, setLoadError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!drillRegion) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrillRegion(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drillRegion]);
 
   if (loadError) {
     return (
@@ -370,10 +391,6 @@ function ChoroplethMapPanel({
   // Get fill color for a feature
   const getColor = (feature: any) => getFillColor(feature);
 
-  // Tooltip content
-  const value = currentValueOf.get(String(feature?.properties?.name ?? ""));
-  const baselineValue = baselineValueOf.get(String(feature?.properties?.name ?? ""));
-
   const renderMap = () => {
     return (
       <div style={{ height: height ?? 360 }} className="overflow-hidden rounded-md border border-line" role="img" aria-label={title}>
@@ -396,25 +413,6 @@ function ChoroplethMapPanel({
                 fillOpacity: 0.9,
               };
             }}
-            eventHandlers={{
-              click: (e) => {
-                const name = String(e.target.getLeafletElement().getAttribute("name") ?? "");
-                if (onRegionClick) onRegionClick(name);
-              },
-              click: (e) => {
-                // Shift-click triggers drill-through
-                if (e.originalEvent.shiftKey && onDrillClick) {
-                  const name = String(e.target.getLeafletElement().getAttribute("name") ?? "");
-                  onDrillClick(name);
-                }
-              },
-              mouseover: (e) => {
-                e.target.setStyle({ weight: 1.6, color: "#121212" });
-              },
-              mouseout: (e) => {
-                e.target.setStyle({ weight: 0.6, color: "#6B6B6B" });
-              },
-            }}
             onEachFeature={(feature, layer) => {
               const name = String(feature.properties?.name ?? "");
               const v = currentValueOf.get(name);
@@ -427,8 +425,23 @@ function ChoroplethMapPanel({
                   : `<strong>${name}</strong><br/>${metricLabel}: ${v.toLocaleString("en-US")}`;
               layer.bindTooltip(`<div>${html}</div>`, { sticky: true });
 
-              // Store the region name as an attribute for click handlers to read
-              layer.getLeafletElement().setAttribute("name", name);
+              layer.on({
+                click: (event) => {
+                  // Shift-click opens the drill-through detail panel.
+                  if (event.originalEvent?.shiftKey && onDrillClick) {
+                    onDrillClick(name);
+                    setDrillRegion(name);
+                  } else if (onRegionClick) {
+                    onRegionClick(name);
+                  }
+                },
+                mouseover: (event) => {
+                  event.target.setStyle({ weight: 1.6, color: "#121212" });
+                },
+                mouseout: (event) => {
+                  event.target.setStyle({ weight: 0.6, color: "#6B6B6B" });
+                },
+              });
             }}
           />
         </MapContainer>
@@ -437,29 +450,10 @@ function ChoroplethMapPanel({
   };
 
   // Drill-through panel (Phase 8)
-  const [drillRegion, setDrillRegion] = useState<string | null>(null);
-
   const renderDrillPanel = () => {
     if (!drillRegion) return null;
 
-    // Fetch drill-through data
-    const [drillData, setDrillData] = useState<({ key: string; label: string }[]) | null>(null);
-    const [drillRows, setDrillRows] = useState<(string | number | null)[][] | null>(null);
-
-    useEffect(() => {
-      fetch(`/api/drill-through?region=${drillRegion}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setDrillData(data?.columns ?? []);
-          setDrillRows(data?.rows ?? []);
-        })
-        .catch(() => {
-          setDrillData([]);
-          setDrillRows([]);
-        });
-    }, [drillRegion]);
-
-    if (!drillData || !drillRows) {
+    if (drillStatus !== "ready") {
       return (
         <div
           role="dialog"
@@ -487,16 +481,17 @@ function ChoroplethMapPanel({
             Showing {drillRows.length} matching rows (sampled)
           </p>
 
-          {drillData.length > 0 && (
+          {drillColumns.length > 0 && (
             <div className="overflow-x-auto rounded-border bg-surface-1">
               <table className="w-full text-caption text-table">
                 <thead>
                   <tr>
-                    {drillData.map((col) => (
+                    {drillColumns.map((col) => (
                       <th key={col.key} className="text-caption text-foreground py-2">
                         {col.label ?? col.key}
                       </th>
                     ))}
+                  </tr>
                 </thead>
                 <tbody>
                   {drillRows.slice(0, 20).map((row, i) => (
@@ -597,39 +592,41 @@ function ChoroplethMapPanel({
   };
 
   // Summary view export button
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!onExport) return;
 
-    const mapContainer = document.querySelector(".leaflet-container") as HTMLElement;
-    if (!mapContainer) {
+    const mapContainer = document.querySelector(".leaflet-container") as HTMLElement | null;
+    const svg = mapContainer?.querySelector("svg");
+    if (!mapContainer || !svg) {
       onExport("");
       return;
     }
 
-    const clone = mapContainer.cloneNode(true) as HTMLElement;
-    clone.style.position = "absolute";
-    clone.style.left = "-9999px";
-    clone.style.top = "-9999px";
-    clone.style.width = "100%";
-    clone.style.height = `${height ?? 360}px`;
-    document.body.appendChild(clone);
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Leaflet draws its vector layers as SVG; serializing that markup into an
+    // image is enough to produce a PNG without pulling in a rasterizer.
+    const xml = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    await new Promise<void>((resolve) => {
+      image.onload = () => resolve();
+      image.onerror = () => resolve();
+      image.src = url;
+    });
 
     const canvas = document.createElement("canvas");
-    canvas.width = clone.scrollWidth;
-    canvas.height = clone.scrollHeight;
+    canvas.width = mapContainer.scrollWidth;
+    canvas.height = mapContainer.scrollHeight;
     const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.draw(clone);
-      const dataUrl = canvas.toDataURL("image/png");
-      onExport(dataUrl);
+    if (ctx && image.width > 0) {
+      ctx.fillStyle = "#f4f3ee";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0);
+      onExport(canvas.toDataURL("image/png"));
     } else {
       onExport("");
     }
-
-    document.body.removeChild(clone);
+    URL.revokeObjectURL(url);
   };
 
   const legendItems = classified.legend.map((entry) => (
@@ -726,7 +723,7 @@ function ChoroplethMapPanel({
             className="rounded border border-line px-3 py-1.5 text-caption hover:bg-surface-2 hover:text-foreground transition-colors"
             title="Export map as PNG"
           >
-            <Download className="size-4 aria-hidden="true" /> Export
+            <Download className="size-4" aria-hidden="true" /> Export
           </button>
         )}
       </div>
@@ -795,15 +792,13 @@ export function ChoroplethMap({
           classification={classification}
           height={height}
           baselineData={baselineData}
-          compareMode={false}
-          highlightRef={React.createRef()}
           onExport={onExport}
           showKPIs={showKPIs}
         />
 
         {compareData && (
           <div className="text-caption text-muted">
-            • Click the "Compare" button above to side-by-side mode
+            • Click the &quot;Compare&quot; button above to side-by-side mode
           </div>
         )}
       </div>
@@ -853,9 +848,6 @@ export function ChoroplethMap({
           classification={classification}
           height={height}
           baselineData={compareMode && compareData ? baselineData : undefined}
-          compareMode={true}
-          otherRegion={secondaryData ? "any" : null}
-          highlightRef={React.createRef()}
           onExport={onExport}
           showKPIs={showKPIs}
         />
@@ -863,7 +855,7 @@ export function ChoroplethMap({
 
       {/* Right panel: secondary map (compare mode only) */}
       {compareMode && (
-        <div className="flex ${compareMode ? "w-1/2" : "hidden"} flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <ChoroplethMapPanel
             title={secondaryTitle}
             metricLabel={metricLabel}
@@ -877,9 +869,6 @@ export function ChoroplethMap({
             classification={classification}
             height={height}
             baselineData={compareMode && compareData ? baselineData : undefined}
-            compareMode={true}
-            otherRegion={primaryData ? "any" : null}
-            highlightRef={React.createRef()}
             onExport={onExport}
           />
         </div>

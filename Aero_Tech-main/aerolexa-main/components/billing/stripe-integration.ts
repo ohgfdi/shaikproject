@@ -13,13 +13,15 @@
  *   // Handle webhook events (in your route handler)
  *   // await handleWebhook(request);
  */
-import Stripe from "stripe";
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
+
+import { prisma } from "@/lib/db";
 
 // Initialize Stripe with secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-09-30",
-  // @ts-ignore
+  // @ts-expect-error -- the installed Stripe types do not expose `timeout`
   timeout: 30000,
 });
 

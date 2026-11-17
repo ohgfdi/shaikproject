@@ -190,7 +190,7 @@ export type { OrgMemberWithRole } from "@/lib/server/members";
 export async function listOrgMembers(ctx: AuthContext): Promise<ReturnType<typeof listOrganizationMembers>> {
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
   await requireOrgRole(ctx, ctx.organization.id, "MEMBER");
-  return listOrganizationMembers(ctx.organization);
+  return listOrganizationMembers(ctx, ctx.organization);
 }
 
 export interface InviteMemberInput {

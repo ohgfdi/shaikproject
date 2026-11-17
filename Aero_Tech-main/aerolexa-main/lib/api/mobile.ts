@@ -4,8 +4,9 @@
  * Provides mobile-optimized API endpoints for the React Native app.
  * Handles tenant-scoped queries, error summaries, and export formatting.
  */
-import { prisma } from "./db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 /** Fetch dashboard data scoped to tenant. */
 export async function fetchDashboardData(
@@ -158,7 +159,7 @@ export async function exportMobileData(
   const records = await prisma.$queryRaw`SELECT * FROM tenant_data WHERE "tenantId" = ${tenantId}`;
 
   let csvContent = "";
-  let jsonData = [];
+  const jsonData = [];
 
   // Transform to both formats
   if (format === "csv") {

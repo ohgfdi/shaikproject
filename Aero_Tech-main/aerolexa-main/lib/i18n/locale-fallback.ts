@@ -5,8 +5,9 @@
  * loading, and locale-specific formatting. Extends the existing 11 locales
  * with intelligent fallback mechanisms and missing key detection.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Locale = "en" | "es" | "de" | "fr" | "zh" | "ar" | "pt" | "ru" | "ja" | "hi";
 
@@ -85,7 +86,8 @@ export function getAvailableLocales(): {
   name: string;
   rtl: boolean;
   fallbackChain: Locale[];
-} const localeNames: Record<Locale, string> = {
+}[] {
+  const localeNames: Record<Locale, string> = {
   en: "English",
   es: "Spanish",
   de: "German",
@@ -98,7 +100,7 @@ export function getAvailableLocales(): {
   hi: "Hindi",
 };
 
-  return Object.keys(localeNames) as Locale[] map((locale) => ({
+  return (Object.keys(localeNames) as Locale[]).map((locale) => ({
     locale,
     name: localeNames[locale],
     rtl: locale === "ar",
@@ -170,9 +172,8 @@ export async function GET(
 
     return new Response(JSON.stringify({ locales }), {
       status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Locale fallback error:", error);
     return new Response(

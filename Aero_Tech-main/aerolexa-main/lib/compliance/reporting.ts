@@ -4,8 +4,9 @@
  * Provides SOC2, HIPAA, and GDPR compliance report generation.
  * Integrates with existing audit logging and tenancy isolation.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type ComplianceFramework = "SOC2" | "HIPAA" | "GDPR";
 

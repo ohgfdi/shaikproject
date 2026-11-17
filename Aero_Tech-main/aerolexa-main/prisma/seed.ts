@@ -21,6 +21,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { prisma } from "@/lib/db";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

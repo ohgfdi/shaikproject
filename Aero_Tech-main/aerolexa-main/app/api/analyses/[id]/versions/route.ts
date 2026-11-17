@@ -3,12 +3,6 @@ import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-/**
- * tenancy-audit: global-operator — analysis versions API lists analysis
- * versions for the workspace. This is a deployment-wide aggregate rather than
- * a per-tenant query.
- */
 import { analysisPythonScript } from "@/lib/engine/code-export";
 import { diffAnalysisMetrics, analysisVersionIpynb, type VersionMetric } from "@/lib/engine/versioning";
 import { parseJson, parseJsonArray } from "@/lib/json";
@@ -16,6 +10,12 @@ import { logActivity } from "@/lib/server/activity";
 import { toErrorResponse, ok, readJsonBody } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
 import type { AnalysisResult } from "@/lib/types";
+
+/**
+ * tenancy-audit: global-operator — analysis versions API lists analysis
+ * versions for the workspace. This is a deployment-wide aggregate rather than
+ * a per-tenant query.
+ */
 
 export const dynamic = "force-dynamic";
 

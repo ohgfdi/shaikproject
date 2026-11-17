@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { exchangeCode, fetchUserInfo } from "@/lib/auth/oidc";
 import { createSessionCookie, createSessionToken } from "@/lib/auth/session";
 import { BRAND_STORAGE_KEYS, brandKey } from "@/lib/brand";
+import { prisma } from "@/lib/db";
 import { publicEnv, serverEnv } from "@/lib/env";
 import { logSecurityEvent } from "@/lib/server/activity";
 

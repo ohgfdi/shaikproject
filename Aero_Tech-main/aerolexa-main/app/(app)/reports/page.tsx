@@ -10,7 +10,7 @@ export const metadata = { title: "Reports" };
 
 export default async function ReportsPage() {
   const ctx = await requirePageAuth();
-  const reports = await withTenantDb(ctx, (db)
+  const reports = await withTenantDb(ctx, (db) =>
     db.report.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { updatedAt: "desc" },

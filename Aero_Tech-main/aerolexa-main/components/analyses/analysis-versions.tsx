@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage, LoadingSkeleton } from "@/components/ui/feedback";
 import { Badge, Card } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
-import { CALCULATED_LABEL, TRUST_EXPLANATION } from "@/lib/trust/labels";
 import { timeAgo } from "@/lib/format";
+import { CALCULATED_LABEL, TRUST_EXPLANATION } from "@/lib/trust/labels";
 
 export interface AnalysisVersionRow {
   id: string;

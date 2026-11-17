@@ -16,6 +16,8 @@
 
 import path from "node:path";
 
+import { prisma } from "@/lib/db";
+
 /** Directory Prisma 6 resolved relative SQLite paths against: prisma/. */
 const SQLITE_URL_BASE = path.join(process.cwd(), "prisma");
 

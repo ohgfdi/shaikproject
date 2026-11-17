@@ -5,9 +5,10 @@
  * Shows how a tenant's metrics compare to industry peers at various percentiles.
  */
 import React from "react";
-import { prisma } from "../lib/db";
-import { getIndustryTemplate } from "../lib/industry";
-import type { Industry } from "../lib/industry/finance";
+
+import { prisma } from "@/lib/db";
+import { getIndustryTemplate } from "@/lib/industry";
+import type { Industry } from "@/lib/industry/finance";
 
 export type BenchmarkPercentile = "25th" | "50th" | "75th" | "90th" | "95th";
 

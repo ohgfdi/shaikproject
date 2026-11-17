@@ -17,7 +17,6 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -32,6 +31,7 @@ import {
 } from "@/lib/engine/compliance-calendar";
 import { requireEngagementRole } from "@/lib/server/engagement";
 import { requireOrgRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export interface ComplianceProfileSeed {
   entityKind: EntityKind;

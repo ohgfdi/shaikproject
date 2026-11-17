@@ -6,7 +6,6 @@ import { DashboardBuilder, type WidgetSourceAnalysis } from "@/components/dashbo
 import { DemoBadge } from "@/components/ui/feedback";
 import { PublishButton } from "@/components/ui/publish-button";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import {
   analysisResult,
   dashboardBookmarks,
@@ -16,6 +15,7 @@ import {
   insightCard,
 } from "@/lib/serialize";
 import { artifactRole } from "@/lib/server/members";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Dashboard" };
 
@@ -39,11 +39,13 @@ export default async function DashboardDetailPage(props: { params: Promise<{ id:
       orderBy: { createdAt: "desc" },
       take: 40,
     })),
-    await withTenantDb(ctx, (db) => db.insight.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: dashboard.projectId ?? undefined },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-    }),
+    withTenantDb(ctx, (db) =>
+      db.insight.findMany({
+        where: { workspaceId: ctx.workspace.id, projectId: dashboard.projectId ?? undefined },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+    ),
   ]);
 
   const widgetSources: WidgetSourceAnalysis[] = analyses.map((a) => ({

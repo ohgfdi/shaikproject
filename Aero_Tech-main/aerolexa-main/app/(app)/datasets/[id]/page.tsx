@@ -1,10 +1,4 @@
 import { AlertTriangle, FileSpreadsheet, FlaskConical, Sparkles } from "lucide-react";
-
-/**
- * tenancy-audit: global-operator — dataset detail page shows workspace-wide
- * dataset details and associated analyses. This is a deployment-wide aggregate
- * rather than a per-tenant query.
- */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -24,14 +18,21 @@ import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { SubNav } from "@/components/ui/sub-nav";
 import { DataTable } from "@/components/ui/table";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
+import { prisma } from "@/lib/db";
 import type { Cell } from "@/lib/engine/dataset";
 import { fmtDate, timeAgo } from "@/lib/format";
 import { parseJson, parseJsonArray } from "@/lib/json";
 import { datasetColumns } from "@/lib/serialize";
 import { moduleEnabled } from "@/lib/server/modules";
+import { withTenantDb } from "@/lib/server/tenant-db";
 import type { DatasetProfile } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
+
+/**
+ * tenancy-audit: global-operator — dataset detail page shows workspace-wide
+ * dataset details and associated analyses. This is a deployment-wide aggregate
+ * rather than a per-tenant query.
+ */
 
 export const metadata = { title: "Dataset" };
 

@@ -9,7 +9,6 @@
  */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { prisma } from "@/lib/db";
 import {
   buildClientComplianceCalendar,
@@ -26,6 +25,7 @@ import {
 import { resolvePortalToken } from "@/lib/server/client-portal";
 import { defaultProfile, type ComplianceProfileSeed } from "@/lib/server/compliance-calendar";
 import { requireEngagementRole } from "@/lib/server/engagement";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 const ENTITY_KINDS = new Set<EntityKind>([
   "company",
@@ -76,34 +76,31 @@ async function assembleReport(input: {
 }): Promise<MonthlyComplianceReport> {
   const [profileRow, runs, statuses] = await Promise.all([
     withTenantDb(ctx, (db) =>
-      withTenantDb(ctx, (db) =>
-        db.clientComplianceProfile.findUnique({
-          where: { engagementId: input.engagement.id },
-          select: { profile: true },
-        }),
+      db.clientComplianceProfile.findUnique({
+        where: { engagementId: input.engagement.id },
+        select: { profile: true },
+      }),
     ),
     withTenantDb(ctx, (db) =>
-      withTenantDb(ctx, (db) =>
-        db.complianceFilingRun.findMany({
-          where: { organizationId: input.organizationId, engagementId: input.engagement.id },
-          select: {
-            taskId: true,
-            stage: true,
-            dueDate: true,
-            filedAt: true,
-            acknowledgementReference: true,
-            proofDigest: true,
-            clientApprovedAt: true,
-          },
-          take: 500,
-        }),
+      db.complianceFilingRun.findMany({
+        where: { organizationId: input.organizationId, engagementId: input.engagement.id },
+        select: {
+          taskId: true,
+          stage: true,
+          dueDate: true,
+          filedAt: true,
+          acknowledgementReference: true,
+          proofDigest: true,
+          clientApprovedAt: true,
+        },
+        take: 500,
+      }),
     ),
     withTenantDb(ctx, (db) =>
-      withTenantDb(ctx, (db) =>
-        db.clientComplianceStatus.findMany({
-          where: { organizationId: input.organizationId, engagementId: input.engagement.id },
-          select: { taskId: true, status: true, filedOn: true, reference: true },
-        }),
+      db.clientComplianceStatus.findMany({
+        where: { organizationId: input.organizationId, engagementId: input.engagement.id },
+        select: { taskId: true, status: true, filedOn: true, reference: true },
+      }),
     ),
   ]);
 

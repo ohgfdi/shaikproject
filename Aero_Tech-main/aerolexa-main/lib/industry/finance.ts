@@ -4,8 +4,9 @@
  * Pre-built metrics, KPIs, and compliance mappings for Financial Services.
  * Complements the multi-tenant SaaS isolation (Phase 24) with industry-specific defaults.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

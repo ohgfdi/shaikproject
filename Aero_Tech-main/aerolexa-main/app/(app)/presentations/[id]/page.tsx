@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { CommentsPanel } from "@/components/comments/comments-panel";
 import { PresentationEditor } from "@/components/presentations/presentation-editor";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { analysisResult, insightCard, presentationSlides } from "@/lib/serialize";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Presentation" };
 
@@ -22,18 +22,20 @@ export default async function PresentationDetailPage(props: { params: Promise<{ 
 
   const [analyses, insights] = await Promise.all([
     withTenantDb(ctx, (db) =>
-    db.analysis.findMany({
-      where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-    }),
+      db.analysis.findMany({
+        where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+    ),
     withTenantDb(ctx, (db) =>
       db.insight.findMany({
         where: { workspaceId: ctx.workspace.id, projectId: presentation.projectId ?? undefined },
         orderBy: { createdAt: "desc" },
         take: 40,
       }),
-  ));
+    ),
+  ]);
 
   return (
     <div>

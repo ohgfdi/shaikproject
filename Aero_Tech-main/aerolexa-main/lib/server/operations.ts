@@ -6,9 +6,9 @@
  * requests. No utilisation percentage, WIP value or capacity model is invented;
  * the app does not track timesheets or billing inputs, so it does not pretend
  * to. What it does answer is: what is late, who owns it, and how old is it.
- */
-
+ *
  * tenancy-audit: global-operator — operations module manages compliance filing runs and organization membership. This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";

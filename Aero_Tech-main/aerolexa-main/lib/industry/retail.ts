@@ -4,8 +4,9 @@
  * Pre-built metrics, KPIs, and compliance mappings for Retail/E-commerce.
  * Focuses on sales performance, conversion, inventory, and customer behavior.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export interface RetailKPI {
   id: string;

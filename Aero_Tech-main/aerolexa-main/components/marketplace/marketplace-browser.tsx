@@ -5,7 +5,8 @@
  * Shows available extensions with ratings, reviews, and installation status.
  */
 import React, { useState, useEffect } from "react";
-import { prisma } from "../lib/db";
+
+import { prisma } from "@/lib/db";
 
 export interface MarketplacePlugin {
   id: string;
@@ -189,7 +190,6 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
                           className={i < plugin.rating ? "star filled" : "star empty"}
                         />
                       ))}
-                    </span>
                     <span className="rating-count">({plugin.reviews})</span>
                   </div>
                   <div className="plugin-category">

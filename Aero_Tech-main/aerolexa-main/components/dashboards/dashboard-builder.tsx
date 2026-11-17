@@ -1746,7 +1746,8 @@ function ChoroplethWidget({
         }
       }}
     />
-
+  );
+}
 
 function SourceRow({ title, subtitle, onPick }: { title: string; subtitle: string; onPick: () => void }) {
   return (

@@ -4,12 +4,13 @@
  * Provides a responsive dashboard view optimized for mobile devices.
  * Features offline caching, biometric-friendly design, and push notification readiness.
  */
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Text, View, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
-import { selectCurrentTenant } from "@/lib/redux/slices/tenant-slice";
+
 import { fetchDashboardData, fetchErrorSummary } from "@/lib/api/mobile";
+import { selectCurrentTenant } from "@/lib/redux/slices/tenant-slice";
 
 export const MobileDashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     backgroundColor: "#0052cc",
-    padding: 8 16,
+    padding: "8px 16px",
     borderRadius: 6,
   },
   retryText: {

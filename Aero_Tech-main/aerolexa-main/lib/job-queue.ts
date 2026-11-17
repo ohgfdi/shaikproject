@@ -14,8 +14,9 @@
  *   const job = await getJob(jobId);
  */
 
-import { prisma } from "./db";
 import { v4 as uuidv4 } from "uuid";
+
+import { prisma } from "./db";
 
 export type JobKind =
   | "email"

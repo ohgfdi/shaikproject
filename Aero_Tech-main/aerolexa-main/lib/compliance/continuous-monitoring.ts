@@ -5,11 +5,12 @@
  * with auto-remediation eligibility scoring, drift detection, and continuous audit trails.
  * Integrates with Phase 55 governance, Phase 62 AI governance, and tenancy audit system.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
-import { checkModelCompliance } from "./enterprise-ai-governance";
-import { generateAIGovernanceReport } from "./enterprise-ai-governance";
-import type { GovernanceFramework, ModelMetadata } from "./enterprise-ai-governance";
+
+import { checkModelCompliance } from "@/lib/ai/enterprise-ai-governance";
+import { generateAIGovernanceReport } from "@/lib/ai/enterprise-ai-governance";
+import type { GovernanceFramework, ModelMetadata } from "@/lib/ai/enterprise-ai-governance";
+import { prisma } from "@/lib/db";
 
 export type Framework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
 
@@ -79,7 +80,7 @@ export function runContinuousComplianceCheck(
     const complianceCheck = checkModelCompliance(modelMetadata, framework);
 
     // Calculate base score (100 - risk adjustments from violations)
-    let baseScore = 100 - complianceCheck.risk_adjustment;
+    const baseScore = 100 - complianceCheck.risk_adjustment;
 
     // Apply drift penalty
     const driftAdjustment = driftReports.filter(d => d.drift_score > 30).length > 0 ? 10 : 0;

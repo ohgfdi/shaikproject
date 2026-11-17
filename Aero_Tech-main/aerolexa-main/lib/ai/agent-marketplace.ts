@@ -6,8 +6,9 @@
  * with the agent orchestration system (Phase 57). Supports free and commercial
  * agents with revenue sharing for agent creators.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type AgentTier = "free" | "pro" | "enterprise" | "custom";
 

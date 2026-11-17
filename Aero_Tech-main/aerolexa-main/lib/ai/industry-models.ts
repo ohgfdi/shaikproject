@@ -5,8 +5,9 @@
  * Each model is optimized for the data patterns of its vertical and integrates
  * with the industry data models (Phase 41) for end-to-end predictions.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

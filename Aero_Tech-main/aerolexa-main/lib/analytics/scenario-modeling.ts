@@ -6,8 +6,10 @@
  * predictive engine (Phase 56) and collaborative workspaces (Phase 59) for
  * enterprise-grade scenario planning and decision support.
  */
-import { prisma } from "../lib/db";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
+
 import { calculateMovingAverage, calculateLinearRegression, exponentialSmoothing, detectAnomalies } from "./predictive-engine";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
@@ -243,8 +245,7 @@ export function getSensitivityAnalysis(
       parameters: config.parameters.map(p =>
         p.name === param.name ? { ...p, current_value: p.current_value + (p.step || 10) } : p
       ),
-      ...config,
-    ).scenarios[0]?.predicted_value || basePredicted) - basePredicted) * 100,
+    }).scenarios[0]?.predicted_value || basePredicted) - basePredicted) * 100,
   })).sort((a, b) => Math.abs(b.sensitivity_index) - Math.abs(a.sensitivity_index));
 
   return {

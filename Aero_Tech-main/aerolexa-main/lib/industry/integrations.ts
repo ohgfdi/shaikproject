@@ -7,8 +7,9 @@
  * - Jira Project Management
  * - Snowflake Data Warehouse
  */
-import { prisma } from "./db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type IntegrationType =
   | "salesforce"

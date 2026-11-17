@@ -14,9 +14,9 @@ import { createDatasetVersion } from "@/lib/server/versioning";
  * "upload" = classic file upload, "connected" = data pulled from an external
  * source (REST import, connector) via the /api/upload `fileType=connected`
  * contract.
- */
-
+ *
  * tenancy-audit: global-operator — import-dataset module handles dataset import and project association. This is a deployment-wide aggregate rather than a per-tenant query.
+ */
 
 export interface ImportFileOptions {
   /** Project the dataset belongs to (validated for workspace access). */

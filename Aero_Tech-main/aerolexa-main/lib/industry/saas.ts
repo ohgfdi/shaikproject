@@ -4,8 +4,9 @@
  * Pre-built metrics, KPIs, and compliance mappings for SaaS businesses.
  * Focuses on recurring revenue metrics, growth indicators, and operational efficiency.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export interface SaaSKPI {
   id: string;

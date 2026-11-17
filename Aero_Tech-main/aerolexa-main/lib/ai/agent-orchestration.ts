@@ -7,8 +7,9 @@
  * governance constraints. Integrates with Phase 52 AI chat knowledge bases
  * and Phase 56 predictive analytics engine.
  */
-import { prisma } from "../lib/db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
@@ -325,7 +326,7 @@ function generateAgentResponse(
       }
       if (industry === "saas") {
         return `Forecast for ${industry}: Revenue projection based on MRR trends, churn rate, and expansion potential. Predicted growth: ${
-          predictedValue ? `${predictedValue}%` : "10-15%`
+          predictedValue ? `${predictedValue}%` : "10-15%"
         }. Key drivers: trial conversion, expansion revenue, contraction risk.`;
       }
       if (industry === "retail") {

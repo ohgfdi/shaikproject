@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 
 import { ProjectHub, type HubAnalysis, type HubDataset } from "@/components/projects/project-hub";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 import { serverEnv } from "@/lib/env";
 import { parseJsonArray } from "@/lib/json";
 import { analysisResult, datasetColumns, insightCard } from "@/lib/serialize";
 import { moduleEnabled } from "@/lib/server/modules";
+import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Project" };
 
@@ -88,10 +88,12 @@ export default async function ProjectPage(props: {
     withTenantDb(ctx, (db) => db.notebook.count({ where: worksWhere })),
     withTenantDb(ctx, (db) => db.modelVersion.count({ where: worksWhere })),
     withTenantDb(ctx, (db) => db.projectMember.count({ where: { projectId: project.id } })),
-    withTenantDb(ctx, (db) => db.projectMember.findUnique({
-      where: { projectId_userId: { projectId: project.id, userId: ctx.user.id } },
-      select: { role: true },
-    }),
+    withTenantDb(ctx, (db) =>
+      db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: project.id, userId: ctx.user.id } },
+        select: { role: true },
+      }),
+    ),
     withTenantDb(ctx, (db) => db.activity.findMany({
       where: worksWhere,
       orderBy: { createdAt: "desc" },

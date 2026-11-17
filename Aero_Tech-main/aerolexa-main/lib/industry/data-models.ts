@@ -5,8 +5,9 @@
  * Extends the industry templates (Phases 33-38) with Prisma schema definitions
  * and TypeScript types for end-to-end data integrity.
  */
-import { prisma } from "./db";
 import type { NextRequest } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
@@ -181,7 +182,7 @@ export const ManufacturingDataModel = {
         operator_id: { name: "operator_id", type: "string", required: true },
         first_pass_yield: { name: "first_pass_yield", type: "number", required: true, min: 0, max: 100 },
         defect_count: { name: "defect_count", type: "number", required: true, min: 0 },
-        total inspected: { name: "total_inspected", type: "number", required: true, min: 0 },
+        total_inspected: { name: "total_inspected", type: "number", required: true, min: 0 },
         notes: { name: "notes", type: "string", required: false },
       },
     },

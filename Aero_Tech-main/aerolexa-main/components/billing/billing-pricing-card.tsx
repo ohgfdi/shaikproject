@@ -86,12 +86,12 @@ export const PricingCard: React.FC<{
 
   return (
     <div
-      className`
+      className={`
         pricing-card
         ${highlighted ? "pricing-card-highlighted" : ""}
         border
         ${highlighted ? "border-primary shadow-xl" : "border-gray-200"}
-      `
+      `}
     >
       <div className="pricing-header">
         <h3 className="pricing-name">{name}</h3>
@@ -159,7 +159,7 @@ export const PricingTable: React.FC<{
 }> = ({ onTierSelect, highlightedTier }) => {
   return (
     <div className="pricing-table">
-      {Object.keys(pricingTiers) as PricingTier$.map((tier) => (
+      {(Object.keys(pricingTiers) as PricingTier[]).map((tier) => (
         <PricingCard
           key={tier}
           tier={tier as PricingTier}
