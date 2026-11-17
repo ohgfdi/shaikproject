@@ -6905,7 +6905,7 @@ function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): Analys
 
   const classified = classifyValues(validRows, { method: "quantile", classCount: 5 });
 
-  const chartTitle = `${cfg.metric ?? "Metric"} by ${cfg.regionCol ?? "Region"}`;
+  const chartTitle = `${cfg.metric?.toString() ?? "Metric"} by ${cfg.regionCol ?? "Region"}`;
 
   const charts: ChartSpec[] = [
     {

@@ -313,7 +313,7 @@ export async function GET(
       for (const key of searchParams.keys()) {
         if (key.startsWith("parameter[")) {
           const paramKey = key.replace("parameter[", "").replace("]", "");
-          const value = searchParams.get(key);
+          const value = searchParams.get(key) || "";
           const isPercentage = key.includes("pct") || key.includes("percent");
 
           parameters.push({

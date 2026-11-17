@@ -14,7 +14,7 @@ export async function fetchDashboardData(
 ): Promise<{
   charts: Array<{ id: string; title: string; type: string; lastUpdated: Date }>;
   kpis: Array<{ id: string; label: string; value: string; color: string }>;
-  activity: Array<{ id: string; message: string; timestamp: Date }>;
+  activity: Array<{ id: string; timestamp: Date }>;
 }> {
   const charts = await prisma.chart.findMany({
     where: { tenantId },
@@ -41,7 +41,7 @@ export async function fetchDashboardData(
   });
 
   const activity = await prisma.auditLog.findMany({
-    where: { organizationId },
+    where: { organizationId: tenantId },
     select: {
       id: true,
       createdAt: true,

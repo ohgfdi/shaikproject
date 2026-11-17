@@ -150,9 +150,9 @@ export function detectAnomalies(
       const sorted = [...historicalValues].sort((a, b) => a - b);
       const q1 = sorted.length > 0 ? sorted[Math.floor(sorted.length * 0.25)]! : undefined;
       const q3 = sorted.length > 0 ? sorted[Math.floor(sorted.length * 0.75)]! : undefined;
-      const iqr = q3 - q1;
-      const lowerBound = q1 - 1.5 * iqr;
-      const upperBound = q3 + 1.5 * iqr;
+      const iqr = q3! - q1!;
+      const lowerBound = q1! - 1.5 * iqr;
+      const upperBound = q3! + 1.5 * iqr;
 
       if (currentValue < lowerBound) {
         anomalies.push({

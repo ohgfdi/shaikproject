@@ -106,7 +106,7 @@ export async function logAuditEvent({
       targetId: event.targetId,
       ipAddress: event.ipAddress,
       userAgent: event.userAgent,
-      details: event.details as const ?? undefined,
+      details: event.details as any,
       status: event.status,
       createdAt: event.createdAt,
     },
@@ -233,7 +233,7 @@ export async function getAuditStats({
       Record<AuditAction, number>
       >(
       (acc, curr) => {
-        acc[curr.action] = curr._count.action;
+        acc[(curr.action as AuditAction)] = curr._count.action;
         return acc;
       },
       {} as Record<AuditAction, number>

@@ -165,10 +165,9 @@ export async function GET(
     const action = searchParams.get("action") || "roles";
 
     if (action === "roles") {
-      const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
-        key: key as RoleKey,
-        ...ROLE_DEFINITIONS[key as RoleKey],
-      }));
+      const roles = Object.keys(ROLE_DEFINITIONS).map((key: RoleKey) => ({
+        ...ROLE_DEFINITIONS[key],
+      })) as unknown as RoleKey[];
       return new Response(JSON.stringify({ roles }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
