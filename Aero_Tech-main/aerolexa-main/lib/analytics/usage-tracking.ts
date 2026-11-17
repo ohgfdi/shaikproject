@@ -123,7 +123,7 @@ export function getTenantMetrics(
     "plugin_marketing",
   ];
 
-  const featureAdoption: Record<FeatureKey, number> = {};
+  const featureAdoption = {} as Record<FeatureKey, number>;
   features.forEach((f) => {
     // Random realistic adoption rate 10-95% based on plan
     const baseRate = plan === "free" ? 10 : plan === "pro" ? 40 : plan === "enterprise" ? 75 : 95;
@@ -196,12 +196,15 @@ export function getAggregatedAnalytics(): AggregatedAnalytics {
 
   // Normalize to total tenants
   const totalTenants = planDistribution.free + planDistribution.pro + planDistribution.enterprise + planDistribution.strategic;
-  const normalizedDistribution = Object.fromEntries(
-    Object.entries(planDistribution).map(([key, val]) => [key, Math.round((val / totalTenants) * 100)])
-  );
+  const normalizedDistribution: Record<PlanType, number> = {
+    free: Math.round((planDistribution.free / totalTenants) * 100),
+    pro: Math.round((planDistribution.pro / totalTenants) * 100),
+    enterprise: Math.round((planDistribution.enterprise / totalTenants) * 100),
+    strategic: Math.round((planDistribution.strategic / totalTenants) * 100),
+  };
 
   // Feature adoption averages per plan
-  const featureAdoptionAverages: Record<FeatureKey, number> = {};
+  const featureAdoptionAverages = {} as Record<FeatureKey, number>;
   features.forEach((f) => {
     // Weighted by plan distribution
     let weightedSum = 0;
@@ -224,9 +227,14 @@ export function getAggregatedAnalytics(): AggregatedAnalytics {
     "manufacturing",
   ];
 
-  const crossIndustryComparison: Record<string, Record<FeatureKey, number>> = {};
+  const crossIndustryComparison: AggregatedAnalytics["crossIndustryComparison"] = {
+    finance: {} as Record<FeatureKey, number>,
+    saas: {} as Record<FeatureKey, number>,
+    retail: {} as Record<FeatureKey, number>,
+    manufacturing: {} as Record<FeatureKey, number>,
+  };
   industries.forEach((industry) => {
-    crossIndustryComparison[industry] = {};
+    const target = crossIndustryComparison[industry];
     features.forEach((f) => {
       // Industry-specific adoption offsets
       const offsets: Record<"finance" | "saas" | "retail" | "manufacturing", number> = {
@@ -235,8 +243,8 @@ export function getAggregatedAnalytics(): AggregatedAnalytics {
         retail: -5,
         manufacturing: -10,
       };
-      const baseRate = featureAdoptionAverages[f] + (offsets as any)[industry];
-      crossIndustryComparison[industry][f] = Math.max(10, Math.min(95, baseRate + Math.random() * 10));
+      const baseRate = featureAdoptionAverages[f] + offsets[industry];
+      target[f] = Math.max(10, Math.min(95, baseRate + Math.random() * 10));
     });
   });
 
@@ -318,9 +326,9 @@ export async function GET(
     }
 
     // Default: tenant metrics
-    return GET(new NextRequest(`/${request.url.pathname}?action=tenant-metrics`, {
-      url: new URL(request.url),
-    }));
+    const url = new URL(request.url);
+    url.searchParams.set("action", "tenant-metrics");
+    return GET(new NextRequest(url));
   } catch (error) {
     console.error("Usage analytics error:", error);
     return new Response(

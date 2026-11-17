@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/analytics/collaborative-workspaces/route";
+import { GET as upstreamGET } from "@/lib/analytics/collaborative-workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Creates or lists collaborative analytics workspaces.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

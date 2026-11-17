@@ -9,6 +9,8 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
+import type { Industry } from "@/lib/industry";
+import type { StreamType } from "@/lib/streaming/real-time-integrations";
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer" | "guest";
 
@@ -46,12 +48,12 @@ export interface CollaborativeWorkspace {
 }
 
 /** Industry-specific workspace configurations. */
-export const WorkspaceConfigs: Record<Industry, {
+export const WorkspaceConfigs: Partial<Record<Industry, {
   default_role: WorkspaceRole;
   default_stream_types: StreamType[];
   default_metrics: string[];
   max_members: number;
-}> = {
+}>> = {
   finance: {
     default_role: "admin",
     default_stream_types: ["kpi-updates", "alerts", "data-changes"],
@@ -85,7 +87,12 @@ export function createWorkspace(
   industry: Industry,
   ownerId: string
 ): CollaborativeWorkspace {
-  const config = WorkspaceConfigs[industry];
+  const config = WorkspaceConfigs[industry] ?? {
+    default_role: "editor" as WorkspaceRole,
+    default_stream_types: [] as StreamType[],
+    default_metrics: [] as string[],
+    max_members: 10,
+  };
   const now = new Date();
 
   const workspace: CollaborativeWorkspace = {
@@ -200,6 +207,9 @@ export function removeMember(
 
   // Prevent removing the owner
   const member = workspace.members[memberIndex];
+  if (!member) {
+    throw new Error("Member not found in workspace");
+  }
   if (member.role === "owner" && workspace.owner_id !== userId) {
     throw new Error("Cannot remove owner: transfer ownership first");
   }

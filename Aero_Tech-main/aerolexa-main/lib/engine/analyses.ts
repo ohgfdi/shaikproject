@@ -25,6 +25,7 @@ import {
 } from "@/lib/engine/ca-india";
 import { checkContract, runQualityGate, type ContractColumn, type Expectation } from "@/lib/engine/data-quality";
 import type { Cell } from "@/lib/engine/dataset";
+import { classifyValues } from "@/lib/engine/geo";
 import {
   applyCategoricalFilter,
   bucketByDate,
@@ -6894,7 +6895,7 @@ function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): Analys
   const validRows: { region: string; value: number }[] = [];
   for (let i = 0; i < ctx.rows.length; i++) {
     if (regions[i] && Number.isFinite(values[i])) {
-      validRows.push({ region: regions[i], value: values[i] });
+      validRows.push({ region: regions[i]!, value: values[i]! });
     }
   }
 

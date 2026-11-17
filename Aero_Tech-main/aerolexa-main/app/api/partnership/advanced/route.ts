@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET, POST } from "@/app/api/partnership/advanced/route";
+import { GET as upstreamGET, POST as upstreamPOST } from "@/lib/partnership/advanced-partnership";
 
 export const dynamic = "force-dynamic";
 
@@ -8,12 +8,12 @@ export const dynamic = "force-dynamic";
  * Returns advanced partnership program data including partners and deals.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }
 
 /** POST /api/partnership/advanced/register-deal
  * Register a new deal for revenue sharing and pipeline tracking.
  */
 export async function POST(request: Request) {
-  return POST(request);
+  return upstreamPOST(request);
 }

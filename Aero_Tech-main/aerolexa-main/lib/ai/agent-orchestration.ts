@@ -36,7 +36,7 @@ export interface AgentResponse {
 }
 
 /** Vertical-specific agent capabilities. */
-export const AgentCapabilities: Record<Industry, AgentCapability[]> = {
+export const AgentCapabilities: Partial<Record<Industry, AgentCapability[]>> = {
   finance: [
     {
       type: "research" as AgentType,
@@ -402,7 +402,7 @@ export async function GET(
     const agentTypes = agentTypesStr.split(",") as AgentType[];
     const taskDescription = searchParams.get("task") || "Analyze industry metrics";
 
-    const responses = await orchestrateAgents(industry, agentTypes, taskDescription, {});
+    const responses = await orchestrateAgents(industry as Industry, agentTypes, taskDescription, {});
 
     return new Response(JSON.stringify({
       industry,

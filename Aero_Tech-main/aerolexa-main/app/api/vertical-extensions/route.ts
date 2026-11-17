@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/vertical-extensions/route";
+import { GET as upstreamGET } from "@/lib/api/vertical-extensions";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Executes a domain-specific query for the specified industry vertical.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

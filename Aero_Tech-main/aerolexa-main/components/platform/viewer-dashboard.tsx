@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { MapTemplateGallery } from "@/components/charts/map-template-gallery";
+import type { MapTemplate } from "@/components/charts/map-template-gallery";
 import { QuickFilter } from "@/components/charts/quick-filter";
 import { DashboardWidget } from "@/lib/types";
 
@@ -27,10 +28,7 @@ export function ViewerDashboard({ dashboardId }: { dashboardId: string }) {
   const [scope, setScope] = useState<"us-states" | "countries">("us-states");
   const [metric, setMetric] = useState<string>("Value");
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<
-    | (MapTemplate & { id: string })
-    | null
-  >(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<MapTemplate | null>(null);
 
   useEffect(() => {
     // Placeholder: in production, fetch read-only widget state
@@ -38,7 +36,7 @@ export function ViewerDashboard({ dashboardId }: { dashboardId: string }) {
     // setWidgets(state?.widgets ?? []);
   }, [dashboardId]);
 
-  const handleTemplateSelect = (template: MapTemplate & { id: string }) => {
+  const handleTemplateSelect = (template: MapTemplate) => {
     setSelectedTemplate(template);
     // Show template preview — no widget created for viewers
   };
@@ -61,9 +59,7 @@ export function ViewerDashboard({ dashboardId }: { dashboardId: string }) {
         onScopeChange={setScope}
         metric={metric}
         onMetricChange={setMetric}
-        metrics={["Value", "Revenue", "Engagement Count", "Tenancy Score"]
-        }
-        disabled
+        metrics={["Value", "Revenue", "Engagement Count", "Tenancy Score"]}
       />
 
       {/* Main content */}
@@ -126,7 +122,7 @@ export function ViewerDashboard({ dashboardId }: { dashboardId: string }) {
         <div>
           <MapTemplateGallery
             onSelect={handleTemplateSelect}
-            selected={selectedTemplate}
+            selected={selectedTemplate ?? undefined}
           />
           <div className="mt-6 rounded border p-4">
             <h4 className="font-medium mb-3">About this dashboard</h4>

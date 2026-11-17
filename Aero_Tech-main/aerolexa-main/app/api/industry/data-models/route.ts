@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/industry/data-models/route";
+import { GET as upstreamGET } from "@/lib/industry/data-models";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Returns the data model schema for the specified industry.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

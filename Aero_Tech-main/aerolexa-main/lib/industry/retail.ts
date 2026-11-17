@@ -184,7 +184,7 @@ export const RetailTemplate = {
 };
 
 /** Get the active industry template. */
-export function getIndustryTemplate(industry: string): any {
+export async function getIndustryTemplate(industry: string): Promise<any> {
   const templates: Record<string, any> = {
     retail: RetailTemplate,
     saas: await import("./saas").then((m) => m.SaaSTemplate),
@@ -202,7 +202,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const industry = searchParams.get("industry") || "retail";
 
-    const template = getIndustryTemplate(industry);
+    const template = await getIndustryTemplate(industry);
 
     return new Response(JSON.stringify(template), {
       status: 200,

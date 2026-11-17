@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/compliance/continuous-monitoring/route";
+import { GET as upstreamGET } from "@/lib/compliance/continuous-monitoring";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Returns continuous compliance dashboard across all 5 frameworks (SOC2, HIPAA, PCI-DSS, GDPR, SOX).
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

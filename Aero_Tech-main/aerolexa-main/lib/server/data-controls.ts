@@ -49,7 +49,7 @@ const CLIENT_CONSENT_PURPOSES: readonly ClientConsentPurpose[] = [
 // ---------------------------------------------------------------------------
 
 /** Read the firm privacy posture for the caller's organization. */
-async function privacyForOrganization(organizationId: string) {
+async function privacyForOrganization(ctx: AuthContext, organizationId: string) {
   const org = await withTenantDb(ctx, (db) =>
     db.organization.findUnique({
       where: { id: organizationId },
@@ -95,7 +95,7 @@ export interface EngagementDataPosture {
   counts: Record<string, number>;
 }
 
-async function projectIdsForEngagement(organizationId: string, engagementId: string): Promise<string[]> {
+async function projectIdsForEngagement(ctx: AuthContext, organizationId: string, engagementId: string): Promise<string[]> {
   const projects = await withTenantDb(ctx, (db) =>
     db.project.findMany({
       where: { engagementId, organizationId },
@@ -236,9 +236,9 @@ export async function erasureChecklistForEngagement(
 /** The full data-governance posture for an engagement. */
 export async function engagementDataPosture(ctx: AuthContext, engagementId: string): Promise<EngagementDataPosture> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const privacy = await privacyForOrganization(engagement.organizationId);
+  const privacy = await privacyForOrganization(ctx, engagement.organizationId);
   const retention = engagementRetention(engagement, privacy);
-  const checklist = await erasureChecklistForEngagement(engagement.organizationId, engagement.id);
+  const checklist = await erasureChecklistForEngagement(ctx, engagement.organizationId, engagement.id);
   const counts: Record<string, number> = {};
   for (const item of checklist) counts[item.kind] = item.count;
   return {
@@ -461,7 +461,7 @@ async function evaluateExport(
   role: PracticeRole,
   opts: { targetJurisdiction?: string; includeIdentifiers?: boolean },
 ): Promise<ExportDecision> {
-  const privacy = await privacyForOrganization(engagement.organizationId);
+  const privacy = await privacyForOrganization(ctx, engagement.organizationId);
   const blockers: string[] = [];
 
   // 1. Cross-border check. An unknown target is treated as cross-border.
@@ -557,7 +557,7 @@ export async function exportEngagementPackage(
     prisma.workingPaper.findMany({ where: { engagementId: eng.id }, orderBy: { indexRef: "asc" } }),
     prisma.engagementChangeRequest.findMany({ where: { engagementId: eng.id }, orderBy: { requestedAt: "desc" } }),
     prisma.clientConsent.findMany({ where: { engagementId: eng.id }, orderBy: { createdAt: "desc" } }),
-    erasureChecklistForEngagement(eng.organizationId, eng.id),
+    erasureChecklistForEngagement(ctx, eng.organizationId, eng.id),
     prisma.engagementChangeLog.findMany({ where: { engagementId: eng.id }, orderBy: { seq: "asc" }, take: 2000 }),
   ]);
 
@@ -645,9 +645,9 @@ export interface ErasurePlan {
 /** Compute whether an engagement may be erased, and what would be removed. */
 export async function planEngagementErasure(ctx: AuthContext, engagementId: string): Promise<ErasurePlan> {
   const { engagement } = await requireEngagementRole(ctx, engagementId, "ASSISTANT");
-  const privacy = await privacyForOrganization(engagement.organizationId);
+  const privacy = await privacyForOrganization(ctx, engagement.organizationId);
   const retention = engagementRetention(engagement, privacy);
-  const checklist = await erasureChecklistForEngagement(engagement.organizationId, engagement.id);
+  const checklist = await erasureChecklistForEngagement(ctx, engagement.organizationId, engagement.id);
 
   const blockers: string[] = [];
   if (retention.legalHold) blockers.push("A legal hold is active on this engagement.");
@@ -717,7 +717,7 @@ export async function executeEngagementErasure(
     throw new ApiError(400, "CONFIRMATION_REQUIRED", "Confirmation must match the engagement name or code.");
   }
 
-  const privacy = await privacyForOrganization(engagement.organizationId);
+  const privacy = await privacyForOrganization(ctx, engagement.organizationId);
   const retention = engagementRetention(engagement, privacy);
   if (retention.legalHold) throw new ApiError(409, "LEGAL_HOLD", "A legal hold is active on this engagement.");
   if (!retention.purgeEligible && !input.overrideRetention) {
@@ -728,7 +728,7 @@ export async function executeEngagementErasure(
     );
   }
 
-  const projectIds = await projectIdsForEngagement(engagement.organizationId, engagement.id);
+  const projectIds = await projectIdsForEngagement(ctx, engagement.organizationId, engagement.id);
   const byProject = projectIds.length ? { projectId: { in: projectIds } } : { projectId: null as string | null };
 
   const erased = await prisma.$transaction(async (tx) => {

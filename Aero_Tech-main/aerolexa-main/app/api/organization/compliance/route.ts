@@ -7,10 +7,10 @@ import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
 import { runSoxCheck } from "@/lib/compliance/sox";
 import { complianceTaskState, ComplianceTaskState, daysUntil } from "@/lib/engine/compliance-calendar";
-import { getPartnerTiers, PartnerTier, PartnerTierDefinition, PartnerProfile } from "@/lib/partner/partner-tiers";
-import { calculateCommission, canPartnerCloseDeal, CommissionCalculation, PartnerPayoutSummary } from "@/lib/partner/revenue-share";
-import { hasPermission, getEffectivePermissions, RoleKey, Permission } from "@/lib/rbac/permissions";
-import { getSecurityControls, BugBountyProgram, SecurityHardening, SecurityControl } from "@/lib/security/security-hardening";
+import { PARTNER_TIER_DEFINITIONS, PartnerTier, PartnerProfile, PartnerStatus } from "@/lib/partner/partner-tiers";
+import { calculateCommission, CommissionTier } from "@/lib/partner/revenue-share";
+import { hasPermission, getEffectivePermissions, RoleKey, Permission, ROLE_DEFINITIONS } from "@/lib/rbac/permissions";
+import { getSecurityControls, getBugBountyProgram } from "@/lib/security/security-hardening";
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
 import { mapOrgRoleToProjectRole } from "@/lib/server/members";
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       }
 
       if (action === "partner:tiers") {
-        return new Response(JSON.stringify(getPartnerTiers()), {
+        return new Response(JSON.stringify(Object.values(PARTNER_TIER_DEFINITIONS)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -211,7 +211,20 @@ export async function GET(request: Request) {
         const events = eventsStr
           ? eventsStr.split(";").map((e: string) => {
               const [id, metricId, metricName, type, severity, current, expected, devPct, detected, status] = e.split("|");
-              return { id, metricId, metricName, type: type as AnomalyType, severity: severity as AnomalySeverity, currentValue: parseFloat(current), expectedValue: parseFloat(expected), deviationPercentage: parseFloat(devPct), detectedAt: new Date(detected), status: status as "active" | "resolved" | "dismissed" };
+              return {
+                id: id ?? "",
+                metricId: metricId ?? "",
+                metricName: metricName ?? "",
+                anomalyType: type as AnomalyType,
+                severity: severity as AnomalySeverity,
+                currentValue: parseFloat(current ?? "0"),
+                expectedValue: parseFloat(expected ?? "0"),
+                deviationPercentage: parseFloat(devPct ?? "0"),
+                detectedAt: new Date(detected ?? Date.now()),
+                timeRangeStart: new Date(detected ?? Date.now()),
+                timeRangeEnd: new Date(detected ?? Date.now()),
+                status: status === "dismissed" ? " dismissed" : (status as "active" | "resolved"),
+              };
             })
             .filter((e) => e.metricId)
           : [];

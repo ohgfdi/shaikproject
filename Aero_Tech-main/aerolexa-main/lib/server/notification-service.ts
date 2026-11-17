@@ -22,8 +22,7 @@ import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 
-import { enqueue } from "./job-queue";
-import { rateLimit } from "./rate-limit";
+import { enqueue } from "@/lib/job-queue";
 
 export type NotificationChannel = "email" | "in-app" | "push" | "sms";
 export type NotificationKind =
@@ -160,7 +159,9 @@ function renderDefaultTemplate(kind: NotificationKind, context: Record<string, u
     system: `
       <p>${context.message || "System notification"}</p>
     `,
-    custom: context.body || "<p>Custom notification</p>",
+    custom: typeof context.body === "string" && context.body
+      ? context.body
+      : "<p>Custom notification</p>",
   };
 
   return templates[kind] || templates.system;
@@ -209,8 +210,9 @@ async function dispatchNotification({
       break;
     }
     case "sms": {
-      // Enqueue SMS job - use string kind since sms not in JobKind
-      await enqueue("sms-notification", {
+      // Enqueue SMS job through the generic notification queue.
+      await enqueue("notification", {
+        channel: "sms",
         to: context.phoneNumber || "",
         message: rendered.substring(0, 160), // SMS character limit
         kind: "sms" as NotificationKind,

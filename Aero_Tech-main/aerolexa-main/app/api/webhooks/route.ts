@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
-import { rlsEnabled, rlsConfigError } from "@/lib/server/rls-status";
+import { rlsEnabled, rlsConfigError } from "@/lib/server/tenancy";
 
 /** Schema for a webhook subscription. */
 const subscriptionSchema = z.object({
@@ -47,20 +47,20 @@ export async function GET(request: Request) {
 /** POST /api/webhooks
  *  Create a new webhook subscription.
  */
-export async function POST(request: Request, { params }: { params: Promise<{ dashboardId: string }> }) {
-  const { dashboardId } = await params;
+export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const result = subscriptionSchema.safeParse({
-      ...body,
-      dashboardId: dashboardId,
-    });
+    const result = subscriptionSchema.safeParse(body);
 
     if (!result.success) {
       return NextResponse.json({ ok: false, error: result.error.format() }, { status: 400 });
     }
 
     const { url, events, idempotencyKey } = result.data;
+    const { dashboardId } = result.data;
+    if (!url) {
+      return NextResponse.json({ ok: false, error: "A webhook URL is required." }, { status: 400 });
+    }
 
     // Check idempotency: if a subscription with this key already exists, return it
     const existing = await prisma.webhookSubscription.findFirst({
@@ -90,7 +90,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ das
         events,
         dashboardId: dashboardId,
         idempotencyKey,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
       },
     });
 
@@ -99,8 +99,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ das
       const user = await prisma.user.findFirst();
       if (user) {
         logSecurityEvent(
-          user.workspace?.id ?? "",
-          user.id ?? "",
+          user.workspaceId ?? "",
+          user.id,
           "WEBHOOK_CREATED",
           `Webhook created for dashboard ${dashboardId}`,
         );
@@ -128,8 +128,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ das
 /** PUT /api/webhooks/[id]
  *  Update a webhook subscription.
  */
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PUT(request: Request) {
+  const id = new URL(request.url).searchParams.get("id") ?? "";
   try {
     const body = await request.json();
     const result = subscriptionSchema.partial().safeParse({
@@ -170,8 +170,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 /** DELETE /api/webhooks/[id]
  *  Remove a webhook subscription.
  */
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id") ?? "";
   try {
     await prisma.webhookSubscription.delete({
       where: { id: id },
@@ -186,8 +186,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 /** PATCH /api/webhooks?id=…
  *  Retry a failed webhook delivery.
  */
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PATCH(request: Request) {
+  const id = new URL(request.url).searchParams.get("id") ?? "";
   try {
     const body = await request.json();
     const { idempotencyKey } = body;
@@ -234,8 +234,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const user = await prisma.user.findFirst();
       if (user) {
         logSecurityEvent(
-          user.workspace?.id ?? "",
-          user.id ?? "",
+          user.workspaceId ?? "",
+          user.id,
           "WEBHOOK_RETRY",
           `Webhook retry for subscription ${id}`,
         );

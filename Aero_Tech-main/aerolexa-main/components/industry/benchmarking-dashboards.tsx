@@ -5,12 +5,13 @@
  * Shows how a tenant's metrics compare to industry peers at various percentiles.
  */
 import React from "react";
+import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { getIndustryTemplate } from "@/lib/industry";
 import type { Industry } from "@/lib/industry/finance";
 
-export type BenchmarkPercentile = "25th" | "50th" | "75th" | "90th" | "95th";
+export type BenchmarkPercentile = "25th" | "50th" | "70th" | "75th" | "80th" | "85th" | "90th" | "95th";
 
 export interface BenchmarkDataPoint {
   metric: string;
@@ -90,6 +91,9 @@ export function getIndustryBenchmarkConfig(
       percentile_bands: {
         "25th": 25,
         "50th": 50,
+        "70th": 70,
+        "80th": 80,
+        "85th": 85,
         "75th": 75,
         "90th": 90,
         "95th": 95,
@@ -150,6 +154,9 @@ export function getIndustryBenchmarkConfig(
       percentile_bands: {
         "25th": 25,
         "50th": 50,
+        "70th": 70,
+        "80th": 80,
+        "85th": 85,
         "75th": 75,
         "90th": 90,
         "95th": 95,
@@ -210,6 +217,9 @@ export function getIndustryBenchmarkConfig(
       percentile_bands: {
         "25th": 25,
         "50th": 50,
+        "70th": 70,
+        "80th": 80,
+        "85th": 85,
         "75th": 75,
         "90th": 90,
         "95th": 95,
@@ -270,6 +280,9 @@ export function getIndustryBenchmarkConfig(
       percentile_bands: {
         "25th": 25,
         "50th": 50,
+        "70th": 70,
+        "80th": 80,
+        "85th": 85,
         "75th": 75,
         "90th": 90,
         "95th": 95,

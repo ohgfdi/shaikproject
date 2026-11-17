@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
@@ -60,5 +61,5 @@ export async function GET(request: Request) {
 /** POST is no longer a delivery trigger; direct callers to the calendar route. */
 export async function POST(request: Request) {
   const handler = await import("@/lib/compliance/reporting");
-  return handler.POST(request);
+  return handler.POST(new NextRequest(request.url, request));
 }

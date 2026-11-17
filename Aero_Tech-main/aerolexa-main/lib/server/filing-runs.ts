@@ -357,7 +357,7 @@ export async function moveFilingRunDueDate(
     );
   }
 
-  const views = await viewRuns(ctx, await loadRuns(run.organizationId, { engagementId: run.engagementId }));
+  const views = await viewRuns(ctx, await loadRuns(ctx, run.organizationId, { engagementId: run.engagementId }));
   const match = views.find((candidate) => candidate.id === run.id);
   if (!match) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
   return match;
@@ -370,7 +370,7 @@ export async function getFilingBoard(
   const organizationId = requireOrganization(ctx);
   await requireOrgRole(ctx, organizationId, "MEMBER");
 
-  const [calendar, runs] = await Promise.all([getComplianceCalendar(ctx), loadRuns(organizationId, opts)]);
+  const [calendar, runs] = await Promise.all([getComplianceCalendar(ctx), loadRuns(ctx, organizationId, opts)]);
 
   const covered = new Set(runs.map((run) => `${run.engagementId}:${run.taskId}`));
   const available: AvailableObligation[] = calendar.tasks
@@ -413,7 +413,7 @@ export async function ensureFilingRun(
     where: { engagementId_taskId: { engagementId: engagement.id, taskId: task.id } },
   });
   if (existing) {
-    const views = await viewRuns(ctx, await loadRuns(organizationId, { engagementId: engagement.id }));
+    const views = await viewRuns(ctx, await loadRuns(ctx, organizationId, { engagementId: engagement.id }));
     const match = views.find((run) => run.id === existing.id);
     if (!match) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
     return match;
@@ -453,7 +453,7 @@ export async function ensureFilingRun(
     },
   );
 
-  const runs = await loadRuns(organizationId, { engagementId: engagement.id });
+  const runs = await loadRuns(ctx, organizationId, { engagementId: engagement.id });
   const view = await viewRuns(ctx, runs);
   const created = view.find((run) => run.taskId === task.id && run.engagementId === engagement.id);
   if (!created) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
@@ -553,7 +553,7 @@ export async function assignFilingRun(ctx: AuthContext, runId: string, assigneeI
     where: { id: run.id },
     data: { assigneeId, updatedById: ctx.user.id },
   });
-  const views = await viewRuns(ctx, await loadRuns(run.organizationId, { engagementId: run.engagementId }));
+  const views = await viewRuns(ctx, await loadRuns(ctx, run.organizationId, { engagementId: run.engagementId }));
   const match = views.find((candidate) => candidate.id === run.id);
   if (!match) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
   return match;
@@ -867,7 +867,7 @@ export async function submitFilingRun(
     { engagementId: run.engagementId, runId: run.id, provider: receipt.provider, ack: reference },
   );
 
-  const views = await viewRuns(ctx, await loadRuns(run.organizationId, { engagementId: run.engagementId }));
+  const views = await viewRuns(ctx, await loadRuns(ctx, run.organizationId, { engagementId: run.engagementId }));
   const match = views.find((candidate) => candidate.id === run.id);
   if (!match) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
   return match;
@@ -981,7 +981,7 @@ export async function advanceFilingRun(
     to,
   });
 
-  const view = await viewRuns(ctx, await loadRuns(run.organizationId, { engagementId: run.engagementId }));
+  const view = await viewRuns(ctx, await loadRuns(ctx, run.organizationId, { engagementId: run.engagementId }));
   const match = view.find((candidate) => candidate.id === run.id);
   if (!match) throw new ApiError(500, "INTERNAL", "Filing run could not be read back.");
   return match;

@@ -297,9 +297,10 @@ export async function verifyFilingRunNow(
   runId: string,
 ): Promise<{ runId: string; verificationStatus: VerificationStatus; note: string; provider: string }> {
   if (!ctx.organization) throw new ApiError(404, "NO_ORGANIZATION", "Create an organization first.");
+  const organizationId = ctx.organization.id;
   const run = await withTenantDb(ctx, (db) =>
     db.complianceFilingRun.findFirst({
-      where: { id: runId, organizationId: ctx.organization.id },
+      where: { id: runId, organizationId },
       include: { engagement: { select: { name: true } } },
     }),
   );

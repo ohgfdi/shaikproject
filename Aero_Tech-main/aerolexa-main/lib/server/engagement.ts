@@ -704,10 +704,11 @@ export async function updateOrgPrivacy(
 ): Promise<OrganizationPrivacySettings> {
   if (!ctx.organization) throw notFoundError("No organization.");
   await requireOrgRole(ctx, ctx.organization.id, "ADMIN");
+  const organizationId = ctx.organization.id;
 
   const current = await withTenantDb(ctx, (db) =>
     db.organization.findUnique({
-      where: { id: ctx.organization.id },
+      where: { id: organizationId },
       select: { settings: true },
     }),
   );
@@ -731,7 +732,7 @@ export async function updateOrgPrivacy(
   const merged = { ...currentSettings, privacy: mergedPrivacy };
   await withTenantDb(ctx, (db) =>
     db.organization.update({
-      where: { id: ctx.organization.id },
+      where: { id: organizationId },
       data: { settings: stringifyJson(merged) },
     }),
   );

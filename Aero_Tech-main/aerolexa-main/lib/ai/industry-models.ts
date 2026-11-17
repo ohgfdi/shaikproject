@@ -11,13 +11,16 @@ import { prisma } from "@/lib/db";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
-export type ModelType =
-  | "fraud_detection"
-  | "churn_prediction"
-  | "demand_forecasting"
-  | "risk_scoring"
-  | "sentiment_analysis"
-  | "anomaly_detection";
+export const ModelType = {
+  FRAUD_DETECTION: "fraud_detection",
+  CHURN_PREDICTION: "churn_prediction",
+  DEMAND_FORECASTING: "demand_forecasting",
+  RISK_SCORING: "risk_scoring",
+  SENTIMENT_ANALYSIS: "sentiment_analysis",
+  ANOMALY_DETECTION: "anomaly_detection",
+} as const;
+
+export type ModelType = (typeof ModelType)[keyof typeof ModelType];
 
 export interface ModelPrediction {
   id: string;
@@ -195,8 +198,8 @@ export const ManufacturingRiskScoring = {
 export function getIndustryModel(
   industry: Industry,
   modelType: ModelType
-): { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string } {
-  const models: Record<Industry, Record<ModelType, { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string }>> = {
+): { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType } {
+  const models: Partial<Record<Industry, Partial<Record<ModelType, { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType }>>>> = {
     finance: {
       [ModelType.FRAUD_DETECTION]: FinanceFraudDetection,
     },
@@ -212,11 +215,12 @@ export function getIndustryModel(
   };
 
   const industryModels = models[industry];
-  if (!industryModels || !industryModels[modelType]) {
+  const model = industryModels?.[modelType];
+  if (!model) {
     throw new Error(`Model ${modelType} not available for industry ${industry}`);
   }
 
-  return industryModels[modelType];
+  return model;
 }
 
 /** API route to get industry AI model predictions. */

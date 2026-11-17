@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactElement } from "react";
 
 /**
  * EmbedWidget — renders a read-only dashboard map embedded in external pages.
@@ -23,7 +23,7 @@ import { useState, useEffect, useRef } from "react";
  *   - `message` events carry `{ type: "error", error }` or `{ type: "ready" }`
  *   - The embed height can be adjusted by the parent via `parent.postMessage`.
  */
-export function EmbedWidget(): JSX.Element {
+export function EmbedWidget(): ReactElement {
   const [ready, setReady] = useState(false);
   const token = useRef<string | null>(null);
   const workspaceId = useRef<string | null>(null);

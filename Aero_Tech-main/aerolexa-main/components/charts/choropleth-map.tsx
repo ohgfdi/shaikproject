@@ -197,7 +197,7 @@ function ChoroplethMapPanel({
     if (colorBy === "value") {
       if (currentValue === undefined && baselineValue === undefined) return NO_DATA_COLOR;
 
-      const maxVal = classified.classes.bounds.max ?? 1;
+      const maxVal = Math.max(...classified.breaks.bounds) ?? 1;
       const ratio = Math.min(Math.max((currentValue ?? baselineValue ?? 0) / maxVal, 0), 1);
       const accent = "#3B82F6";
       const r1 = parseInt(NO_DATA_COLOR.slice(1, 3), 16);
@@ -218,7 +218,7 @@ function ChoroplethMapPanel({
 
     // If baseline data is provided, overlay a subtle stripe at baseline position
     if (baselineValue !== undefined && currentValue !== undefined) {
-      const baselineRatio = Math.min(Math.max(baselineValue / (classified.classes.bounds.max ?? 1), 0), 1);
+      const baselineRatio = Math.min(Math.max(baselineValue / (Math.max(...classified.breaks.bounds) ?? 1), 0), 1);
       const accent = "#3B82F6";
       const blendRatio = baselineRatio * 0.3;
       const r1 = parseInt(baseColor.slice(1, 3), 16);
@@ -402,7 +402,7 @@ function ChoroplethMapPanel({
           attributionControl={false}
         >
           <GeoJSON
-            key={`${scope}-${JSON.stringify(classified.classes.bounds)}`}
+            key={`${scope}-${JSON.stringify(classified.breaks.bounds)}`}
             data={collection as FeatureCollectionLike}
             style={(feature) => {
               const name = String(feature?.properties?.name ?? "");

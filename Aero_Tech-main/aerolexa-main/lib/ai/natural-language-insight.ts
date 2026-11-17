@@ -119,12 +119,12 @@ export function generateInsight(
 
   switch (type) {
     case "trend": {
-      const timeframe = extracted.timeframe || "period";
+      const timeframe = typeof extracted.timeframe === "string" ? extracted.timeframe : "period";
       const response = `I analyzed the ${timeframe} trend and found ${Math.random() > 0.5 ? "upward" : "downward"} movement in your metrics. ${Math.random() > 0.5 ? "Key drivers include" : "Recommendation"}: ${Math.random().toFixed(2)}% ${Math.random() > 0.5 ? "increase" : "decrease"} observed.`;
       return {
         id,
         type: "trend",
-        query: extracted.originalQuery || "trend analysis",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "trend analysis",
         response,
         confidence: "medium",
         data: { timeframe, trendDirection: Math.random() > 0.5 ? "up" : "down" },
@@ -140,7 +140,7 @@ export function generateInsight(
       return {
         id,
         type: "anomaly",
-        query: extracted.originalQuery || "anomaly detection",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "anomaly detection",
         response,
         confidence: Math.random() > 0.5 ? "high" : "medium",
         data: { severity: severityWeights()[Math.floor(Math.random() * severityWeights().length)] },
@@ -156,7 +156,7 @@ export function generateInsight(
       return {
         id,
         type: "comparison",
-        query: extracted.originalQuery || "comparison",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "comparison",
         response,
         confidence: "medium",
         data: { variancePercent: Math.random() * 30 },
@@ -167,12 +167,12 @@ export function generateInsight(
     }
 
     case "forecast": {
-      const timeframe = extracted.timeframe || "period";
+      const timeframe = typeof extracted.timeframe === "string" ? extracted.timeframe : "period";
       const response = `Forecast for the ${timeframe}: ${Math.random() > 0.5 ? "continued growth" : "market correction expected"}. ${Math.random() > 0.5 ? "Projected increase" : "Projected decrease"}: ${Math.floor(Math.random() * 20 + 5)}% ${Math.random() > 0.5 ? "in the metric" : "across key areas"}.`;
       return {
         id,
         type: "forecast",
-        query: extracted.originalQuery || "forecast",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "forecast",
         response,
         confidence: "medium",
         data: { timeframe, projectedChange: (Math.random() - 0.5) * 20 },
@@ -187,7 +187,7 @@ export function generateInsight(
       return {
         id,
         type: "segment",
-        query: extracted.originalQuery || "segment analysis",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "segment analysis",
         response,
         confidence: "medium",
         data: { segmentCount: Math.floor(Math.random() * 4 + 2), topSegmentGrowth: Math.random().toFixed(1) },
@@ -202,7 +202,7 @@ export function generateInsight(
       return {
         id,
         type: "recommendation",
-        query: extracted.originalQuery || "recommendation",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "recommendation",
         response,
         confidence: "high",
         data: { impactPercent: Math.random() * 20 },
@@ -217,7 +217,7 @@ export function generateInsight(
       return {
         id,
         type: "trend",
-        query: extracted.originalQuery || "insight",
+        query: typeof extracted.originalQuery === "string" ? extracted.originalQuery : "insight",
         response: "I've analyzed your request and identified relevant insights in your data.",
         confidence: "low",
         data: {},

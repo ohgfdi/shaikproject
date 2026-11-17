@@ -109,7 +109,15 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const analysisIds = [...new Set(widgets.map((w) => w.analysisId).filter((v): v is string => Boolean(v)))].slice(
       0,
       20,
-    );const datasetId =
+    );
+    const analyses = analysisIds.length
+      ? await withTenantDb(ctx, (db) =>
+          db.analysis.findMany({
+            where: { id: { in: analysisIds }, workspaceId: ctx.workspace.id },
+          }),
+        )
+      : [];
+    const datasetId =
       analyses[0]?.datasetId ??
       widgets.find((w) => w.datasetId)?.datasetId ??
       widgets.find((w) => w.pivot?.datasetId)?.pivot?.datasetId ??

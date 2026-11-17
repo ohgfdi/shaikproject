@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
+import { AdminDashboard } from "./admin-dashboard";
+import { PowerUserDashboard } from "./power-user-dashboard";
+import { ViewerDashboard } from "./viewer-dashboard";
+
 /**
  * SSOLogin — handles user authentication and session management.
  *
@@ -106,7 +110,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
     } finally {
       setLoading(false);
     }
-  });
+  }, [onAuthSuccess, redirectPath, router]);
 
   // SSO login with provider
   const handleSSOLogin = useCallback(async (params: SSOLoginParams) => {
@@ -131,7 +135,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
     } finally {
       setLoading(false);
     }
-  });
+  }, [onAuthSuccess]);
 
   // Logout
   const handleLogout = useCallback(async () => {
@@ -303,7 +307,13 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
       {/* Main content — role-based dashboard */}
       <main className="flex-1 p-4">
         {/* Route to role-appropriate dashboard */}
-        <dashboard-route userRole={user.role} />
+        {user.role === "admin" || user.role === "super-admin" ? (
+          <AdminDashboard dashboardId="default" />
+        ) : user.role === "power-user" ? (
+          <PowerUserDashboard dashboardId="default" />
+        ) : (
+          <ViewerDashboard dashboardId="default" />
+        )}
       </main>
     </div>
   );

@@ -5,6 +5,7 @@
  * Integrates with the industry templates (Phases 33-36) and compliance mappings (Phase 37).
  */
 import React from "react";
+import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { getIndustryTemplate, getComplianceRequirements } from "@/lib/industry";

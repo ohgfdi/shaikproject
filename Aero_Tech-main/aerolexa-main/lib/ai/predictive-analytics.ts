@@ -92,11 +92,11 @@ export function exponentialSmoothing(
 
     const n = historicalValues.length;
     const values = [...historicalValues];
-    let S = values[0]; // initial smoothed value
+    let S = values[0] ?? 0; // initial smoothed value
 
     // Apply exponential smoothing
     for (let t = 1; t < n; t++) {
-      S = alpha * values[t] + (1 - alpha) * S;
+      S = alpha * (values[t] ?? 0) + (1 - alpha) * S;
     }
 
     // Generate forecast points
@@ -160,7 +160,7 @@ export function linearTrendForecast(
     // Calculate linear regression (least squares)
     const sumX = xValues.reduce((sum, x) => sum + x, 0);
     const sumY = historicalValues.reduce((sum, y) => sum + y, 0);
-    const sumXY = xValues.reduce((sum, x, i) => sum + x * historicalValues[i], 0);
+    const sumXY = xValues.reduce((sum, x, i) => sum + x * (historicalValues[i] ?? 0), 0);
     const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0);
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
@@ -182,11 +182,11 @@ export function linearTrendForecast(
       const forecastX = lastX + i;
       const forecastY = slope * forecastX + intercept;
       const timestamp = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
-      const residual = historicalValues[i - 1] - (slope * i + intercept); // simplified
+      const residual = (historicalValues[i - 1] ?? 0) - (slope * i + intercept); // simplified
 
       points.push({
         timestamp,
-        actualValue: i - 1 < historicalValues.length ? historicalValues[i - 1] : undefined,
+        actualValue: i - 1 < historicalValues.length ? (historicalValues[i - 1] ?? undefined) : undefined,
         forecastValue: Math.round(forecastY * 100) / 100,
         lowerBound: Math.round((forecastY - 5) * 100) / 100, // simplified CI
         upperBound: Math.round((forecastY + 5) * 100) / 100,
@@ -194,7 +194,7 @@ export function linearTrendForecast(
       });
     }
 
-    const lastActual = historicalValues[historicalValues.length - 1];
+    const lastActual = historicalValues[historicalValues.length - 1] ?? 0;
     const lastForecast = slope * lastX + intercept;
     const mape = lastActual !== 0 ? Math.abs(lastActual - lastForecast) / Math.max(lastActual, 1) * 100 : 0;
     const confidence = mape < 5 ? "high" : mape < 10 ? "medium" : "low";

@@ -8,6 +8,7 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
+import type { Industry } from "@/lib/industry";
 
 export type StreamType = "kpi-updates" | "alerts" | "chart-updates" | "data-changes" | "collaborative";
 
@@ -52,7 +53,7 @@ export function getStreamTypesForIndustry(
   const baseTypes: StreamType[] = ["kpi-updates", "alerts", "chart-updates"];
 
   // Industry-specific additional stream types
-  const industryExtensions: Record<Industry, StreamType[]> = {
+  const industryExtensions: Partial<Record<Industry, StreamType[]>> = {
     finance: ["data-changes"],
     saas: ["collaborative"],
     retail: ["data-changes"],

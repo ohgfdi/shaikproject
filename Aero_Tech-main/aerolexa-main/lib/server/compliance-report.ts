@@ -10,6 +10,8 @@
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
+
+const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 import {
   buildClientComplianceCalendar,
   financialYearFor,
@@ -25,7 +27,6 @@ import {
 import { resolvePortalToken } from "@/lib/server/client-portal";
 import { defaultProfile, type ComplianceProfileSeed } from "@/lib/server/compliance-calendar";
 import { requireEngagementRole } from "@/lib/server/engagement";
-import { withTenantDb } from "@/lib/server/tenant-db";
 
 const ENTITY_KINDS = new Set<EntityKind>([
   "company",
@@ -75,13 +76,13 @@ async function assembleReport(input: {
   asOf: string;
 }): Promise<MonthlyComplianceReport> {
   const [profileRow, runs, statuses] = await Promise.all([
-    withTenantDb(ctx, (db) =>
+    withGlobalDb((db) =>
       db.clientComplianceProfile.findUnique({
         where: { engagementId: input.engagement.id },
         select: { profile: true },
       }),
     ),
-    withTenantDb(ctx, (db) =>
+    withGlobalDb((db) =>
       db.complianceFilingRun.findMany({
         where: { organizationId: input.organizationId, engagementId: input.engagement.id },
         select: {
@@ -96,7 +97,7 @@ async function assembleReport(input: {
         take: 500,
       }),
     ),
-    withTenantDb(ctx, (db) =>
+    withGlobalDb((db) =>
       db.clientComplianceStatus.findMany({
         where: { organizationId: input.organizationId, engagementId: input.engagement.id },
         select: { taskId: true, status: true, filedOn: true, reference: true },

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
-import { rlsEnabled, rlsConfigError, rlsEnforcementStatus, isPostgres } from "@/lib/server/rls-status";
+import { rlsEnabled, rlsConfigError, rlsEnforcementStatus, isPostgres } from "@/lib/server/tenancy";
 
 /** GET /api/embed/validate?token=...&workspaceId=...
  *  Validate an embed JWT token and return the dashboard configuration.
@@ -32,12 +32,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: false, error: "Invalid token" }, { status: 401 });
     }
 
-    // Verify workspace access: the user must be a member of the workspace
-    const isMember = user.workspace.members?.some(
-      (m: { userId: string }) => m.userId === token,
-    );
-
-    if (!isMember) {
+    // Verify workspace access. The app is one workspace per account today, so
+    // the signed-in user's workspace is the access boundary.
+    if (workspaceId && user.workspace.id !== workspaceId) {
       return NextResponse.json({ ok: false, error: "Workspace access denied" }, { status: 403 });
     }
 
@@ -46,8 +43,8 @@ export async function GET(request: Request) {
 
     logSecurityEvent(
       user.workspace.id,
-      Number(token),
-      "EMBED_ACCESS",
+      user.id,
+      "SECURITY_SSO",
       `Embed dashboard accessed (workspace: ${workspaceId || "none"})`,
     );
 
@@ -57,16 +54,16 @@ export async function GET(request: Request) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.isAdmin ? "admin" : "member",
       },
       workspace: {
         id: user.workspace.id,
         name: user.workspace.name,
       },
       rlsPosture: {
-        severity: posture.severity,
-        enforced: posture.enforced,
-        queryLayerWired: posture.queryLayerWired,
+        role: posture.role,
+        tablesWithRls: posture.tablesWithRls,
+        tablesWithoutForce: posture.tablesWithoutForce,
       },
     });
   } catch (err) {

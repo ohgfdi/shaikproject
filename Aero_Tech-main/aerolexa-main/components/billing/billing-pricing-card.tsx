@@ -10,14 +10,12 @@ import { useState } from "react";
 export type PricingTier = "free" | "pro" | "enterprise";
 
 export type PricingTierFeatures = {
-  [key in PricingTier]: {
-    name: string;
-    price: string;
-    billing: "monthly" | "annual";
-    features: string[];
-    cta: string;
-    ctaUrl?: string;
-  };
+  name: string;
+  price: string;
+  billing: "monthly" | "annual";
+  features: string[];
+  cta: string;
+  ctaUrl?: string;
 };
 
 export const pricingTiers: Record<PricingTier, PricingTierFeatures> = {

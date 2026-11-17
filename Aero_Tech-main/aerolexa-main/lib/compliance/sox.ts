@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db";
 
 export type SoxSection = "302" | "404" | "409" | "802" | "906";
 
-export type SoxStatus = "compliant" | "partial" | "non_compliant" | "not_applicable";
+export type SoxStatus = "compliant" | "partial" | "at_risk" | "non_compliant" | "not_applicable";
 
 export interface SoxControl {
   id: string;
@@ -57,6 +57,7 @@ export function runSoxCheck(): SoxDashboard {
   let atRiskCount = 0;
   let criticalDeficiencies = 0;
   const detailControls: SoxControl[] = [];
+  const sectionScores = {} as Record<SoxSection, number>;
 
   for (const section of sections) {
     // Mock compliance check - in production this would query actual controls
@@ -69,6 +70,7 @@ export function runSoxCheck(): SoxDashboard {
     const isAtRisk = sectionScore >= 60 && sectionScore < 80;
 
     totalScore += sectionScore;
+    sectionScores[section] = sectionScore;
     if (isFullyCompliant) {
       fullyCompliantCount++;
     }
@@ -127,10 +129,7 @@ export function runSoxCheck(): SoxDashboard {
 
   return {
     overallScore,
-    sectionScores: detailControls.reduce((acc, curr) => {
-      acc[curr.section] = curr.overallScore;
-      return acc;
-    }, {} as Record<SoxSection, number>),
+    sectionScores,
     atRiskCount,
     fullyCompliantCount:
       fullyCompliantCount,

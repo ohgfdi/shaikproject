@@ -11,6 +11,7 @@ import type { NextRequest } from "next/server";
 import { getIndustryDashboardConfig } from "@/components/industry/dashboard-configs";
 import { prisma } from "@/lib/db";
 import { getIndustryTemplate as getIndustryTemplateFn } from "@/lib/industry";
+import type { Industry } from "@/lib/industry";
 import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
 import { getIntegrationConfig } from "@/lib/industry/integrations";
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     const industry = searchParams.get("industry") || "saas";
 
     // 1. Get industry template
-    const template = getIndustryTemplateFn(industry);
+    const template = getIndustryTemplateFn(industry as Industry);
 
     // 2. Get compliance requirements for key frameworks
     const complianceFrameworks = ["SOC2", "GDPR", "PCI_DSS", "HIPAA"].map(

@@ -203,7 +203,7 @@ export const ManufacturingDataModel = {
 
 /** Get the data model for a specific industry. */
 export function getIndustryDataModel(industry: Industry): any {
-  const models: Record<Industry, any> = {
+  const models: Partial<Record<Industry, any>> = {
     finance: FinanceDataModel,
     saas: SaaSDataModel,
     retail: RetailDataModel,
@@ -226,7 +226,9 @@ export function validateAgainstModel(
 
   const errors: string[] = [];
 
-  for (const [fieldName, fieldDef] of Object.entries(tableDef.fields)) {
+  for (const [fieldName, fieldDef] of Object.entries(
+    tableDef.fields as Record<string, any>
+  )) {
     if (fieldDef.required && (data[fieldName] === undefined || data[fieldName] === null)) {
       errors.push(`${fieldName} is required`);
     }

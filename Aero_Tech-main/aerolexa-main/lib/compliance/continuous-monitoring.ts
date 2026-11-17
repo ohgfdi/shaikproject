@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 
 import { checkModelCompliance } from "@/lib/ai/enterprise-ai-governance";
 import { generateAIGovernanceReport } from "@/lib/ai/enterprise-ai-governance";
-import type { GovernanceFramework, ModelMetadata } from "@/lib/ai/enterprise-ai-governance";
+import type { GovernanceFramework, ModelDriftReport, ModelMetadata } from "@/lib/ai/enterprise-ai-governance";
 import { prisma } from "@/lib/db";
 
 export type Framework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
@@ -92,6 +92,30 @@ export function runContinuousComplianceCheck(
 
     totalScore += finalScore;
 
+    const toIssue = (
+      message: string,
+      severity: "critical" | "high",
+      index: number
+    ): ComplianceIssue => ({
+      id: `${framework}_issue_${index}`,
+      framework,
+      severity,
+      category: "model_compliance",
+      title: message,
+      description: message,
+      currentState: "violation detected",
+      requiredState: "framework requirement satisfied",
+      autoRemediable: true,
+      lastObserved: new Date(),
+    });
+
+    const criticalViolations = complianceCheck.violations.filter(
+      (v) => v.includes("below") || v.includes("not certified") || v.includes("without GDPR")
+    );
+    const otherViolations = complianceCheck.violations.filter(
+      (v) => !v.includes("below") && !v.includes("not certified") && !v.includes("without GDPR")
+    );
+
     if (isFullyCompliant) {
       fullyCompliantCount++;
     }
@@ -105,9 +129,9 @@ export function runContinuousComplianceCheck(
       score: finalScore,
       lastChecked: new Date(),
       driftScore: driftAdjustment,
-      criticalIssues: complianceCheck.violations.filter(v => v.includes("below") || v.includes("not certified") || v.includes("without GDPR")),
-      highIssues: complianceCheck.violations.filter(v => !v.includes("below") && !v.includes("not certified") && !v.includes("without GDPR")),
-      recommendations: complianceCheck.violations.map(v => `Address: ${v}`),
+      criticalIssues: criticalViolations.map((v, i) => toIssue(v, "critical", i)),
+      highIssues: otherViolations.map((v, i) => toIssue(v, "high", i)),
+      recommendations: complianceCheck.violations.map((v) => `Address: ${v}`),
       autoRemediable: totalViolations <= 2, // Small violations can be auto-remediated
     });
   }
@@ -149,8 +173,8 @@ export async function GET(
       const modelMetadata: ModelMetadata = {
         id: modelId,
         name: "Predictive Revenue Model",
-        model_type: "predictive_score" as const,
-        industry: industry as const,
+        model_type: "predictive_score",
+        industry: industry as ModelMetadata["industry"],
         version: "2.3.0",
         description: "Predicts monthly recurring revenue based on historical trends and usage patterns",
         training_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
@@ -196,8 +220,8 @@ export async function GET(
       const modelMetadata: ModelMetadata = {
         id: modelId,
         name: "Predictive Revenue Model",
-        model_type: "predictive_score" as const,
-        industry: "saas" as const,
+        model_type: "predictive_score",
+        industry: "saas",
         version: "2.3.0",
         description: "Predicts monthly recurring revenue",
         training_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),

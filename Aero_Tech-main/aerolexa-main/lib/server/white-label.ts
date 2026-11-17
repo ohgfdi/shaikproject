@@ -68,13 +68,13 @@ export async function getWhiteLabelConfig(
 
   return {
     companyName: tenant.name || "Ledgerly",
-    logoUrl: tenant.logoUrl,
-    faviconUrl: tenant.faviconUrl,
+    logoUrl: tenant.logoUrl ?? undefined,
+    faviconUrl: tenant.faviconUrl ?? undefined,
     primaryColor: tenant.primaryColor || "#0052cc",
     secondaryColor: tenant.secondaryColor || "#e0e7ff",
-    theme: tenant.theme as BrandTheme || "system",
-    customJs: tenant.customJs,
-    customCss: tenant.customCss,
+    theme: (tenant.theme as BrandTheme) || "system",
+    customJs: tenant.customJs ?? undefined,
+    customCss: tenant.customCss ?? undefined,
   };
 }
 

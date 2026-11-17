@@ -87,7 +87,7 @@ export function calculateLinearRegression(
 
   const sumX = xValues.reduce((a, b) => a + b, 0);
   const sumY = yValues.reduce((a, b) => a + b, 0);
-  const sumXY = xValues.reduce((acc, x, i) => acc + x * yValues[i], 0);
+  const sumXY = xValues.reduce((acc, x, i) => acc + x * (yValues[i] ?? 0), 0);
   const sumX2 = xValues.reduce((acc, x) => acc + x * x, 0);
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
@@ -97,7 +97,7 @@ export function calculateLinearRegression(
   const yMean = sumY / n;
   const ssTot = yValues.reduce((acc, y) => acc + (y - yMean) ** 2, 0);
   const ssRes = yValues.reduce(
-    (acc, y, i) => acc + (y - (slope * xValues[i] + intercept)) ** 2,
+    (acc, y, i) => acc + (y - (slope * (xValues[i] ?? 0) + intercept)) ** 2,
     0
   );
   const rSquared = 1 - ssRes / ssTot;
@@ -114,10 +114,10 @@ export function exponentialSmoothing(
   if (alpha <= 0 || alpha >= 1) alpha = 0.5;
 
   const smoothed: number[] = [];
-  smoothed[0] = values[0];
+  smoothed[0] = values[0] ?? 0;
 
   for (let i = 1; i < values.length; i++) {
-    smoothed[i] = alpha * values[i] + (1 - alpha) * smoothed[i - 1];
+    smoothed[i] = alpha * (values[i] ?? 0) + (1 - alpha) * (smoothed[i - 1] ?? 0);
   }
 
   return smoothed;
@@ -222,6 +222,9 @@ export function detectMetricAnomalies(
   const worst = severeAnomalies.reduce((prev, current) =>
     Math.abs(current.z_score) > Math.abs(prev.z_score) ? current : prev
   );
+  if (!worst) return null;
+  const worstSeverity: "low" | "medium" | "high" | "critical" =
+    worst.z_score > 3 ? "critical" : worst.z_score > 2 ? "high" : "medium";
 
   const deviationPercent = ((worst.value - worst.z_score * ((historicalValues.reduce(
     (a, b) => a + b, 0) / historicalValues.length
@@ -251,10 +254,10 @@ export function detectMetricAnomalies(
       ) || 0),
     ],
     deviation_percent: parseFloat(deviationPercent.toFixed(1)),
-    severity: severityMap[worst.z_score > 3 ? "critical" : worst.z_score > 2 ? "high" : "medium"],
+    severity: severityMap[worstSeverity] ?? "medium",
     detected_at: new Date(),
-    contributing_factors: this.identifyContributingFactors(metric, industry, worst.value),
-    recommended_action: this.getRecommendedAction(metric, industry, worst.severity || "medium"),
+    contributing_factors: identifyContributingFactors(metric, industry, worst.value),
+    recommended_action: getRecommendedAction(metric, industry, worstSeverity),
   };
 }
 
@@ -316,7 +319,7 @@ function getRecommendedAction(
       },
     };
 
-    return actions[severity][industry] || "Review and monitor";
+    return actions[severity]?.[industry] || "Review and monitor";
 }
 
 /** API route for predictive analytics engine. */
@@ -341,7 +344,7 @@ export async function GET(
 
     const config: PredictiveEngineConfig = {
       metric,
-      industry,
+      industry: industry as Industry,
       horizon: horizon as any,
       alpha: 0.3,
       beta: 0.1,

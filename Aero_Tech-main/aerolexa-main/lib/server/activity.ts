@@ -139,6 +139,8 @@ export async function logSecurityEvent(
     | "MEMBER_ADDED"
     | "MEMBER_UPDATED"
     | "MEMBER_REMOVED"
+    | "WEBHOOK_CREATED"
+    | "WEBHOOK_RETRY"
     | "SCHEDULE_RUN",
   message: string,
   projectId?: string | null,

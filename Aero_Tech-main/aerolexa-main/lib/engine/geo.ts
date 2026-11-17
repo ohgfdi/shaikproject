@@ -217,6 +217,12 @@ export interface GeoFeatureLike {
   geometry: unknown;
 }
 
+export interface FeatureCollectionLike {
+  type: "FeatureCollection";
+  features: GeoFeatureLike[];
+  [key: string]: unknown;
+}
+
 export interface JoinReport {
   /** Features with their assigned color + value (the draw list). */
   matched: { feature: GeoFeatureLike; region: string; value: number; color: string; classLabel: string }[];

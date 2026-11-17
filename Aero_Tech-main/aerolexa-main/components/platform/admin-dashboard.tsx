@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { MapTemplateGallery } from "@/components/charts/map-template-gallery";
+import type { MapTemplate } from "@/components/charts/map-template-gallery";
 import { QuickFilter } from "@/components/charts/quick-filter";
 import { WebhookManager } from "@/components/platform/webhook-manager";
 import { DashboardWidget } from "@/lib/types";
@@ -28,10 +29,7 @@ export function AdminDashboard({ dashboardId }: { dashboardId: string }) {
   const [scope, setScope] = useState<"us-states" | "countries">("us-states");
   const [metric, setMetric] = useState<string>("Value");
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<
-    | (MapTemplate & { id: string })
-    | null
-  >(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<MapTemplate | null>(null);
   const [webhookError, setWebhookError] = useState<string | null>(null);
 
   // Load widgets from dashboard state (would call API in production)
@@ -42,17 +40,16 @@ export function AdminDashboard({ dashboardId }: { dashboardId: string }) {
   }, [dashboardId]);
 
   // Handle template selection
-  const handleTemplateSelect = (template: MapTemplate & { id: string }) => {
+  const handleTemplateSelect = (template: MapTemplate) => {
     setSelectedTemplate(template);
     // Apply template to create a new map widget
     const newWidget: DashboardWidget = {
-      id: template.id,
+      id: template.name,
       type: "pbi-visual",
       title: template.props.title,
       pbiVisual: {
         categories: [],
         values: [],
-        mapScope: template.props.scope,
         ...template.props,
       },
       w: 6,
@@ -143,7 +140,7 @@ export function AdminDashboard({ dashboardId }: { dashboardId: string }) {
           {selectedTemplate === null && (
             <MapTemplateGallery
               onSelect={handleTemplateSelect}
-              selected={selectedTemplate}
+              selected={selectedTemplate ?? undefined}
             />
           )}
 

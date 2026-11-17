@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/ai/enterprise-ai-governance/route";
+import { GET as upstreamGET } from "@/lib/ai/enterprise-ai-governance";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Returns AI governance report with compliance, drift, and recommendations.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

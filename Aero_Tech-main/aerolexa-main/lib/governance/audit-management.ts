@@ -13,7 +13,18 @@ import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
 
 export type GovernanceFramework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
 
-export type AuditEventType = "record_create" | "record_update" | "record_delete" | "login" | "permission_change" | "configuration_change" | "data_export" | "system_access";
+export const AuditEventType = {
+  record_create: "record_create",
+  record_update: "record_update",
+  record_delete: "record_delete",
+  login: "login",
+  permission_change: "permission_change",
+  configuration_change: "configuration_change",
+  data_export: "data_export",
+  system_access: "system_access",
+} as const;
+
+export type AuditEventType = (typeof AuditEventType)[keyof typeof AuditEventType];
 
 export interface AuditEvent {
   id: string;
@@ -63,8 +74,8 @@ export class EnterpriseAuditTrail {
 
     const auditEvent: AuditEvent = {
       id,
-      timestamp: new Date(),
       ...event,
+      timestamp: event.timestamp ?? new Date(),
     };
 
     // In a real implementation, this would write to an immutable audit log
@@ -305,7 +316,7 @@ export async function GET(
     });
 
     return new Response(JSON.stringify({ ...result, governance_frameworks: Object.keys(
-      GovernancePolicies.reduce((acc, p) => { acc[p.framework] = true; return acc; }, {} as GovernanceFramework),
+      GovernancePolicies.reduce<Record<string, boolean>>((acc, p) => { acc[p.framework] = true; return acc; }, {}),
     ) }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

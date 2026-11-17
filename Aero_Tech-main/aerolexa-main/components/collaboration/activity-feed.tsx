@@ -48,7 +48,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
 
       // Apply filter
       if (filter !== "all") {
-        where.action = filter as any;
+        where.type = filter;
       }
 
       const data = await prisma.activity.findMany({
@@ -56,10 +56,9 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
         orderBy: { createdAt: "desc" },
         take: limit,
         include: {
-          user: {
+          actor: {
             select: {
               name: true,
-              avatar: true,
             },
           },
         },
@@ -68,13 +67,13 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
       setEvents(
         data.map((event) => ({
           id: event.id,
-          userId: event.userId,
-          userName: event.user?.name || "System",
-          userAvatar: event.user?.avatar,
-          action: event.action,
-          targetType: event.targetType,
-          targetId: event.targetId,
-          details: event.details,
+          userId: event.actorId ?? "system",
+          userName: event.actor?.name || "System",
+          userAvatar: undefined,
+          action: event.type as ActivityEvent["action"],
+          targetType: (event.targetType ?? "dashboard") as ActivityEvent["targetType"],
+          targetId: event.targetId ?? "",
+          details: event.meta ?? undefined,
           createdAt: event.createdAt,
         }))
       );

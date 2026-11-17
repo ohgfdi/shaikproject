@@ -222,7 +222,7 @@ export const ManufacturingReportTemplates: ReportTemplate[] = [
 export function getIndustryReportTemplates(
   industry: Industry
 ): ReportTemplate[] {
-  const templates: Record<Industry, ReportTemplate[]> = {
+  const templates: Partial<Record<Industry, ReportTemplate[]>> = {
     finance: FinanceReportTemplates,
     saas: SaaSReportTemplates,
     retail: RetailReportTemplates,

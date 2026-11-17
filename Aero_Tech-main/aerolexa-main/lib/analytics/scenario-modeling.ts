@@ -10,7 +10,14 @@ import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 
-import { calculateMovingAverage, calculateLinearRegression, exponentialSmoothing, detectAnomalies } from "./predictive-engine";
+import {
+  calculateMovingAverage,
+  calculateLinearRegression,
+  exponentialSmoothing,
+  detectAnomalies,
+  generatePredictiveScore,
+} from "./predictive-engine";
+import type { MetricType } from "./predictive-engine";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
@@ -34,6 +41,29 @@ export interface ScenarioConfig {
   horizon: "24h" | "7d" | "30d" | "90d";
   simulation_count?: number; // For Monte Carlo
   confidence_level: number; // 0-100
+}
+
+export interface ScenarioResult {
+  parameter_name: string;
+  parameter_value: number | boolean;
+  scenario_type: ScenarioType;
+  predicted_value: number;
+  confidence: number;
+  trend: "up" | "down" | "stable";
+  data_points: number;
+}
+
+export interface ScenarioComparison {
+  baseline_predicted: number;
+  baseline_confidence: number;
+  scenario_count: number;
+  best_scenario: ScenarioResult;
+  worst_scenario: ScenarioResult;
+  parameter_impacts: {
+    parameter: string;
+    impact: number;
+    percentage_impact: number;
+  }[];
 }
 
 /** Run a what-if scenario. */
@@ -66,12 +96,12 @@ export function runWhatIfScenario(
     
     // Apply parameter modification to each data point based on type
     for (let i = 0; i < modifiedValues.length; i++) {
+      const currentValue = historicalValues[i] ?? 0;
       if (param.type === "percentage") {
-        // Apply percentage change to baseline trend
-        const trendFactor = (param.current_value / 100) * (i - historicalCount / 2);
-        modifiedValues[i] = Math.max(0, historicalValues[i] * (1 + param.current_value / 100));
+        const pct = Number(param.current_value);
+        modifiedValues[i] = Math.max(0, currentValue * (1 + pct / 100));
       } else if (param.type === "number") {
-        modifiedValues[i] = Math.max(0, historicalValues[i] + param.current_value);
+        modifiedValues[i] = Math.max(0, currentValue + Number(param.current_value));
       }
       // boolean type doesn't modify values directly
     }
@@ -95,17 +125,22 @@ export function runWhatIfScenario(
     };
   });
 
+  const [firstScenario, ...remainingScenarios] = scenarios;
+  if (!firstScenario) {
+    throw new Error("At least one scenario parameter is required.");
+  }
+
   // Generate comparison summary
   const comparison: ScenarioComparison = {
     baseline_predicted: baselineResult.predicted_value,
     baseline_confidence: baselineResult.confidence,
     scenario_count: scenarios.length,
-    best_scenario: scenarios.reduce((best, current) =>
+    best_scenario: remainingScenarios.reduce((best, current) =>
       current.predicted_value > best.predicted_value ? current : best
-    ),
-    worst_scenario: scenarios.reduce((worst, current) =>
+    , firstScenario),
+    worst_scenario: remainingScenarios.reduce((worst, current) =>
       current.predicted_value < worst.predicted_value ? current : worst
-    ),
+    , firstScenario),
     parameter_impacts: scenarios.map((s) => ({
       parameter: s.parameter_name,
       impact: s.predicted_value - baselineResult.predicted_value,
@@ -168,17 +203,17 @@ export function runMonteCarloSimulation(
   const sortedResults = [...results].sort((a, b) => a - b);
   const sum = results.reduce((a, b) => a + b, 0);
   const mean = sum / simulation_count;
-  const median = sortedResults[Math.floor(simulation_count / 2)];
-  const p25 = sortedResults[Math.floor(simulation_count * 0.25)];
-  const p75 = sortedResults[Math.floor(simulation_count * 0.75)];
-  const p10 = sortedResults[Math.floor(simulation_count * 0.1)];
-  const p90 = sortedResults[Math.floor(simulation_count * 0.9)];
+  const median = sortedResults[Math.floor(simulation_count / 2)] ?? 0;
+  const p25 = sortedResults[Math.floor(simulation_count * 0.25)] ?? 0;
+  const p75 = sortedResults[Math.floor(simulation_count * 0.75)] ?? 0;
+  const p10 = sortedResults[Math.floor(simulation_count * 0.1)] ?? 0;
+  const p90 = sortedResults[Math.floor(simulation_count * 0.9)] ?? 0;
   const variance = results.reduce((acc, val) => acc + (val - mean) ** 2, 0) / simulation_count;
   const stdDev = Math.sqrt(variance);
 
   // Probability of exceeding baseline
-  const baselineExceeded = results.filter(r => r > baselineConfig.predicted_value || baseConfig.predicted_value).length;
-  const probability = (probabilityExceeded / simulation_count) * 100;
+  const baselineExceeded = results.filter((r) => r > baseline.predicted_value).length;
+  const probability = (baselineExceeded / simulation_count) * 100;
 
   return {
     distribution: results,
@@ -192,7 +227,7 @@ export function runMonteCarloSimulation(
       std_dev: parseFloat(stdDev.toFixed(2)),
     },
     probability_of_exceedance: {
-      value: baselineConfig.predicted_value,
+      value: baseline.predicted_value,
       probability: parseFloat(probability.toFixed(1)),
     },
   };
@@ -206,15 +241,15 @@ export function getSensitivityAnalysis(
   parameter: ScenarioParameter;
   sensitivity_index: number;
   impact_range: [number, number];
-  ranked_parameters: ScenarioParameter[];
+  ranked_parameters: (ScenarioParameter & { sensitivity_index: number })[];
 } {
   const baseResult = runWhatIfScenario(config);
   const basePredicted = baseResult.scenarios[0]?.predicted_value || 0;
 
   // Test each parameter at current + step and current - step
-  const testValues = [varyingParameter.current_value - (varyingParameter.step || 10),
-    varyingParameter.current_value,
-    varyingParameter.current_value + (varyingParameter.step || 10)];
+  const step = Number(varyingParameter.step ?? 10);
+  const baseValue = Number(varyingParameter.current_value);
+  const testValues = [baseValue - step, baseValue, baseValue + step];
 
   const testResults = testValues.map(val => {
     const testParam = {
@@ -234,8 +269,10 @@ export function getSensitivityAnalysis(
     return scenarios[0]?.predicted_value || basePredicted;
   });
 
-  const sensitivityIndex = ((testResults[2] - testResults[0]) / 20) * 100; // Normalized index
-  const impactRange: [number, number] = [testResults[0], testResults[2]];
+  const lowResult = testResults[0] ?? basePredicted;
+  const highResult = testResults[2] ?? basePredicted;
+  const sensitivityIndex = ((highResult - lowResult) / 20) * 100; // Normalized index
+  const impactRange: [number, number] = [lowResult, highResult];
 
   // Rank all parameters by sensitivity
   const rankedParameters = config.parameters.map(param => ({
@@ -243,7 +280,7 @@ export function getSensitivityAnalysis(
     sensitivity_index: Math.abs((runWhatIfScenario({
       ...config,
       parameters: config.parameters.map(p =>
-        p.name === param.name ? { ...p, current_value: p.current_value + (p.step || 10) } : p
+        p.name === param.name ? { ...p, current_value: Number(p.current_value) + Number(p.step ?? 10) } : p
       ),
     }).scenarios[0]?.predicted_value || basePredicted) - basePredicted) * 100,
   })).sort((a, b) => Math.abs(b.sensitivity_index) - Math.abs(a.sensitivity_index));
@@ -398,7 +435,9 @@ export async function GET(
     }
 
     // Default: what-if analysis
-    return GET(new NextRequest(`/${request.url.pathname}?action=what-if`, { url: new URL(request.url) }));
+    const url = new URL(request.url);
+    url.searchParams.set("action", "what-if");
+    return GET(new NextRequest(url));
   } catch (error) {
     console.error("Scenario modeling error:", error);
     return new Response(

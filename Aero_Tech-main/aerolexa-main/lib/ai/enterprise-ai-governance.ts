@@ -10,8 +10,12 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
+import { checkGovernancePolicies, AuditEventType } from "@/lib/governance/audit-management";
+import type { AuditEvent, GovernanceFramework } from "@/lib/governance/audit-management";
 
+export type { GovernanceFramework };
+
+import type { Industry } from "./agent-orchestration";
 import { executeDecision, DecisionRiskLevel, DecisionProposal } from "./autonomous-decision-engine";
 
 
@@ -60,7 +64,7 @@ export interface AIGovernanceReport {
 }
 
  /** Check model compliance across frameworks. */
-function checkModelCompliance(
+export function checkModelCompliance(
   model: ModelMetadata,
   framework: GovernanceFramework
 ): {
@@ -111,7 +115,7 @@ function checkModelCompliance(
   return {
     compliant: violations.length === 0,
     violations,
-    risk_adjustment,
+    risk_adjustment: riskAdjustment,
   };
 }
 
@@ -140,7 +144,7 @@ export function generateAIGovernanceReport(
   // Generate recommendations
   const recommendations: string[] = [];
   
-  if (!model.compliant) {
+  if (compliantCount < frameworks.length) {
     recommendations.push("Review model compliance across regulatory frameworks");
   }
   if (model.drift_threshold > 0 && driftReports.length > 0) {
@@ -160,7 +164,7 @@ export function generateAIGovernanceReport(
     model_id: modelId,
     overall_compliance: totalCompliance,
     risk_score: Math.max(0, Math.min(100, 100 - totalRisk)),
-    drift_reports,
+    drift_reports: driftReports,
     active_models: [model],
     recommendations,
     generated_at: new Date(),

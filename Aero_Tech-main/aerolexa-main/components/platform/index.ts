@@ -15,5 +15,6 @@ export { AdminDashboard } from "./admin-dashboard";
 export { PowerUserDashboard } from "./power-user-dashboard";
 export { ViewerDashboard } from "./viewer-dashboard";
 export { WebhookManager } from "./webhook-manager";
-export { MapTemplateGallery, type MapTemplate } from "./map-template-gallery";
-export type { UserProfile, WebhookSubscription, WebhookPayload } from "./sso-login";
+export { MapTemplateGallery, type MapTemplate } from "@/components/charts/map-template-gallery";
+export type { UserProfile } from "./sso-login";
+export type { WebhookSubscription, WebhookPayload } from "./webhook-manager";

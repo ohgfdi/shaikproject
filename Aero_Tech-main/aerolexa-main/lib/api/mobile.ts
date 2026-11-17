@@ -41,10 +41,9 @@ export async function fetchDashboardData(
   });
 
   const activity = await prisma.auditLog.findMany({
-    where: { tenantId },
+    where: { organizationId },
     select: {
       id: true,
-      message: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
@@ -66,7 +65,6 @@ export async function fetchDashboardData(
     })),
     activity: activity.map((a) => ({
       id: a.id,
-      message: a.message || "Activity recorded",
       timestamp: a.createdAt,
     })),
   };
@@ -156,10 +154,12 @@ export async function exportMobileData(
   tenantId: string,
   format: "csv" | "json"
 ): Promise<{ success: boolean; data: string; filename: string }> {
-  const records = await prisma.$queryRaw`SELECT * FROM tenant_data WHERE "tenantId" = ${tenantId}`;
+  const records = await prisma.$queryRaw<
+    Array<{ id: string; value: string; label: string; createdAt: Date }>
+  >`SELECT * FROM tenant_data WHERE "tenantId" = ${tenantId}`;
 
   let csvContent = "";
-  const jsonData = [];
+  const jsonData: Array<{ id: string; value: string; label: string; createdAt: Date }> = [];
 
   // Transform to both formats
   if (format === "csv") {

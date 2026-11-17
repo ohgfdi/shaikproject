@@ -7,6 +7,7 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
+import type { Industry } from "@/lib/industry";
 
 export type PartnershipTier = "startup" | "growth" | "enterprise" | "strategic";
 
@@ -180,7 +181,7 @@ export async function registerDeal(
     closed_at: dealStage === "closed_won" ? new Date() : undefined,
     revenue_share_percent: 20, // Would look up partner tier
     revenue_share_credited: dealStage === "closed_won" ? Math.round(dealValue * 0.2) : 0,
-    co_selling: dealStage !== "lead", // Co-selling enabled for non-lead stages
+    co_selling: dealStage === "lead" ? false : "joint", // Co-selling enabled for non-lead stages
     activities: [],
   };
 
@@ -265,7 +266,7 @@ export async function GET(
             closed_at: undefined,
             revenue_share_percent: 25,
             revenue_share_credited: 18750,
-            co_selling: true,
+            co_selling: "joint",
             activities: [
               {
                 id: "act_1",

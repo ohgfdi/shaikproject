@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET } from "@/app/api/analytics/scenario-modeling/route";
+import { GET as upstreamGET } from "@/lib/analytics/scenario-modeling";
 
 export const dynamic = "force-dynamic";
 
@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
  * Runs predictive scenario modeling with what-if analysis, Monte Carlo simulation, and sensitivity analysis.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }

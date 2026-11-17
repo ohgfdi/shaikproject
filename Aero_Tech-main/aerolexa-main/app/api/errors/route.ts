@@ -33,22 +33,24 @@ export async function POST(request: Request) {
       .passthrough();
 
     const parsed = report.safeParse(body);
-    const base = parsed
+    const base = parsed.success
       ? {
-          fingerprint: parsed.fingerprint,
-          name: parsed.name,
-          message: parsed.message,
-          stack: parsed.stack,
-          path: parsed.path,
-          requestId: parsed.requestId,
-          userId: parsed.userId,
-          workspaceId: parsed.workspaceId,
+          fingerprint:
+            parsed.data.fingerprint ??
+            fingerprint(parsed.data.name ?? "Error", parsed.data.stack ?? ""),
+          name: parsed.data.name ?? "Error",
+          message: parsed.data.message ?? "",
+          stack: parsed.data.stack ?? "",
+          path: parsed.data.path ?? "",
+          requestId: parsed.data.requestId,
+          userId: parsed.data.userId ?? ctx.user.id,
+          workspaceId: parsed.data.workspaceId ?? ctx.workspace.id,
         }
       : toReport(body.err, {
           path: body.path,
-          requestId: currentRequestId(),
-          userId: ctx?.id,
-          workspaceId: ctx?.workspaceId,
+          requestId: currentRequestId() ?? undefined,
+          userId: ctx.user.id,
+          workspaceId: ctx.workspace.id,
         });
 
     // Upsert: de-duplicate by fingerprint, update lastSeenAt + count
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
       where: { fingerprint: base.fingerprint },
     });
 
-    const now = Date.now();
+    const now = new Date();
 
     if (existing) {
       await prisma.errorReport.update({
@@ -120,11 +122,8 @@ export async function GET(request: Request) {
       where.tags = { has: tag };
     }
 
-    const [reports, total] = await prisma.$executeRaw`UNKNOWN`
-      // We'll use a raw query to get paginated results
-      ;
+    const total = await prisma.errorReport.count({ where });
 
-    // Fallback: use find_many with basic filtering
     const all = await prisma.errorReport.findMany({
       where,
       orderBy: { lastSeenAt: "desc" },
@@ -132,8 +131,9 @@ export async function GET(request: Request) {
       skip: cursor ? 1 : 0,
     });
 
-    const nextCursor = all.length > limit ? all[0].fingerprint : undefined;
-    const page = all.slice(limit);
+    const hasMore = all.length > limit;
+    const page = all.slice(0, limit);
+    const nextCursor = hasMore ? page[page.length - 1]?.fingerprint : undefined;
 
     return ok({
       reports: page.map((r) => ({

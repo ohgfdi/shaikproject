@@ -31,7 +31,7 @@ function movingAverage(data: number[], period: number): number[] {
     let sum = 0;
     let count = 0;
     for (let j = 0; j < period && (i - j) >= 0; j++) {
-      sum += data[i - j];
+      sum += data[i - j] ?? 0;
       count++;
     }
     result.push(sum / count);
@@ -53,8 +53,8 @@ function linearRegressionForecast(data: number[], periodsAhead: number): { slope
   let denominator = 0;
   
   for (let i = 0; i < n; i++) {
-    numerator += (xValues[i] - meanX) * (data[i] - meanY);
-    denominator += Math.pow(xValues[i] - meanX, 2);
+    numerator += ((xValues[i] ?? 0) - meanX) * ((data[i] ?? 0) - meanY);
+    denominator += Math.pow((xValues[i] ?? 0) - meanX, 2);
   }
 
   const slope = numerator / denominator;
@@ -81,10 +81,10 @@ function forecastLinearRegression(data: number[], periodsAhead: number): number[
 function exponentialSmoothing(data: number[], alpha: number): number[] {
   const alphaVal = Math.max(0, Math.min(1, alpha));
   const result: number[] = [];
-  let level = data[0];
+  let level = data[0] ?? 0;
 
   for (let i = 0; i < data.length; i++) {
-    level = alphaVal * data[i] + (1 - alphaVal) * level;
+    level = alphaVal * (data[i] ?? 0) + (1 - alphaVal) * level;
     result.push(level);
   }
   return result;
@@ -131,9 +131,8 @@ export const PredictiveAnalytics: React.FC<{
         // Use last `period` values as simple forecast
         const maPeriod = Math.min(5, data.length);
         const ma = movingAverage(data, maPeriod);
-        forecastValues = forecastValues || [];
         // Simple: forecast as last moving average value
-        const lastMA = ma[ma.length - 1];
+        const lastMA = ma[ma.length - 1] ?? 0;
         forecastValues = Array.from({ length: horizon }, () => lastMA);
         setForecast({
           series: forecastValues.map((y, i) => ({
@@ -163,7 +162,7 @@ export const PredictiveAnalytics: React.FC<{
 
       case "exponential-smoothing":
         const smoothed = exponentialSmoothing(data, 0.3);
-        const lastSmoothed = smoothed[smoothed.length - 1];
+        const lastSmoothed = smoothed[smoothed.length - 1] ?? 0;
         forecastValues = Array.from({ length: horizon }, () => lastSmoothed);
         setForecast({
           series: forecastValues.map((y, i) => ({
@@ -208,7 +207,7 @@ export const PredictiveAnalytics: React.FC<{
           <div className="forecast-method">
             <strong>Method:</strong> {method}
             <span>• {horizon}-period forecast</span>
-            <span>• {Math.round(confidence * 100)}% confidence</span>
+            <span>• {Math.round(forecast.confidence * 100)}% confidence</span>
           </div>
 
           <div className="forecast-chart">

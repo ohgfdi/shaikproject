@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from "react";
 
 import { prisma } from "@/lib/db";
-import { getInstalledPlugins, executePlugin } from "@/lib/extensions/plugin-sdk";
+import { getInstalledPlugins, executePlugin as executePluginSdk } from "@/lib/extensions/plugin-sdk";
 
 export interface PluginCard {
   id: string;
@@ -54,14 +54,14 @@ export const PluginStore: React.FC = () => {
           description: p.description,
           version: p.version,
           author: p.author,
-          type: p.type,
-          price: p.price,
+          type: p.type as PluginCard["type"],
+          price: p.price as PluginCard["price"],
           rating: p.rating,
           reviews: p.reviews,
           installs: p.installCount,
           isInstalled: false,
-          previewImage: p.previewImage,
-          priceAmount: p.priceAmount,
+          previewImage: p.previewImage ?? undefined,
+          priceAmount: p.priceAmount ?? undefined,
         }))
       );
 
@@ -73,7 +73,7 @@ export const PluginStore: React.FC = () => {
           description: p.description,
           version: p.version,
           author: p.author,
-          type: p.type,
+          type: p.type as PluginCard["type"],
           price: "free", // SDK plugins are free
           rating: 5,
           reviews: 0,
@@ -112,7 +112,7 @@ export const PluginStore: React.FC = () => {
   };
 
   const executePlugin = (pluginId: string, args: any) => {
-    return executePlugin(pluginId, args);
+    return executePluginSdk(pluginId, args);
   };
 
   if (loading) {
@@ -126,15 +126,15 @@ export const PluginStore: React.FC = () => {
         <p>Extend your analytics capabilities</p>
       </div>
 
-      <div class="store-tabs">
-        <button className={/* tab selection logic */}>Marketplace</button>
-        <button className={/* tab selection logic */}>My Plugins</button>
+      <div className="store-tabs">
+        <button className="tab active">Marketplace</button>
+        <button className="tab">My Plugins</button>
       </div>
 
-      <div class="store-content">
+      <div className="store-content">
         {/* Marketplace tabs would go here */}
 
-        <div class="plugins-grid">
+        <div className="plugins-grid">
           {loading ? (
             <div>Loading plugins...</div>
           ) : plugins.length === 0 ? (
@@ -161,7 +161,7 @@ export const PluginStore: React.FC = () => {
                 </div>
               )}
 
-              <div class="plugin-info">
+              <div className="plugin-info">
                 <h3 className="plugin-name">{plugin.name}</h3>
                 <p className="plugin-description">{plugin.description}</p>
                 <div className="plugin-rating">

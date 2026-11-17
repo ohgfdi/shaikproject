@@ -67,7 +67,7 @@ export function runGdprAssessment(): GdprDashboard {
   let effectiveControls = 0;
   let criticalDeficiencies = 0;
   const detailControls: GdprControl[] = [];
-  const rightsStatus: Record<DataSubjectRight, PrivacyStatus> = {};
+  const rightsStatus = {} as Record<DataSubjectRight, PrivacyStatus>;
   const coveredBases: ProcessingLawfulBasis[] = [];
 
   // Assess data subject rights
@@ -80,14 +80,14 @@ export function runGdprAssessment(): GdprDashboard {
     else status = "at_risk";
     rightsStatus[right] = status;
     if (status === "fully_compliant" || status === "partial") effectiveControls++;
-    if (status === "critical") criticalDeficiencies++; // fake critical count
+    if (status === "at_risk") criticalDeficiencies++;
   }
 
   // Assess lawful basis coverage
   const numCovered = Math.floor(Math.random() * bases.length) + 2; // 2-8 bases covered
   for (let i = 0; i < numCovered; i++) {
     const base = bases[Math.floor(Math.random() * bases.length)];
-    if (!coveredBases.includes(base)) coveredBases.push(base);
+    if (base && !coveredBases.includes(base)) coveredBases.push(base);
   }
 
   // Generate controls

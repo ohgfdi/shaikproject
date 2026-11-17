@@ -64,6 +64,7 @@ export function runSoc2Assessment(): Soc2Dashboard {
   let criticalDeficiencies = 0;
   let highDeficiencies = 0;
   const detailControls: Soc2Control[] = [];
+  const criterionScores = {} as Record<TrustServiceCriterion, number>;
 
   for (const criterion of criteria) {
     // Typical control count per criterion
@@ -74,6 +75,7 @@ export function runSoc2Assessment(): Soc2Dashboard {
 
     const criterionScore = Math.round((criterionEffective / totalControls) * 100);
     totalScore += criterionScore;
+    criterionScores[criterion] = criterionScore;
     effectiveControls += criterionEffective;
     if (critCriticalDef > 0) criticalDeficiencies += critCriticalDef;
     if (critHighDef > 0) highDeficiencies += critHighDef;
@@ -93,7 +95,7 @@ export function runSoc2Assessment(): Soc2Dashboard {
         frequency: "quarterly",
         status: isEffective ? "operating_effective" : "deficient",
         evidence_path: `/evidence/soc2/${criterion}/control_${i}.md`,
-        test_results: passed ? {
+        test_results: isEffective ? {
           passed: Math.random() > 0.1,
           evidence: `Evidence_${criterion}_${i}.md`,
           tested_by: "Compliance Team",
@@ -113,6 +115,7 @@ export function runSoc2Assessment(): Soc2Dashboard {
     detailControls.push({
       id: `criterion_${criterion}`,
       criterion,
+      control_id: `CT-${criterion}`,
       title: `SOC 2 ${criterion.toUpperCase()} Criterion`,
       description: `Trust Service Criterion: ${criterion}`,
       testing_procedure: `Annual third-party audit for ${criterion}`,
@@ -128,10 +131,7 @@ export function runSoc2Assessment(): Soc2Dashboard {
 
   return {
     overallScore,
-    criterionScores: detailControls.reduce((acc, curr) => {
-      acc[curr.criterion] = curr.overallScore;
-      return acc;
-    }, {} as Record<TrustServiceCriterion, number>),
+    criterionScores,
     totalControls: criteria.length * 16,
     effectiveControls,
     criticalDeficiencies,

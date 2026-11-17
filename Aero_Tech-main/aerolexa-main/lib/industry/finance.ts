@@ -172,7 +172,7 @@ export const FinanceTemplate: IndustryTemplate = {
 
 /** Get the active industry template. */
 export function getIndustryTemplate(industry: Industry): IndustryTemplate {
-  const templates: Record<Industry, IndustryTemplate> = {
+  const templates: Partial<Record<Industry, IndustryTemplate>> = {
     finance: FinanceTemplate,
     // Other templates will be added in subsequent phases
     // healthcare: HealthcareTemplate,
@@ -207,9 +207,7 @@ export function formatKPIValue(
     case "count":
       return typeof value === "number" ? `${value.toLocaleString()}` : String(value);
     case "time":
-      return typeof value === "object"
-        ? value.toISOString()
-        : String(value);
+      return value instanceof Date ? value.toISOString() : String(value);
     default:
       return String(value);
   }

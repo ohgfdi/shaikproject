@@ -84,16 +84,18 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
           id: plugin.id,
           name: plugin.name,
           description: plugin.description,
-          category: plugin.category,
+          category: plugin.category as MarketplacePlugin["category"],
           price: plugin.price as "free" | "paid",
-          priceAmount: plugin.priceAmount,
+          priceAmount: plugin.priceAmount ?? undefined,
           rating: plugin.rating,
           reviews: plugin.reviews,
-          imageUrl: plugin.imageUrl,
+          imageUrl: plugin.imageUrl ?? undefined,
           isInstalled: plugin.isInstalled,
           installCount: plugin.installCount,
-          supportedPlatforms: plugin.supportedPlatforms,
-          previewUrl: plugin.previewUrl,
+          supportedPlatforms: Array.isArray(plugin.supportedPlatforms)
+            ? plugin.supportedPlatforms.filter((p): p is string => typeof p === "string")
+            : undefined,
+          previewUrl: plugin.previewUrl ?? undefined,
         }))
       );
     } catch (error) {

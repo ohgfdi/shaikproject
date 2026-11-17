@@ -11,6 +11,11 @@ import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
+import type { AuditEvent } from "@/lib/governance/audit-management";
+import type { AnomalyDetection, PredictiveScore } from "@/lib/analytics/predictive-engine";
+
+import type { AgentType, Industry } from "./agent-orchestration";
+import type { KnowledgeEntry } from "./industry-knowledge-bases";
 
 export type DecisionRiskLevel = "low" | "medium" | "high" | "critical";
 
@@ -46,14 +51,17 @@ export interface DecisionProposal {
 /** Execute a decision with risk-based approval. */
 export async function executeDecision(
   proposal: DecisionProposal
-): {
+): Promise<{
   success: boolean;
   executed_action?: string;
   approval_status: "approved" | "rejected" | "pending";
   audit_event?: AuditEvent;
-} {
+}> {
   // Check governance policies first
   const governanceCheck = checkGovernancePolicies({
+    id: `event_${Date.now()}`,
+    tenant_id: "tenant_1",
+    timestamp: new Date(),
     event_type: AuditEventType.configuration_change,
     resource_type: "decision_engine",
     risk_level: proposal.risk_level,
@@ -116,9 +124,21 @@ export async function executeDecision(
       return {
         success: governanceCheck.passed,
         approval_status: governanceCheck.passed ? "approved" : "pending",
-        audit_event: governanceCheck.flags.length > 0
-          ? governanceCheck.flags[0]
-          : undefined,
+        audit_event: {
+          id: `audit_${Date.now()}_medium`,
+          tenant_id: "tenant_1",
+          event_type: AuditEventType.configuration_change,
+          user_id: "system",
+          user_role: "system",
+          timestamp: new Date(),
+          ip_address: "127.0.0.1",
+          user_agent: "autonomous-decision-engine",
+          resource_type: "decision_engine",
+          changes: { decision_id: proposal.id },
+          compliance_framework: "SOC2",
+          status: governanceCheck.passed ? "success" : "blocked",
+          risk_level: "medium",
+        },
       };
 
     case "high":
@@ -198,19 +218,7 @@ export async function GET(
         risk_level: "medium" as DecisionRiskLevel,
         confidence: 87,
         supporting_evidence: {
-          predictive_score: {
-            id: "pred_1",
-            metric: "revenue",
-            industry: "saas",
-            current_value: 45000,
-            predicted_value: 52000,
-            confidence: 89,
-            trend: "up",
-            prediction_horizon: "30d",
-            model_version: "2.0.0",
-            last_updated: new Date(),
-            data_points_used: 90,
-          },
+          knowledge_entries: [],
         },
         required_approvals: ["admin_1", "finance_manager"],
         status: "pending",

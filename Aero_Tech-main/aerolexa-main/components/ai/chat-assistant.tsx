@@ -147,9 +147,10 @@ export const AIChatAssistant: React.FC = () => {
 
     return {
       type: chartType,
-      title: chartTypeMap[Object.keys(chartTypeMap).find(
-        (k) => lowerText.includes(k)
-      )] || "Chart",
+      title:
+        chartTypeMap[
+          Object.keys(chartTypeMap).find((k) => lowerText.includes(k)) ?? ""
+        ] ?? "Chart",
       xAxis: dimensionMatch ? dimensionMatch[0] : "time",
       yAxis: metricMatch ? metricMatch[0].toLowerCase() : "value",
       filters: extractFilters(text),
@@ -290,7 +291,7 @@ export const AIChatAssistant: React.FC = () => {
         <p>Natural language analytics</p>
       </div>
 
-      <div className="chat-messages" ref={/* scroll ref */}>
+      <div className="chat-messages">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -329,9 +330,8 @@ export const AIChatAssistant: React.FC = () => {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask me about your data..." 
+          placeholder="Ask me about your data..."
           rows={1}
-          maxRows={3}
           className="chat-textarea"
         />
         <button

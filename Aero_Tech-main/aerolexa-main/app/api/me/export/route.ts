@@ -19,7 +19,7 @@ import { buildPortabilityBundle } from "@/lib/server/portability";
 export async function GET() {
   try {
     const ctx = await requireAuth();
-    const bundle = await buildPortabilityBundle(ctx);
+    const bundle = await buildPortabilityBundle(ctx.user.id);
 
     // Date-stamped filename: a subject requesting access twice should not have
     // to guess which download is the current one.

@@ -1,7 +1,7 @@
 import { BRAND_STORAGE_KEYS, brandKey } from "@/lib/brand";
 
 export type ThemeName = "dark" | "light";
-export type AccentName = "teal" | "blue" | "violet";
+export type AccentName = "teal" | "blue" | "violet" | "amber" | "green" | "rose";
 
 export const THEME_COOKIE = brandKey(BRAND_STORAGE_KEYS.theme);
 export const ACCENT_COOKIE = brandKey(BRAND_STORAGE_KEYS.accent);

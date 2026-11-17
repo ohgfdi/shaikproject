@@ -8,7 +8,10 @@
  */
 import type { NextRequest } from "next/server";
 
+import type { GovernanceFramework } from "@/lib/governance/audit-management";
 import { prisma } from "@/lib/db";
+
+import type { AgentType, Industry } from "./agent-orchestration";
 
 export type AgentTier = "free" | "pro" | "enterprise" | "custom";
 
@@ -77,10 +80,11 @@ export const AgentMarketplace: AgentListing[] = [
     capabilities: ["portfolio_analysis", "roi_calculation", "risk_scoring"],
     is_active: true,
     trial_available: false,
+    trial_duration_days: 0,
     install_endpoint: "/api/ai/agent-orchestration?agent_types=analysis&industry=finance",
     created_at: new Date("2024-02-01"),
     created_by: "agent_creator_1",
-    compliance_frameworks: ["SOC2", "PCI-DSS"],
+    compliance_frameworks: ["SOC2", "PCI_DSS"],
     version: "2.1.0",
   },
   // SaaS agents
@@ -117,6 +121,7 @@ export const AgentMarketplace: AgentListing[] = [
     capabilities: ["churn_analysis", "retention_workflows", "renewal_automation"],
     is_active: true,
     trial_available: false,
+    trial_duration_days: 0,
     install_endpoint: "/api/ai/agent-orchestration?agent_types=execution&industry=saas",
     created_at: new Date("2024-03-01"),
     created_by: "agent_creator_2",
@@ -141,7 +146,7 @@ export const AgentMarketplace: AgentListing[] = [
     install_endpoint: "/api/ai/agent-orchestration?agent_types=research&industry=retail",
     created_at: new Date("2024-01-25"),
     created_by: "agent_creator_3",
-    compliance_frameworks: ["PCI-DSS", "GDPR"],
+    compliance_frameworks: ["PCI_DSS", "GDPR"],
     version: "1.3.0",
   },
   {
@@ -161,7 +166,7 @@ export const AgentMarketplace: AgentListing[] = [
     install_endpoint: "/api/ai/agent-orchestration?agent_types=analysis&industry=retail",
     created_at: new Date("2024-02-15"),
     created_by: "agent_creator_3",
-    compliance_frameworks: ["PCI-DSS"],
+    compliance_frameworks: ["PCI_DSS"],
     version: "2.0.0",
   },
   // Manufacturing agents
@@ -198,10 +203,11 @@ export const AgentMarketplace: AgentListing[] = [
     capabilities: ["predictive_maintenance", "maintenance_scheduling", "equipment_optimization"],
     is_active: true,
     trial_available: false,
+    trial_duration_days: 0,
     install_endpoint: "/api/ai/agent-orchestration?agent_types=execution&industry=manufacturing",
     created_at: new Date("2024-03-15"),
     created_by: "agent_creator_4",
-    compliance_frameworks: ["ISO 9001"],
+    compliance_frameworks: ["SOC2"],
     version: "2.3.0",
   },
 ];
@@ -235,7 +241,7 @@ export function getAgentTiers(): Record<AgentTier, {
     free: { min_price: 0, max_price: 0, description: "Free agents (community edition)" },
     pro: { min_price: 50, max_price: 199, description: "Professional agents for growing businesses" },
     enterprise: { min_price: 200, max_price: 499, description: "Enterprise agents for large organizations" },
-    custom: { min_price: 500, max_price: null, description: "Custom agents with tailored capabilities" },
+    custom: { min_price: 500, max_price: 500, description: "Custom agents with tailored capabilities" },
   };
 }
 
@@ -314,7 +320,7 @@ export async function POST(request: Request): Promise<Response> {
       tier,
     } = body;
 
-    const agent = getAgentById(agentId);
+    const agent = getAgentById(agent_id);
 
     if (!agent) {
       return new Response(

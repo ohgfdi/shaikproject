@@ -4,6 +4,17 @@
  * Enum of preset rate limits for common use cases.
  * Used by the rate-limit middleware to configure per-endpoint limits.
  */
+export interface RateLimitConfig {
+  limit: number;
+  windowMs: number;
+}
+
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds: number;
+}
+
 export enum RATE_LIMITS {
   /** 10 login attempts per 15 minutes per IP */
   login = 10,

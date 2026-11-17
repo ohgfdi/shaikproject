@@ -14,8 +14,9 @@
 
 // TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - filing automation is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
+
+const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 import { notify } from "@/lib/server/activity";
-import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const REMINDER_OFFSETS = [7, 3, 0] as const;
 export type ReminderKind = "T-7" | "T-3" | "T-0";
@@ -78,7 +79,7 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
   const today = now.toISOString().slice(0, 10);
   const windowEnd = new Date(now.getTime() + 8 * DAY_MS).toISOString().slice(0, 10);
 
-  const runs = await withTenantDb(ctx, (db) =>
+  const runs = await withGlobalDb((db) =>
     db.complianceFilingRun.findMany({
       where: {
         stage: { notIn: ["filed", "acknowledged"] },
@@ -113,7 +114,7 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
             message: `${run.engagement.name} — ${run.title} is due ${run.dueDate}. Open Firm Operations to see what is outstanding.`,
           });
         }
-        await withTenantDb(ctx, (db) =>
+        await withGlobalDb((db) =>
       db.complianceFilingEvent.create({
         data: {
           runId: run.id,
@@ -163,7 +164,7 @@ export async function runFilingAutomation(now: Date = new Date()): Promise<Filin
 
 /** Owners and admins of the organization, cached per pass. */
 async function escalationRecipients(organizationId: string): Promise<string[]> {
-  const members = await withTenantDb(ctx, (db) =>
+  const members = await withGlobalDb((db) =>
     db.organizationMember.findMany({
       where: { organizationId, role: { in: ["OWNER", "ADMIN"] } },
       select: { userId: true },

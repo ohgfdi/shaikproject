@@ -53,6 +53,7 @@ export async function enqueue(
       maxAttempts,
       attempts: 0,
       createdAt: now,
+      priority: 0,
 
       // If a delay is specified, set the status to pending but track the delay
       ...(delayMs > 0 && { finishedAt: null }),
@@ -113,8 +114,7 @@ export async function retryJob(jobId: string) {
       where: { id: jobId },
       data: {
         status: "failed" as JobStatus,
-        errorMsg: "Max attempts exceeded - moved to dead-letter queue",
-        errorCode: "MAX_ATTEMPTS_EXCEEDED",
+        lastError: "Max attempts exceeded - moved to dead-letter queue",
         attempts: newAttempts,
       },
     });
@@ -167,8 +167,7 @@ export async function failJob(
     where: { id: jobId },
     data: {
       status: "failed" as JobStatus,
-      errorMsg: error.message,
-      errorCode: error.code,
+      lastError: error.message,
       attempts: {
         increment: 1,
       },

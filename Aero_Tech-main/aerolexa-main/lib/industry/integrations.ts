@@ -51,6 +51,7 @@ export const SalesforceIntegration: IntegrationConfig = {
   apiVersion: "v57.0",
   scopes: ["api", "full"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Pre-built HubSpot integration configuration. */
@@ -64,6 +65,7 @@ export const HubSpotIntegration: IntegrationConfig = {
   apiVersion: "v3",
   scopes: ["crm.read", "contacts.read", "marketing.read"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Pre-built Jira integration configuration. */
@@ -77,6 +79,7 @@ export const JiraIntegration: IntegrationConfig = {
   apiVersion: "3",
   scopes: ["read:jira-work", "read:jira-user"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Pre-built Snowflake integration configuration. */
@@ -91,6 +94,7 @@ export const SnowflakeIntegration: IntegrationConfig = {
   // Snowflake uses account identifier + username/password or key pair
   scopes: ["SELECT", "MONITOR", "USAGE"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Pre-built Slack integration configuration. */
@@ -103,6 +107,7 @@ export const SlackIntegration: IntegrationConfig = {
   redirectUri: process.env.SLACK_REDIRECT_URI,
   scopes: ["chat:write", "channels.read", "groups.read"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Pre-built Mailchimp integration configuration. */
@@ -116,6 +121,7 @@ export const MailchimpIntegration: IntegrationConfig = {
   apiVersion: "3.0",
   scopes: ["campaign.read", "campaign.write", "segment.read"],
   isConnected: false,
+  errorCount: 0,
 };
 
 /** Map integration type to its config. */

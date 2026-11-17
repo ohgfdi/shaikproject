@@ -20,8 +20,7 @@ import { prisma } from "@/lib/db";
 
 // Initialize Stripe with secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-09-30",
-  // @ts-expect-error -- the installed Stripe types do not expose `timeout`
+  apiVersion: "2026-10-28.endive",
   timeout: 30000,
 });
 
@@ -93,7 +92,7 @@ export async function createPortalSession({
 export async function handleWebhook(
   request: Request
 ): Promise<NextResponse> {
-  const sig = request.headers.get("stripe-signature") as string | null;
+  const sig = request.headers.get("stripe-signature") as string | null ?? '';
 
   let event: Stripe.Event;
 
@@ -104,9 +103,10 @@ export async function handleWebhook(
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err) {
-    console.error(`Webhook signature verification failed: ${err.message}`);
+    const error = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`Webhook signature verification failed: ${error}`);
     return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
+      { error: `Webhook Error: ${error}` },
       { status: 400 }
     );
   }

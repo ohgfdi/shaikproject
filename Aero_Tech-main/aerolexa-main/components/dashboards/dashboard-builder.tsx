@@ -124,6 +124,7 @@ export function DashboardBuilder(props: DashboardEditorProps) {
   /** Shareable row-level detail URL for the current drill (null when the widget has no dataset). */
   const [drillUrl, setDrillUrl] = useState<string | null>(null);
 
+  // Drill-through handler for PBI visual map widgets
   // ---- Realtime co-editing (ROADMAP 7.2): Yjs CRDT widget sync -------------
   // Remote widget states fold into the active page (last-writer-wins per
   // widget via CRDT versions); local edits diff into room ops. Presence
@@ -875,6 +876,10 @@ export function DashboardBuilder(props: DashboardEditorProps) {
                       onSlicerToggle={(value) =>
                         onSlicerToggle(activePage.widgets.find((o) => o.id === w.id) ?? w, value)
                       }
+                      activePage={activePage}
+                      onTileClick={onTileClick}
+                      setDrillUrl={setDrillUrl}
+                      setDrill={setDrill}
                     />
                   </div>
                 </Card>
@@ -959,6 +964,10 @@ function CrossFilterableBody({
   onPick,
   slicerSelected,
   onSlicerToggle,
+  activePage,
+  onTileClick,
+  setDrillUrl,
+  setDrill,
 }: {
   widget: DashboardWidget;
   original: DashboardWidget;
@@ -969,6 +978,10 @@ function CrossFilterableBody({
   onPick: (value: string, opts?: { drill?: boolean }) => void;
   slicerSelected: string[];
   onSlicerToggle: (value: string) => void;
+  activePage: ReportPage;
+  onTileClick: (widget: DashboardWidget, value: string, opts?: { drill?: boolean }) => void;
+  setDrillUrl: (url: string | null) => void;
+  setDrill: (drill: DrillThroughResult | null) => void;
 }) {
   if (widget.type === "slicer") {
     return <SlicerBody widget={widget} selected={slicerSelected} onToggle={onSlicerToggle} />;
@@ -1172,7 +1185,26 @@ function WidgetBody({
   }
   if (w.type === "pbi-visual" && w.pbiVisual) {
     if (w.pbiVisual.kind === ("map" as string)) {
-      return <ChoroplethWidget spec={w.pbiVisual} scope={w.mapScope ?? "countries"} title={w.title} />;
+      return (
+        <ChoroplethWidget
+          spec={w.pbiVisual}
+          widgetId={w.id}
+          widgets={activePage.widgets}
+          scope={w.mapScope ?? "countries"}
+          title={w.title}
+          onTileClick={onTileClick}
+          onDrillClick={(widget, region) => {
+            if (!widget.datasetId) return;
+            const drill = drillThroughUrl({
+              datasetId: widget.datasetId,
+              filters: [{ column: widget.slicer?.column ?? "", value: region }],
+              sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
+            });
+            setDrillUrl(drill);
+            setDrill({ column: widget.slicer?.column ?? "", value: region, totalRows: 0 });
+          }}
+        />
+      );
     }
     return (
       <PbiVisual
@@ -1703,14 +1735,25 @@ const PbiVisual = dynamic(() => import("@/components/charts/pbi-visual").then((m
 
 function ChoroplethWidget({
   spec,
+  widgetId,
+  widgets,
   scope,
   title,
+  onTileClick,
+  onDrillClick,
 }: {
   spec: { categories: string[]; values: number[] };
+  widgetId?: string;
+  widgets: DashboardWidget[];
   scope: "us-states" | "countries";
   title: string;
+  onTileClick: (widget: DashboardWidget, value: string) => void;
+  onDrillClick: (widget: DashboardWidget, region: string) => void;
 }) {
   const data = spec.categories.map((region, i) => ({ region, value: spec.values[i] ?? 0 }));
+  const widget = widgetId
+    ? widgets.find((w) => w.id === widgetId)
+    : widgets.find((w) => w.title === title);
   return (
     <ChoroplethMap
       title={title}
@@ -1720,9 +1763,6 @@ function ChoroplethWidget({
       height={260}
       onRegionClick={(region) => {
         // Select this region as a cross-filter
-        const widget = spec?.widgetId
-          ? widgetsLive.current.find((w) => w.id === spec.widgetId)
-          : widgetsLive.current.find((w) => w.title === title);
         if (widget?.type === "chart") {
           const { column } = widgetCategories(widget);
           if (column) {
@@ -1732,17 +1772,8 @@ function ChoroplethWidget({
       }}
       onDrillClick={(region) => {
         // Shift-click drill-through to detail page
-        const widget = spec?.widgetId
-          ? widgetsLive.current.find((w) => w.id === spec.widgetId)
-          : widgetsLive.current.find((w) => w.title === title);
         if (widget?.type === "chart" && widget.datasetId) {
-          const drill = drillThroughUrl({
-            datasetId: widget.datasetId,
-            filters: [{ column: widget.slicer?.column ?? "", value: region }],
-            sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
-          });
-          setDrillUrl(drill);
-          setDrill({ column: widget.slicer?.column ?? "", value: region, totalRows: 0 });
+          onDrillClick(widget, region);
         }
       }}
     />

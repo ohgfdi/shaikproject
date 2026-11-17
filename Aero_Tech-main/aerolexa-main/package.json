@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.6.1",
   "private": true,
-  "description": "Ledgerly \u2014 from raw data to boardroom decisions. Data-driven analytics workspace for CA firms, consultants & SMBs.",
+  "description": "Ledgerly — from raw data to boardroom decisions. Data-driven analytics workspace for CA firms, consultants & SMBs.",
   "license": "MIT",
   "engines": {
     "node": ">=18.18.0"
@@ -163,6 +163,7 @@
     "prettier": "^3.9.6",
     "prisma": "^7.10.0",
     "sharp": "^0.35.5",
+    "stripe": "^23.1.0",
     "supertest": "^7.0.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.2",

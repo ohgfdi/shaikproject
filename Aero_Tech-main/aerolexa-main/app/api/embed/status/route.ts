@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { rlsConfigError, rlsEnabled, rlsEnforcementStatus } from "@/lib/server/rls-status";
+import { rlsConfigError, rlsEnabled, rlsEnforcementStatus } from "@/lib/server/tenancy";
 
 /** GET /api/embed/status — overall embed service status including RLS posture. */
 export async function GET(_request: Request) {
@@ -10,9 +10,9 @@ export async function GET(_request: Request) {
     rlsEnabled: rlsEnabled(),
     rlsConfigError: rlsConfigError(),
     rlsPosture: {
-      severity: posture.severity,
-      summary: posture.summary,
-      remedy: posture.remedy,
+      role: posture.role,
+      tablesWithRls: posture.tablesWithRls,
+      tablesWithoutForce: posture.tablesWithoutForce,
     },
     ssoEnabled: Boolean(process.env.SSO_ENABLED),
   });

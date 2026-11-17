@@ -98,9 +98,13 @@ export function assignVariant(
   const hashFraction = parseInt(assignmentHash, 16) / Number("0xffffffffffffffff");
 
   // Allocate variants based on allocation percentages
+  const primaryVariant = variants[0];
+  if (!primaryVariant) {
+    throw new Error("At least one variant is required for assignment.");
+  }
   let cumulative = 0;
-  let selectedVariantId = variants[0].id;
-  let selectedVariantName = variants[0].name;
+  let selectedVariantId = primaryVariant.id;
+  let selectedVariantName = primaryVariant.name;
 
   for (const variant of variants) {
     cumulative += variant.allocationPercentage;
@@ -313,9 +317,9 @@ export async function GET(
     }
 
     // Default: assign variant
-    return GET(new NextRequest(`/${request.url.pathname}?action=assign`, {
-      url: new URL(request.url),
-    }));
+    const url = new URL(request.url);
+    url.searchParams.set("action", "assign");
+    return GET(new NextRequest(url));
   } catch (error) {
     console.error("A/B test integration error:", error);
     return new Response(

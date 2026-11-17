@@ -114,9 +114,10 @@ export async function GET(
       const tier = (searchParams.get("tier") || "growth") as CommissionTier;
       const arR = parseFloat(searchParams.get("arR") || "0");
       const customerCount = parseInt(searchParams.get("customerCount") || "0", 10);
-      const windows = { startup: 90, growth: 60, enterprise: 30, elite: 14 };
-      const eligible = arR >= (tier === "startup" ? 0 : tier === "growth" ? 100000 : tier === "enterprise" ? 500000 : 2000000) && customerCount >= (tier === "startup" ? 0 : tier === "growth" ? 5 : tier === "enterprise" ? 15 : 50);
-      return new Response(JSON.stringify({ tier, eligible, minARR: tierDefs[tier]?.min, minCustomers: tierDefs[tier]?.minCustomers }), {
+      const minARR = tier === "startup" ? 0 : tier === "growth" ? 100000 : tier === "enterprise" ? 500000 : 2000000;
+      const minCustomers = tier === "startup" ? 0 : tier === "growth" ? 5 : tier === "enterprise" ? 15 : 50;
+      const eligible = arR >= minARR && customerCount >= minCustomers;
+      return new Response(JSON.stringify({ tier, eligible, minARR, minCustomers }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });

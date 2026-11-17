@@ -4050,3 +4050,158 @@ model PracticeInvoice {
   @@index([organizationId, status])
   @@index([engagementId, issuedOn])
 }
+
+// ---------------------------------------------------------------------------
+// Platform feature tables (multi-tenancy, feature flags, audit, mobile,
+// marketplace, webhooks). These back the standalone feature modules added by
+// the enterprise phases; they are intentionally separate from the Workspace
+// tenancy model used by the core analytics app.
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id                   String   @id
+  name                 String
+  slug                 String   @unique
+  plan                 String   @default("free")
+  status               String   @default("active")
+  maxDashboards        Int      @default(3)
+  maxStorageGB         Int      @default(1)
+  maxApiCallsPerMinute Int      @default(60)
+  features             Json     @default("[]")
+  primaryColor         String   @default("#0052cc")
+  secondaryColor       String   @default("#e0e7ff")
+  logoUrl              String?
+  faviconUrl           String?
+  customDomain         String?  @unique
+  theme                String   @default("system")
+  customJs             String?
+  customCss            String?
+  trialEndsAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model FeatureFlag {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  enabled        Boolean  @default(false)
+  rollout        Int      @default(0)
+  userId         String?
+  workspaceId    String?
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id             String   @id
+  organizationId String?
+  workspaceId    String?
+  userId         String?
+  action         String
+  targetType     String
+  targetId       String?
+  ipAddress      String?
+  userAgent      String?
+  details        Json?
+  status         String   @default("success")
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model WebhookSubscription {
+  id             String   @id @default(cuid())
+  url            String
+  events         Json     @default("[]")
+  dashboardId    String
+  idempotencyKey String?  @unique
+  label          String?
+  secret         String?
+  lastDelivery   Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([dashboardId])
+}
+
+model Chart {
+  id        String   @id @default(cuid())
+  tenantId  String
+  title     String
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Kpi {
+  id        String   @id @default(cuid())
+  tenantId  String
+  label     String
+  value     String?
+  color     String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model ErrorTracking {
+  id          String   @id @default(cuid())
+  tenantId    String
+  message     String
+  fingerprint String
+  severity    String   @default("medium")
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([fingerprint])
+}
+
+model ChartData {
+  id       String   @id @default(cuid())
+  tenantId String
+  date     DateTime @default(now())
+  value    Float?
+
+  @@index([tenantId, date])
+}
+
+model Plugin {
+  id           String   @id @default(cuid())
+  name         String
+  description  String
+  version      String
+  author       String
+  type         String
+  price        String
+  priceAmount  Float?
+  rating       Float    @default(0)
+  reviews      Int      @default(0)
+  installCount Int      @default(0)
+  previewImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MarketplacePlugin {
+  id                 String   @id @default(cuid())
+  name               String
+  description        String
+  category           String
+  price              String
+  priceAmount        Float?
+  rating             Float    @default(0)
+  reviews            Int      @default(0)
+  imageUrl           String?
+  isInstalled        Boolean  @default(false)
+  installCount       Int      @default(0)
+  supportedPlatforms Json     @default("[]")
+  previewUrl         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([category])
+}

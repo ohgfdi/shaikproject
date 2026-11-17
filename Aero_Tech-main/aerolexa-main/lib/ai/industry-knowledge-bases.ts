@@ -150,7 +150,7 @@ export function getKnowledgeBase(
   industry: Industry,
   area: KnowledgeArea
 ): KnowledgeEntry[] {
-  const bases: Record<Industry, KnowledgeEntry[]> = {
+  const bases: Partial<Record<Industry, KnowledgeEntry[]>> = {
     finance: FinanceKnowledgeBase,
     saas: SaaSKnowledgeBase,
     retail: RetailKnowledgeBase,
@@ -187,8 +187,11 @@ export function getRandomKnowledgeEntry(
   area: KnowledgeArea
 ): KnowledgeEntry {
   const kb = getKnowledgeBase(industry, area);
-  const entry = kb[Math.floor(Math.random() * kb.length)];
-  return entry || kb[0];
+  const entry = kb[Math.floor(Math.random() * kb.length)] ?? kb[0];
+  if (!entry) {
+    throw new Error(`No knowledge entries for ${industry}/${area}`);
+  }
+  return entry;
 }
 
 /** API route for industry knowledge base queries. */

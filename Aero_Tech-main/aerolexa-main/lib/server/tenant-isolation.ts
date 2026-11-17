@@ -18,11 +18,18 @@
  *     where: { tenantId: tenant?.id },
  *   });
  */
+import type { NextRequest } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
 import { prisma } from "@/lib/db";
 
 export type TenantStatus = "active" | "suspended" | "deleted";
+
+function normalizeFeatures(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
 
 export interface TenantConfig {
   id: string;
@@ -90,6 +97,8 @@ export async function getTenantContext(
         features: ["basic-charts", "email-export"],
         primaryColor: "#0052cc",
         secondaryColor: "#e0e7ff",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       workspaceId,
     };
@@ -100,15 +109,18 @@ export async function getTenantContext(
       id: tenant.id,
       name: tenant.name,
       slug: tenant.slug,
-      plan: tenant.plan,
-      status: tenant.status,
+      plan: tenant.plan as TenantConfig["plan"],
+      status: tenant.status as TenantStatus,
       maxDashboards: tenant.maxDashboards,
       maxStorageGB: tenant.maxStorageGB,
       maxApiCallsPerMinute: tenant.maxApiCallsPerMinute,
-      features: tenant.features,
+      features: normalizeFeatures(tenant.features),
       primaryColor: tenant.primaryColor,
       secondaryColor: tenant.secondaryColor,
-      logoUrl: tenant.logoUrl,
+      logoUrl: tenant.logoUrl ?? undefined,
+      trialEndsAt: tenant.trialEndsAt ?? undefined,
+      createdAt: tenant.createdAt,
+      updatedAt: tenant.updatedAt,
     },
     workspaceId,
   };
@@ -186,6 +198,9 @@ export async function createTenant(
     features?: string[];
     primaryColor?: string;
     secondaryColor?: string;
+    maxDashboards?: number;
+    maxStorageGB?: number;
+    maxApiCallsPerMinute?: number;
   }
 ): Promise<TenantConfig> {
   const tenant = await prisma.tenant.create({
@@ -208,15 +223,17 @@ export async function createTenant(
     id: tenant.id,
     name: tenant.name,
     slug: tenant.slug,
-    plan: tenant.plan,
-    status: tenant.status,
+    plan: tenant.plan as TenantConfig["plan"],
+    status: tenant.status as TenantStatus,
     maxDashboards: tenant.maxDashboards,
     maxStorageGB: tenant.maxStorageGB,
     maxApiCallsPerMinute: tenant.maxApiCallsPerMinute,
-    features: tenant.features,
+    features: normalizeFeatures(tenant.features),
     primaryColor: tenant.primaryColor,
     secondaryColor: tenant.secondaryColor,
-    logoUrl: tenant.logoUrl,
+    logoUrl: tenant.logoUrl ?? undefined,
+    createdAt: tenant.createdAt,
+    updatedAt: tenant.updatedAt,
   };
 }
 
@@ -234,13 +251,15 @@ export async function updateTenantPlan(
     id: tenant.id,
     name: tenant.name,
     slug: tenant.slug,
-    plan: tenant.plan,
-    status: tenant.status,
+    plan: tenant.plan as TenantConfig["plan"],
+    status: tenant.status as TenantStatus,
     maxDashboards: tenant.maxDashboards,
     maxStorageGB: tenant.maxStorageGB,
     maxApiCallsPerMinute: tenant.maxApiCallsPerMinute,
-    features: tenant.features,
+    features: normalizeFeatures(tenant.features),
     primaryColor: tenant.primaryColor,
     secondaryColor: tenant.secondaryColor,
+    createdAt: tenant.createdAt,
+    updatedAt: tenant.updatedAt,
   };
 }

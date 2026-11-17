@@ -11,8 +11,8 @@ import { prisma } from "@/lib/db";
 export type ComplianceFramework = "HIPAA" | "SOC2" | "PCI_DSS" | "GDPR";
 
 export interface IndustryComplianceMap {
-  industry: "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
-  frameworks: Record<ComplianceFramework, ComplianceRequirements>;
+  industry: "finance" | "healthcare" | "saas" | "retail" | "manufacturing" | "unknown";
+  frameworks: Partial<Record<ComplianceFramework, ComplianceRequirements>>;
 }
 
 export interface ComplianceRequirements {

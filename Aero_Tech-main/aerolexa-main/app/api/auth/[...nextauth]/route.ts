@@ -1,4 +1,4 @@
-import type { AuthOptions, OAuthConfig } from "next-auth";
+import type { AuthOptions } from "next-auth";
 import NextAuth from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import Credentials from "next-auth/providers/credentials";
@@ -21,7 +21,7 @@ function oidcProvider(options: {
   issuer: string;
   clientId?: string;
   clientSecret?: string;
-}): OAuthConfig<any> {
+}): any {
   return {
     id: "oidc",
     name: "Single sign-on",
@@ -125,7 +125,7 @@ function getAuthOptions(): AuthOptions {
   const env = serverEnv();
 
   return {
-  providers: buildProviders(),
+  providers: buildProviders(env),
 
   secret: env.NEXTAUTH_SECRET || env.AUTH_SECRET,
   session: { strategy: "jwt" },

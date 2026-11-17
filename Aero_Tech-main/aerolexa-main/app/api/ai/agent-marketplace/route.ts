@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { GET, POST } from "@/app/api/ai/agent-marketplace/route";
+import { GET as upstreamGET, POST as upstreamPOST } from "@/lib/ai/agent-marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -8,12 +8,12 @@ export const dynamic = "force-dynamic";
  * Returns agent marketplace listings.
  */
 export async function GET(request: Request) {
-  return GET(new NextRequest(request.url));
+  return upstreamGET(new NextRequest(request.url));
 }
 
 /** POST /api/ai/agent-marketplace/purchase
  * Purchase or install an agent from the marketplace.
  */
 export async function POST(request: Request) {
-  return POST(request);
+  return upstreamPOST(request);
 }

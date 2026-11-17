@@ -100,6 +100,7 @@ export const AIChatInterface: React.FC = () => {
       return {
         id: String(Date.now()),
         role: "assistant",
+        createdAt: new Date(),
         content:
           "I can help you analyze sales data! Would you like me to create a chart showing sales by region, product, or time period? Just let me know what fields you'd like to analyze.",
         chartConfig: {
@@ -115,6 +116,7 @@ export const AIChatInterface: React.FC = () => {
       return {
         id: String(Date.now()),
         role: "assistant",
+        createdAt: new Date(),
         content:
           "I'd be happy to help you create a chart! What type of chart are you looking for, and what data fields do you want to visualize?",
       };
@@ -124,6 +126,7 @@ export const AIChatInterface: React.FC = () => {
       return {
         id: String(Date.now()),
         role: "assistant",
+        createdAt: new Date(),
         content:
           "I can help identify your top performers! What metric would you like to analyze (sales, profit, customers, etc.) and by what dimension (product, region, time period)?",
       };
@@ -133,6 +136,7 @@ export const AIChatInterface: React.FC = () => {
       return {
         id: String(Date.now()),
         role: "assistant",
+        createdAt: new Date(),
         content:
           "I can analyze trends over time! What data would you like to see trends for, and what time period should I cover?",
       };
@@ -142,6 +146,7 @@ export const AIChatInterface: React.FC = () => {
       return {
         id: String(Date.now()),
         role: "assistant",
+        createdAt: new Date(),
         content:
           "I can help you compare datasets! What two or more metrics or categories would you like to compare, and what time period?",
       };
@@ -151,6 +156,7 @@ export const AIChatInterface: React.FC = () => {
     return {
       id: String(Date.now()),
       role: "assistant",
+      createdAt: new Date(),
       content:
         "I'm Ledgerly AI. I can help you explore your data with natural language queries. Try asking things like: 'Show me sales by region', 'What are my top products?', or 'Show me trends over time'. What would you like to know?",
     };
@@ -163,7 +169,7 @@ export const AIChatInterface: React.FC = () => {
         <small>Conversational analytics assistant</small>
       </div>
 
-      <div className="chat-messages" ref={/* scroll container */}>
+      <div className="chat-messages">
         {messages.map((msg) => (
           <div
             key={msg.id}

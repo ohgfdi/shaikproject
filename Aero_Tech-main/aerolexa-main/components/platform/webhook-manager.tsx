@@ -179,13 +179,13 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: [...s.events, "widget:click"] } : prev
+                          s.id !== editingId ? { ...s, events: [...s.events, "widget:click"] } : s
                         )
                       );
                     } else {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:click") } : prev
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:click") } : s
                         )
                       );
                     }
@@ -204,13 +204,13 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: [...s.events, "widget:filter-change"] } : prev
+                          s.id !== editingId ? { ...s, events: [...s.events, "widget:filter-change"] } : s
                         )
                       );
                     } else {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:filter-change") } : prev
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "widget:filter-change") } : s
                         )
                       );
                     }
@@ -231,13 +231,13 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:saved"] } : prev
+                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:saved"] } : s
                         )
                       );
                     } else {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:saved") } : prev
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:saved") } : s
                         )
                       );
                     }
@@ -256,13 +256,13 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:export"] } : prev
+                          s.id !== editingId ? { ...s, events: [...s.events, "dashboard:export"] } : s
                         )
                       );
                     } else {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
-                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:export") } : prev
+                          s.id !== editingId ? { ...s, events: s.events.filter((e) => e !== "dashboard:export") } : s
                         )
                       );
                     }
