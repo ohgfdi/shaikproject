@@ -173,8 +173,8 @@ export async function GET(
 
     if (action === "tiers") {
       const tiers = Object.keys(PARTNER_TIER_DEFINITIONS).map((key) => ({
-        key,
-        ...PARTNER_TIER_DEFINITIONS[key],
+        key: key as keyof typeof PARTNER_TIER_DEFINITIONS,
+        ...PARTNER_TIER_DEFINITIONS[key as keyof typeof PARTNER_TIER_DEFINITIONS],
       }));
       return new Response(JSON.stringify({ tiers }), {
         status: 200,
@@ -207,8 +207,8 @@ export async function GET(
 
     // Default: list tiers
     const tiers = Object.keys(PARTNER_TIER_DEFINITIONS).map((key) => ({
-      key,
-      ...PARTNER_TIER_DEFINITIONS[key],
+      key: key as string,
+      ...PARTNER_TIER_DEFINITIONS[key as string],
     }));
     return new Response(JSON.stringify({ tiers }), {
       status: 200,

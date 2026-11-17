@@ -275,7 +275,7 @@ export async function requirePublishRole(
 
   if (row.projectId) {
     const project = await withTenantDb(ctx, (db) =>
-    db.project.findUnique({ where: { id: row.projectId } }),
+    db.project.findUnique({ where: { id: row.projectId! } }),
   );
     return requireProjectRole(ctx, project, "OWNER");
   }
@@ -328,7 +328,7 @@ export async function listOrganizationMembers(
   const owner = org
     ? await withTenantDb(ctx, (db) =>
         db.user.findUnique({
-          where: { id: org.ownerId },
+          where: { id: org.ownerId! },
           select: { id: true, name: true, email: true },
         }),
       )

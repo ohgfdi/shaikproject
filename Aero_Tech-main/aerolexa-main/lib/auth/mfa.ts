@@ -14,8 +14,7 @@
  *   // Verify a code
  *   const valid = await verifyTOTP(userId, "123456");
  */
-import { sha256 } from "crypto";
-import { randomBytes } from "crypto";
+import crypto from "crypto";
 
 export type TOTPSize = "6" | "8";
 
@@ -35,9 +34,9 @@ export function generateTOTP(
   const digitCount = size === "6" ? 6 : 8;
 
   // Use provided secret or generate new one
-  let secretKey = secret;
+  let secretKey: string | undefined = secret;
   if (!secretKey) {
-    secretKey = randomBytes(20).toString("base32");
+    secretKey = crypto.randomBytes(20).toString("base64");
   }
 
   // Calculate time interval (30 seconds standard)
@@ -49,7 +48,7 @@ export function generateTOTP(
 
   // HMAC-SHA1 (Node.js crypto - simplified using SHA256 for compatibility)
   // In production, use: crypto.createHmac("sha1", secretKey).update(intervalBuf).digest()
-  const hmac = sha256(Buffer.from(secretKey, "utf8"), intervalBuf);
+  const hmac = crypto.createHash('sha256').update(Buffer.from(secretKey, "utf8"), "utf8").digest();
 
   // Dynamic truncation
   const offset = hmac[hmac.length - 1] & 0xf;
@@ -86,7 +85,7 @@ export function verifyTOTP(
     intervalBuf.writeBigInt64BE(BigInt(timeInterval), 0);
 
     // HMAC-SHA256
-    const hmac = sha256(Buffer.from(secret, "utf8"), intervalBuf);
+    const hmac = crypto.createHash('sha256').update(Buffer.from(secret, "utf8"), "utf8").digest();
 
     // Dynamic truncation
     const offset = hmac[hmac.length - 1] & 0xf;

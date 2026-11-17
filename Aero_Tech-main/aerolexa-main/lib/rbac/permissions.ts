@@ -166,8 +166,8 @@ export async function GET(
 
     if (action === "roles") {
       const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
-        key,
-        ...ROLE_DEFINITIONS[key],
+        key: key as RoleKey,
+        ...ROLE_DEFINITIONS[key as RoleKey],
       }));
       return new Response(JSON.stringify({ roles }), {
         status: 200,
@@ -198,9 +198,8 @@ export async function GET(
 
     // Default: list roles
     const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
-      key,
-      ...ROLE_DEFINITIONS[key],
-    }));
+      ...ROLE_DEFINITIONS[key as RoleKey],
+    })) as RoleKey[];
     return new Response(JSON.stringify({ roles }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

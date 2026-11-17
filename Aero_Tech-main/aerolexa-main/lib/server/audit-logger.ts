@@ -106,7 +106,7 @@ export async function logAuditEvent({
       targetId: event.targetId,
       ipAddress: event.ipAddress,
       userAgent: event.userAgent,
-      details: event.details,
+      details: event.details as const ?? undefined,
       status: event.status,
       createdAt: event.createdAt,
     },
@@ -229,7 +229,9 @@ export async function getAuditStats({
 
   return {
     totalEvents: total,
-    eventsByAction: byAction.reduce(
+    eventsByAction: byAction.reduce<
+      Record<AuditAction, number>
+      >(
       (acc, curr) => {
         acc[curr.action] = curr._count.action;
         return acc;

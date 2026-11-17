@@ -6912,7 +6912,7 @@ function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): Analys
       kind: "map",
       title: chartTitle,
       categories: validRows.map((r) => r.region),
-      series: [{ name: cfg.metric ?? "Value", data: classified.classes.map((c) => c.value), color: "#5AA8AA" }],
+      series: [{ name: cfg.metric as string ?? "Value", data: classified.classes.map((c) => c.value), color: "#5AA8AA" }],
       mapData: classified.classes.map((c) => ({
         region: c.region,
         value: c.value,

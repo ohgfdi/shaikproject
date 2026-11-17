@@ -2000,6 +2000,7 @@ export const ANALYSIS_KIND_LABELS: Record<AnalysisKind, string> = {
   hte: "Individual treatment effect / HTE beyond average uplift",
   "iv-calculus": "Advanced causal: IV / do-calculus for policy evaluation",
   geospatial: "Geospatial / advanced mapping and regional analysis",
+  map: "Choropleth map description",
 };
 
 export const ANALYSIS_KIND_DESCRIPTIONS: Record<AnalysisKind, string> = {

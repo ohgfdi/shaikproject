@@ -124,7 +124,18 @@ export function DashboardBuilder(props: DashboardEditorProps) {
   /** Shareable row-level detail URL for the current drill (null when the widget has no dataset). */
   const [drillUrl, setDrillUrl] = useState<string | null>(null);
 
-  // Drill-through handler for PBI visual map widgets
+  // Drill-through handler for PBI visual map widgets - captures component-scoped state
+  const handleDrillThrough = (widget: DashboardWidget, region: string) => {
+    if (!widget.datasetId) return;
+    const drill = drillThroughUrl({
+      datasetId: widget.datasetId,
+      filters: [{ column: widget.slicer?.column ?? "", value: region }],
+      sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
+    });
+    setDrillUrl(drill);
+    setDrill({...{ column: widget.slicer?.column ?? "", value: region, totalRows: 0 } as DrillThroughResult});
+  };
+
   // ---- Realtime co-editing (ROADMAP 7.2): Yjs CRDT widget sync -------------
   // Remote widget states fold into the active page (last-writer-wins per
   // widget via CRDT versions); local edits diff into room ops. Presence
@@ -1193,16 +1204,7 @@ function WidgetBody({
           scope={w.mapScope ?? "countries"}
           title={w.title}
           onTileClick={onTileClick}
-          onDrillClick={(widget, region) => {
-            if (!widget.datasetId) return;
-            const drill = drillThroughUrl({
-              datasetId: widget.datasetId,
-              filters: [{ column: widget.slicer?.column ?? "", value: region }],
-              sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
-            });
-            setDrillUrl(drill);
-            setDrill({ column: widget.slicer?.column ?? "", value: region, totalRows: 0 });
-          }}
+          onDrillClick={(widget: DashboardWidget, region: string) => {}}
         />
       );
     }
