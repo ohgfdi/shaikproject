@@ -6903,16 +6903,18 @@ function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): Analys
     throw new AnalysisInputError("No valid region-value pairs found. Ensure the region and metric columns contain data.");
   }
 
+  // Type guard: metric exists when kind is not "map"
+  const hasMetric = cfg.kind !== "map";
   const classified = classifyValues(validRows, { method: "quantile", classCount: 5 });
 
-  const chartTitle = `${cfg.metric?.toString() ?? "Metric"} by ${cfg.regionCol ?? "Region"}`;
+  const chartTitle = `${(cfg as { metric?: string; kind: string }).metric?.toString() ?? "Metric"} by ${cfg.regionCol ?? "Region"}`;
 
   const charts: ChartSpec[] = [
     {
       kind: "map",
       title: chartTitle,
       categories: validRows.map((r) => r.region),
-      series: [{ name: cfg.metric as string ?? "Value", data: classified.classes.map((c) => c.value), color: "#5AA8AA" }],
+      series: [{ name: hasMetric ? ((cfg as { metric?: string }).metric?.toString() ?? "Value") : "Value", data: classified.classes.map((c) => c.value), color: "#5AA8AA" }],
       mapData: classified.classes.map((c) => ({
         region: c.region,
         value: c.value,
@@ -6921,7 +6923,7 @@ function runMap(ctx: Ctx, cfg: Extract<AnalysisConfig, { kind: "map" }>): Analys
   ];
 
   const result = baseResult(ctx, cfg, {
-    method: `Choropleth map of ${cfg.metric ?? "metric"} by ${cfg.regionCol ?? "region"} using quantile classification (5 classes).`,
+    method: `${hasMetric ? ((cfg as { metric?: string }).metric ?? "metric") : "metric"} by ${cfg.regionCol ?? "region"} using quantile classification (5 classes).`,
     steps: [
       `Read ${validRows.length} region-value pairs from the dataset.`,
       "Classified values into 5 quantile classes (equal distribution per class).",

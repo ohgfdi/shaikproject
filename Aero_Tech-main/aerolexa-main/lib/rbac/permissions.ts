@@ -162,12 +162,8 @@ export async function GET(
 ): Promise<Response> {
   try {
     const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action") || "roles";
-
-    if (action === "roles") {
-      const roles = Object.keys(ROLE_DEFINITIONS).map((key: RoleKey) => ({
-        ...ROLE_DEFINITIONS[key],
-      })) as unknown as RoleKey[];
+    const action = searchParams.get("action") || "roles";    if (action === "roles") {
+      const roles: RoleKey[] = Object.keys(ROLE_DEFINITIONS) as RoleKey[];
       return new Response(JSON.stringify({ roles }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -193,12 +189,8 @@ export async function GET(
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    }
-
-    // Default: list roles
-    const roles = Object.keys(ROLE_DEFINITIONS).map((key) => ({
-      ...ROLE_DEFINITIONS[key as RoleKey],
-    })) as RoleKey[];
+    }    // Default: list roles
+    const roles: RoleKey[] = Object.keys(ROLE_DEFINITIONS) as RoleKey[];
     return new Response(JSON.stringify({ roles }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

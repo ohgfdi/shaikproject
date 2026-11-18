@@ -45,11 +45,12 @@ export function generateTOTP(
 
   // HMAC-SHA1 (Node.js crypto - simplified using SHA256 for compatibility)
   // In production, use: crypto.createHmac("sha1", secretKey).update(intervalBuf).digest()
-  const hmac = crypto.createHash('sha256').update(secretKey, "utf8").digest();
+  const hmac = crypto.createHash('sha256').update(secretKey, "utf8").digest() as Buffer;
 
   // Dynamic truncation
-  const offset = hmac[hmac.length - 1] & 0xf;
-  const codeBuf = hmac.slice(offset, offset + 4);
+  const offset = hmac[hmac.length - 1]! & 0xf;
+  const codeBuf = hmac.slice(offset, offset + 4)!
+
   const codeInt = codeBuf.readInt32BE(0) as number;
   const code = String(codeInt % Math.pow(10, digitCount)).padStart(digitCount, "0");
 
@@ -82,9 +83,9 @@ export function verifyTOTP(
     intervalBuf.writeBigInt64BE(BigInt(timeInterval), 0);
 
     // HMAC-SHA256
-    const hmac = crypto.createHash('sha256').update(secret, "utf8").digest();
+    const hmac = crypto.createHash('sha256').update(secret, "utf8").digest() as Buffer;
     // Dynamic truncation
-    const offset = hmac[hmac.length - 1] & 0xf;
+    const offset = hmac[hmac.length - 1]! & 0xf;
     const codeBuf = hmac.slice(offset, offset + 4)!
     const codeInt = codeBuf.readInt32BE(0) & 0x7fffffff;
     const generatedCode = String(codeInt % Math.pow(10, digitCount)).padStart(digitCount, "0");
