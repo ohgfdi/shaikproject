@@ -4,6 +4,7 @@
  * A storefront for discovering, reviewing, and installing plugins.
  * Supports creator profiles, revenue sharing, and version management.
  */
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
 
 import { prisma } from "@/lib/db";
@@ -147,10 +148,13 @@ export const PluginStore: React.FC = () => {
               className={`plugin-card ${plugin.isInstalled ? "installed" : ""}`}
             >
               {plugin.previewImage ? (
-                <img
+                <Image
                   src={plugin.previewImage}
                   alt={plugin.name}
                   className="plugin-preview"
+                  width={320}
+                  height={150}
+                  unoptimized
                 />
               ) : (
                 <div

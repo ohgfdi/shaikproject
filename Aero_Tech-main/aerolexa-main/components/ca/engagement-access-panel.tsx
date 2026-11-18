@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Select, Field } from "@/components/ui/form";
@@ -37,11 +37,7 @@ export function EngagementAccessPanel({ engagementId, engagementName }: Engageme
   const [, setError] = useState<string | null>(null);
 
   // Load access and roles when component mounts
-  useEffect(() => {
-    void loadAccess();
-  }, [engagementId]);
-
-  const loadAccess = async () => {
+  const loadAccess = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
@@ -54,7 +50,11 @@ export function EngagementAccessPanel({ engagementId, engagementName }: Engageme
     } finally {
       setBusy(false);
     }
-  };
+  }, [engagementId]);
+
+  useEffect(() => {
+    void loadAccess();
+  }, [loadAccess]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();

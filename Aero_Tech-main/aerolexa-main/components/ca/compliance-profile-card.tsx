@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
@@ -38,11 +38,7 @@ export function ComplianceProfileCard({ engagementId }: ComplianceProfileCardPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void loadData();
-  }, [engagementId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -66,7 +62,11 @@ export function ComplianceProfileCard({ engagementId }: ComplianceProfileCardPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [engagementId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   if (!profile && !status && loading) {
     return (

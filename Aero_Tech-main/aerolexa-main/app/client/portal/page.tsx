@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/overlays";
@@ -66,13 +66,33 @@ function ClientPortal() {
         })
         .finally(() => setLoading(false));
     }
-  }, [token]);
+  }, [token, router, toast]);
+
+  const fetchEngagementData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const docs = await api(`/api/client/documents?engagementId=${engagementId}`);
+      setDocuments((docs as Document[]) || []);
+
+      const dl = await api(`/api/compliance/deadlines?engagementId=${engagementId}`);
+      setDeadlines((dl as Deadline[]) || []);
+    } catch {
+      setError("Failed to load engagement data.");
+      toast({
+        title: "Error",
+        message: "Could not load engagement data.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [engagementId, toast]);
 
   useEffect(() => {
     if (engagementId) {
-      fetchEngagementData();
+      void fetchEngagementData();
     }
-  }, [engagementId]);
+  }, [engagementId, fetchEngagementData]);
 
   if (loading) {
     return (
@@ -142,26 +162,6 @@ function ClientPortal() {
       });
     } finally {
       setUploading(false);
-    }
-  };
-
-  const fetchEngagementData = async () => {
-    setLoading(true);
-    try {
-      const docs = await api(`/api/client/documents?engagementId=${engagementId}`);
-      setDocuments(docs as Document[] || []);
-
-      const dl = await api(`/api/compliance/deadlines?engagementId=${engagementId}`);
-      setDeadlines(dl as Deadline[] || []);
-    } catch {
-      setError("Failed to load engagement data.");
-      toast({
-        title: "Error",
-        message: "Could not load engagement data.",
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 

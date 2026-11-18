@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 /**
  * WebhookManager — manages webhook subscriptions for dashboard events.
@@ -63,11 +63,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [, setRetryId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSubscriptions();
-  }, [dashboardId]);
-
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = useCallback(async () => {
     try {
       const res = await fetch(`/api/webhooks?dashboardId=${dashboardId}`);
       if (!res.ok) throw new Error("Failed to fetch webhooks");
@@ -76,7 +72,11 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
     } catch (e) {
       setError((e as Error).message);
     }
-  };
+  }, [dashboardId]);
+
+  useEffect(() => {
+    void fetchSubscriptions();
+  }, [fetchSubscriptions]);
 
   /** Submit a new webhook (with idempotency key). */
   const addSubscription = async (url: string, events: WebhookSubscription["events"]) => {

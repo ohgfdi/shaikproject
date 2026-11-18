@@ -4,7 +4,8 @@
  * Real-time activity feed showing recent actions across the workspace.
  * Supports filtering by type and user.
  */
-import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { prisma } from "@/lib/db";
 
@@ -34,11 +35,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchEvents();
-  }, [workspaceId, filter, limit]);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -78,7 +75,11 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId, filter, limit]);
+
+  useEffect(() => {
+    void fetchEvents();
+  }, [fetchEvents]);
 
   if (loading) {
     return <div className="activity-loading">Loading activity...</div>;
@@ -105,10 +106,13 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
               // TODO: Navigate to target
             }}
           >
-            <img
+            <Image
               src={event.userAvatar || "/avatars/default.png"}
               alt={event.userName}
               className="activity-avatar"
+              width={32}
+              height={32}
+              unoptimized
             />
             <span className="activity-user">{event.userName}</span>
             <span className="activity-action">

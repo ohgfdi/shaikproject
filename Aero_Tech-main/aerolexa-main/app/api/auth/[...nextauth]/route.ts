@@ -21,7 +21,7 @@ function oidcProvider(options: {
   issuer: string;
   clientId?: string;
   clientSecret?: string;
-}): any {
+}): AuthOptions["providers"][number] {
   return {
     id: "oidc",
     name: "Single sign-on",
@@ -79,15 +79,17 @@ async function resolveSsoUser(email: string, name?: string | null) {
  */
 
 /** NextAuth provider list — only appear when configured + SSO_ENABLED. */
-const buildProviders = (env: ReturnType<typeof serverEnv>): any[] => {
+const buildProviders = (env: ReturnType<typeof serverEnv>): AuthOptions["providers"] => {
   const googleConfigured = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   const azureConfigured = Boolean(
     env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET && env.TENANT_ID,
   );
   const oidcConfigured = Boolean(env.OIDC_ISSUER_URL);
-  if (!env.SSO_ENABLED) return [Credentials];
+  // `Credentials` is passed through as imported (the provider factory itself),
+  // so only the element type needs widening here — the value is unchanged.
+  if (!env.SSO_ENABLED) return [Credentials as unknown as AuthOptions["providers"][number]];
 
-  const providers: any[] = [];
+  const providers: AuthOptions["providers"] = [];
   if (googleConfigured) {
     providers.push(
       GoogleProvider({
@@ -116,7 +118,7 @@ const buildProviders = (env: ReturnType<typeof serverEnv>): any[] => {
   }
 
   // If no third‑party provider is configured, fall back to credentials
-  if (providers.length === 0) return [Credentials];
+  if (providers.length === 0) return [Credentials as unknown as AuthOptions["providers"][number]];
 
   return providers;
 };

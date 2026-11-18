@@ -4,6 +4,7 @@
  * A reusable comment component for datasets, insights, and dashboards.
  * Supports threading, replies, and user mentions.
  */
+import Image from "next/image";
 import React, { useState } from "react";
 
 export interface Comment {
@@ -77,10 +78,13 @@ export const CommentCard: React.FC<CommentCardProps> = ({
   return (
     <div className="comment-card">
       <div className="comment-header">
-        <img
+        <Image
           src={comment.userAvatar || "/avatars/default.png"}
           alt={comment.userName}
           className="comment-avatar"
+          width={36}
+          height={36}
+          unoptimized
         />
         <span className="comment-author">{comment.userName}</span>
         <span className="comment-time">

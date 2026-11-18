@@ -4,7 +4,8 @@
  * A component for discovering and installing plugins, themes, and integrations.
  * Shows available extensions with ratings, reviews, and installation status.
  */
-import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import React, { useCallback, useState, useEffect } from "react";
 
 import { prisma } from "@/lib/db";
 
@@ -51,12 +52,7 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
     | undefined
   >(category);
 
-  useEffect(() => {
-    fetchPlugins();
-    setFilterCategory(category);
-  }, [category]);
-
-  const fetchPlugins = async () => {
+  const fetchPlugins = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -94,7 +90,12 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterCategory, searchQuery]);
+
+  useEffect(() => {
+    void fetchPlugins();
+    setFilterCategory(category);
+  }, [category, fetchPlugins]);
 
   if (loading) {
     return <div className="marketplace-loading">Loading marketplace...</div>;
@@ -154,10 +155,13 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
                 }}
               >
                 {plugin.imageUrl ? (
-                  <img
+                  <Image
                     src={plugin.imageUrl}
                     alt={plugin.name}
                     className="plugin-preview"
+                    width={320}
+                    height={160}
+                    unoptimized
                   />
                 ) : (
                   <div
