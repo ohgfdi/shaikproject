@@ -82,7 +82,7 @@ export function runWhatIfScenario(
     metric,
     industry as Industry,
     historicalValues,
-    { metric, industry: industry as Industry, horizon: horizon as any, seasonality: true, trend: true }
+    { metric, industry: industry as Industry, horizon: horizon as ScenarioConfig["horizon"], seasonality: true, trend: true }
   );
 
   // Apply parameter changes to generate scenarios
@@ -106,7 +106,7 @@ export function runWhatIfScenario(
       metric,
       industry as Industry,
       modifiedValues,
-      { metric, industry: industry as Industry, horizon: horizon as any, seasonality: true, trend: true }
+      { metric, industry: industry as Industry, horizon: horizon as ScenarioConfig["horizon"], seasonality: true, trend: true }
     );
 
     return {
@@ -335,7 +335,7 @@ export async function GET(
         industry: industry as Industry,
         metric,
         parameters,
-        horizon: horizon as any,
+        horizon: horizon as ScenarioConfig["horizon"],
         confidence_level: 95,
       };
 
@@ -365,7 +365,7 @@ export async function GET(
         industry: industry as Industry,
         metric,
         parameters: [],
-        horizon: horizon as any,
+        horizon: horizon as ScenarioConfig["horizon"],
         confidence_level: 95,
       };
 
@@ -405,7 +405,7 @@ export async function GET(
             description: "Pricing sensitivity (percentage change)",
           },
         ],
-        horizon: "30d" as any,
+        horizon: "30d" as ScenarioConfig["horizon"],
         confidence_level: 95,
       };
 

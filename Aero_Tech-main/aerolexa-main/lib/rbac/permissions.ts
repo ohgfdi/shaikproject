@@ -172,7 +172,7 @@ export async function GET(
     if (action === "check") {
       const role = searchParams.get("role") as RoleKey || "member";
       const permission = searchParams.get("permission") as Permission || "read:own profile";
-      const scope = searchParams.get("scope") as any || "own";
+      const scope = (searchParams.get("scope") as "own" | "team" | "organization" | "all") || "own";
       const result = hasPermission(role, permission, scope);
       return new Response(JSON.stringify({ role, permission, scope, hasPermission: result }), {
         status: 200,
@@ -182,7 +182,7 @@ export async function GET(
 
     if (action === "effective") {
       const role = searchParams.get("role") as RoleKey || "member";
-      const scope = searchParams.get("scope") as any || "own";
+      const scope = (searchParams.get("scope") as "own" | "team" | "organization" | "all") || "own";
       const result = getEffectivePermissions(role, scope);
       return new Response(JSON.stringify(result), {
         status: 200,

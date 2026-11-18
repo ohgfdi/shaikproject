@@ -42,7 +42,7 @@ export interface ABTestVariant {
     featureFlags: Record<string, boolean>;
     parameterChanges: ScenarioParameter[];
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ABTestAssignment {

@@ -5,7 +5,6 @@
  * Shows feature differences between Free, Pro, and Enterprise tiers.
  */
 import React from "react";
-import { useState } from "react";
 
 export type PricingTier = "free" | "pro" | "enterprise";
 

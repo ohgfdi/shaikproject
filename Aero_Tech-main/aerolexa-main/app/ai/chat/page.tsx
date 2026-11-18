@@ -37,13 +37,14 @@ function AITaxChatPage() {
       } else {
         toast({ title: "Success", message: `AI generated ${data.type}`, type: "success" });
       }
-    } catch (err: any) {
-      setResponse({ error: err.message });
-      toast({ title: "Error", message: err.message, type: "error" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Request failed";
+      setResponse({ error: message });
+      toast({ title: "Error", message, type: "error" });
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, toast]);
 
   const _handleModeChange = (newMode: "prepare-itr" | "tax-query" | "tax-planning") => {
     setMode(newMode);
@@ -87,7 +88,7 @@ function AITaxChatPage() {
           <Select
             value={form.entityKind}
             onChange={(e) =>
-              setForm((f) => ({ ...f, entityKind: (e.target as any).value }))
+              setForm((f) => ({ ...f, entityKind: (e.target as HTMLSelectElement).value }))
             }
           >
             <option value="individual">Individual</option>

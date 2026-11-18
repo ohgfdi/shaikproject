@@ -343,7 +343,7 @@ export async function GET(
     const config: PredictiveEngineConfig = {
       metric,
       industry: industry as Industry,
-      horizon: horizon as any,
+      horizon: horizon as PredictiveEngineConfig["horizon"],
       alpha: 0.3,
       beta: 0.1,
       seasonality: true,

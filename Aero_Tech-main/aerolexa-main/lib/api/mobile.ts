@@ -164,11 +164,11 @@ export async function exportMobileData(
   if (format === "csv") {
     // CSV generation logic
     csvContent = "id,value,label\n";
-    records.forEach((row: any) => {
+    records.forEach((row) => {
       csvContent += `${row.id},${row.value},${row.label}\n`;
     });
   } else {
-    records.forEach((row: any) => {
+    records.forEach((row) => {
       jsonData.push({
         id: row.id,
         value: row.value,
