@@ -111,8 +111,8 @@ export class ComplianceReporter {
 
   /** Base checks applicable to all frameworks. */
   private runBaseChecks(
-    periodStart: Date,
-    periodEnd: Date
+    _periodStart: Date,
+    _periodEnd: Date
   ): { issues: ComplianceIssue[]; recommendations: string[] } {
     const issues: ComplianceIssue[] = [];
     const recommendations: string[] = [];
@@ -147,8 +147,8 @@ export class ComplianceReporter {
 
   /** SOC2 Trust Services Criteria checks. */
   private runSOC2Checks(
-    periodStart: Date,
-    periodEnd: Date
+    _periodStart: Date,
+    _periodEnd: Date
   ): { issues: ComplianceIssue[]; recommendations: string[] } {
     const issues: ComplianceIssue[] = [];
     const recommendations: string[] = [];
@@ -179,8 +179,8 @@ export class ComplianceReporter {
 
   /** HIPAA Security Rule checks. */
   private runHIPAAChecks(
-    periodStart: Date,
-    periodEnd: Date
+    _periodStart: Date,
+    _periodEnd: Date
   ): { issues: ComplianceIssue[]; recommendations: string[] } {
     const issues: ComplianceIssue[] = [];
     const recommendations: string[] = [];
@@ -217,8 +217,8 @@ export class ComplianceReporter {
 
   /** GDPR Article compliance checks. */
   private runGDPRChecks(
-    periodStart: Date,
-    periodEnd: Date
+    _periodStart: Date,
+    _periodEnd: Date
   ): { issues: ComplianceIssue[]; recommendations: string[] } {
     const issues: ComplianceIssue[] = [];
     const recommendations: string[] = [];

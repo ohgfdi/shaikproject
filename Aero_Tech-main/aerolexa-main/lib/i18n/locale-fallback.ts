@@ -67,7 +67,7 @@ export function loadLocaleWithFallback(
 }
 
 /** Get locale file content. */
-function getLocaleFile(locale: Locale): Record<string, string> | undefined {
+function getLocaleFile(_locale: Locale): Record<string, string> | undefined {
   // In a real implementation, this would dynamically import the JSON file
   // For now, return undefined to trigger fallback chain behavior
   try {

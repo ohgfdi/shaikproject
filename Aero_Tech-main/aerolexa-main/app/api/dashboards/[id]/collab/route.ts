@@ -3,7 +3,7 @@ import { getDashboardCollabRoom, seedDashboardRoom } from "@/lib/collab/dashboar
 import { serializableSpec } from "@/lib/collab/dashboard-widget-sync";
 import { prisma } from "@/lib/db";
 import { toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 
 /**
  * tenancy-audit: global-operator — dashboard collaboration API provides

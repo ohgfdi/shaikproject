@@ -119,7 +119,7 @@ export async function fetchErrorSummary(
 
 /** Health check for mobile connectivity. */
 export async function checkMobileHealth(
-  tenantId: string
+  _tenantId: string
 ): Promise<{
   status: "ok" | "error";
   database: "connected" | "disconnected";

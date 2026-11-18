@@ -22,7 +22,7 @@ export const metadata = { title: "Datasets" };
 export default async function DatasetsPage() {
   const ctx = await requirePageAuth();
   const [datasets, projects] = await Promise.all([
-    await withTenantDb(ctx, (db) => prisma.dataset.findMany({
+    await withTenantDb(ctx, (_db) => prisma.dataset.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -35,7 +35,7 @@ export default async function DatasetsPage() {
       },
       take: 200,
     })),
-    await withTenantDb(ctx, (db) => prisma.project.findMany({
+    await withTenantDb(ctx, (_db) => prisma.project.findMany({
       where: { workspaceId: ctx.workspace.id },
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true },

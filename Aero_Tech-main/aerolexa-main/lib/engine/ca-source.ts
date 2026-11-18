@@ -316,7 +316,7 @@ function canonicaliseOneRow(
   row: Record<string, SqlValue>,
   profile: CaMappingProfile,
   colIndex: Record<string, number>,
-  rowIndex: number,
+  _rowIndex: number,
   options: { provenance?: CaProvenance | null } = {},
 ): CaDocument | null {
   // --- identity fields (must resolve) ---
@@ -503,7 +503,7 @@ for (const kind of KNOWN_DATE_COLUMN_FALLBACK) {
 }
 
 function readString(
-  sourceKind: CaSourceKind,
+  _sourceKind: CaSourceKind,
   profile: CaMappingProfile,
   field: "party" | "account" | "sourceId",
   row: Record<string, SqlValue>,
@@ -529,7 +529,7 @@ function readString(
 }
 
 function readAmount(
-  sourceKind: CaSourceKind,
+  _sourceKind: CaSourceKind,
   profile: CaMappingProfile,
   field: "debit" | "credit" | "sourceAmount",
   row: Record<string, SqlValue>,
@@ -549,7 +549,7 @@ function readAmount(
 }
 
 function readMetadata(
-  sourceKind: CaSourceKind,
+  _sourceKind: CaSourceKind,
   profile: CaMappingProfile,
   row: Record<string, SqlValue>,
   _colIndex: Record<string, number>,

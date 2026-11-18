@@ -38,23 +38,23 @@ export async function POST(request: Request) {
     // Resolve the dataset the question should be answered against.
     let dataset;
     if (body.datasetId) {
-      dataset = await withTenantDb(ctx, (db) =>
+      dataset = await withTenantDb(ctx, (_db) =>
     prisma.dataset.findUnique({ where: { id: body.datasetId } }),
   );
       await requireRowRole(ctx, dataset, "VIEWER");
     } else if (body.projectId) {
-      const project = await withTenantDb(ctx, (db) =>
+      const project = await withTenantDb(ctx, (_db) =>
     prisma.project.findUnique({ where: { id: body.projectId } }),
   );
       await requireRowRole(ctx, project, "VIEWER");
-      dataset = await withTenantDb(ctx, (db) =>
+      dataset = await withTenantDb(ctx, (_db) =>
         prisma.dataset.findFirst({
           where: { workspaceId: ctx.workspace.id, projectId: project!.id },
           orderBy: { createdAt: "desc" },
         }),
       );
     } else {
-      dataset = await withTenantDb(ctx, (db) =>
+      dataset = await withTenantDb(ctx, (_db) =>
         prisma.dataset.findFirst({
           where: { workspaceId: ctx.workspace.id },
           orderBy: { createdAt: "desc" },

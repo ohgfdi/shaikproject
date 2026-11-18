@@ -72,7 +72,7 @@ interface MismatchFlag {
  * Capture and classify a new GST invoice with full validation.
  */
 export async function captureGstInvoice(
-  workspaceId: string,
+  _workspaceId: string,
   bookId: string,
   input: GstInvoiceCaptureInput,
   actorId: string,
@@ -284,7 +284,7 @@ export async function updateGstInvoiceClassification(
  * Link E-Way Bill to an existing invoice.
  */
 export async function linkEwayBill(
-  workspaceId: string,
+  _workspaceId: string,
   bookId: string,
   invoiceId: string,
   ewayBillNumber: string,
@@ -319,7 +319,7 @@ export async function linkEwayBill(
  * Suppress an invoice (mark as suppressed - not eligible for ITC).
  */
 export async function suppressInvoice(
-  workspaceId: string,
+  _workspaceId: string,
   bookId: string,
   invoiceId: string,
   actorId: string,
@@ -352,7 +352,7 @@ export async function suppressInvoice(
  * Mark an invoice as nil-rated (no tax, no ITC).
  */
 export async function markInvoiceNil(
-  workspaceId: string,
+  _workspaceId: string,
   bookId: string,
   invoiceId: string,
   actorId: string,

@@ -112,7 +112,7 @@ async function loadTraced(engagementId: string, versionId: string) {
   });
 }
 
-export async function GET(request: Request, props: { params: Promise<{ id: string; versionId: string }> }) {
+export async function GET(_request: Request, props: { params: Promise<{ id: string; versionId: string }> }) {
   const params = await props.params;
   try {
     const ctx = await requireAuth();

@@ -18,7 +18,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
   const params = await props.params;
   try {
     const ctx = await requireAuth();
-    const dataset = await withTenantDb(ctx, (db) =>
+    const dataset = await withTenantDb(ctx, (_db) =>
     prisma.dataset.findUnique({ where: { id: params.id } }),
   );
     await requireRowRole(ctx, dataset, "EDITOR");
@@ -44,7 +44,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
     });
 
     // Skip cards already generated for this dataset (title match) — avoid noise.
-    const existing = await withTenantDb(ctx, (db) =>
+    const existing = await withTenantDb(ctx, (_db) =>
       prisma.insight.findMany({
         where: { datasetId: dataset!.id },
         select: { title: true },
@@ -75,7 +75,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
       const extra: Record<string, unknown> = { ...(insight.extra ?? {}) };
       if (narration) extra.narrative = narration;
 
-      const row = await withTenantDb(ctx, (db) =>
+      const row = await withTenantDb(ctx, (_db) =>
       prisma.insight.create({
         data: {
           workspaceId: ctx.workspace.id,

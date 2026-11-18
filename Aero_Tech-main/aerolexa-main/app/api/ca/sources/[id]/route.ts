@@ -19,7 +19,7 @@ const updateBody = z
  *
  * Retrieve one CA source by id (workspace + engagement scoped).
  */
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
     const ctx = await requireAuth();
@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
  *
  * Delete a CA source and its runs + snapshots.
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
     const ctx = await requireAuth();

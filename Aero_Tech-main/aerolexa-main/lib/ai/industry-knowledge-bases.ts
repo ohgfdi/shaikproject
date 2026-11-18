@@ -148,7 +148,7 @@ export const ManufacturingKnowledgeBase: KnowledgeEntry[] = [
 /** Get the knowledge base for a specific industry and area. */
 export function getKnowledgeBase(
   industry: Industry,
-  area: KnowledgeArea
+  _area: KnowledgeArea
 ): KnowledgeEntry[] {
   const bases: Partial<Record<Industry, KnowledgeEntry[]>> = {
     finance: FinanceKnowledgeBase,

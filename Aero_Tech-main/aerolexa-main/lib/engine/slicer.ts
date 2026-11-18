@@ -115,7 +115,7 @@ export function toggleSlicerValue(current: string[], value: string, multiSelect:
  * distinct values (throws when the source has none — never a fake slicer).
  */
 export function buildSlicer(
-  id: string,
+  _id: string,
   column: string,
   widgets: DashboardWidget[],
   opts?: { style?: "list" | "dropdown"; multiSelect?: boolean },

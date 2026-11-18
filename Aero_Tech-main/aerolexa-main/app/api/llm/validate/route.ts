@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { validateLLMOutput, type CodeValidationOptions } from "@/lib/engine/llm/validate";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { RATE_LIMITS, enforceUserRateLimit } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";

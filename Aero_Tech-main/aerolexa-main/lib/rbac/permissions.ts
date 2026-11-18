@@ -135,7 +135,7 @@ export function hasPermission(
 
 export function getEffectivePermissions(
   role: RoleKey,
-  resourceScope: "own" | "team" | "organization" | "all" = "own"
+  _resourceScope: "own" | "team" | "organization" | "all" = "own"
 ): { permissions: Permission[]; resourceScope: string } {
   const roleDef = ROLE_DEFINITIONS[role];
   if (!roleDef) return { permissions: [], resourceScope: "own" };

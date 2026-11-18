@@ -79,7 +79,6 @@ import {
   NO_DATA_COLOR,
   type ClassificationMethod,
   type FeatureCollectionLike,
-  type GeoFeatureLike,
 } from "@/lib/engine/geo";
 
 export interface ChoroplethMapProps {

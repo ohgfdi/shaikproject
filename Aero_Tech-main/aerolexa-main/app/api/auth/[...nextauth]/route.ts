@@ -5,7 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { randomBytes } from "node:crypto";
 
-import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db";
 import { serverEnv } from "@/lib/env";
 import { stringifyJson } from "@/lib/json";

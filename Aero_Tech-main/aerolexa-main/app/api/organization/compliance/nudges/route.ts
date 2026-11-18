@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireAuth();
     const body = schema.parse(await readJsonBody<unknown>(request));
-    const { engagement } = await requireEngagementRole(ctx, body.engagementId, "ASSISTANT");const detail = await withTenantDb(ctx, (db) =>
+    const { engagement } = await requireEngagementRole(ctx, body.engagementId, "ASSISTANT");const detail = await withTenantDb(ctx, (_db) =>
     prisma.engagement.findUnique({
       where: { id: engagement.id },
       select: { name: true, gstin: true, organizationId: true },
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     if (!detail) throw new Error("Engagement disappeared while preparing the reminder.");
 
     const today = new Date().toISOString().slice(0, 10);
-    const stored = await withTenantDb(ctx, (db) =>
+    const stored = await withTenantDb(ctx, (_db) =>
       prisma.clientComplianceProfile.findUnique({
         where: { engagementId: engagement.id },
         select: { profile: true },
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       clientId: engagement.id,
       clientName: detail.name,
     });
-    const statuses = await withTenantDb(ctx, (db) =>
+    const statuses = await withTenantDb(ctx, (_db) =>
       prisma.clientComplianceStatus.findMany({
         where: { engagementId: engagement.id },
         select: { taskId: true, status: true },

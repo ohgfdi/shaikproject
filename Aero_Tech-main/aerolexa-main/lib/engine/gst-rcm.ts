@@ -144,7 +144,7 @@ export function calculateRcmTax(supply: RcmSupply, recipientStateCode: string): 
  * 4. Import of services: eligible if for business, blocked if personal
  */
 export function determineRcmItcEligibility(
-  supply: RcmSupply,
+  _supply: RcmSupply,
   taxAmounts: RcmTaxAmounts,
   opts: {
     isBusinessPurpose: boolean;

@@ -48,7 +48,7 @@ import { fetchTallyGatewayRows, testTallyGatewayConnection } from "./tally";
 import { parseTallyTcml, parseTallyCsv, tallyToRows } from "./tally";
 import { parseTdsChallan, tdsChallanToRows } from "./tds-challan";
 import { buildWatermarkMongoFilter, buildWatermarkSqlText } from "./watermark";
-import { XERO_TABLES, fetchXeroRows, testXeroConnection, xeroTables } from "./xero";
+import { fetchXeroRows, testXeroConnection, xeroTables } from "./xero";
 import { ZOHO_BOOKS_TABLES, fetchZohoBooksRows, testZohoBooksConnection, zohoBooksTableColumns } from "./zoho-books";
 
 /** Schema-browser metadata for the Zoho Books connector (real column shapes). */

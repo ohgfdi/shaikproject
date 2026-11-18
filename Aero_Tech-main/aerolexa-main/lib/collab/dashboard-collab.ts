@@ -179,7 +179,7 @@ export class DashboardCollabRoom {
 
   /** Set/update a widget's full spec (merged deeply). */
   setWidgetSpec(
-    peerId: string,
+    _peerId: string,
     widgetId: string,
     type: WidgetCollabState["type"],
     spec: Record<string, unknown>,
@@ -194,7 +194,7 @@ export class DashboardCollabRoom {
   }
 
   /** Deep-merge a partial spec update (for incremental changes). */
-  mergeWidgetSpec(peerId: string, widgetId: string, partialSpec: Record<string, unknown>): Record<string, unknown> {
+  mergeWidgetSpec(_peerId: string, widgetId: string, partialSpec: Record<string, unknown>): Record<string, unknown> {
     const widgetMap = this.getWidgetMap(widgetId);
     let current: Record<string, unknown> = {};
     try {
@@ -256,7 +256,7 @@ export class DashboardCollabRoom {
   }
 
   /** Add a new widget. */
-  addWidget(peerId: string, widget: WidgetCollabState): void {
+  addWidget(_peerId: string, widget: WidgetCollabState): void {
     const widgetMap = this.getWidgetMap(widget.widgetId);
     this.doc.transact(() => {
       widgetMap.set("type", widget.type);
@@ -272,7 +272,7 @@ export class DashboardCollabRoom {
   }
 
   /** Remove a widget. */
-  removeWidget(peerId: string, widgetId: string): void {
+  removeWidget(_peerId: string, widgetId: string): void {
     this.doc.transact(() => {
       this.doc.getMap(WIDGETS_KEY).delete(widgetId);
       const order = this.doc.getArray(WIDGET_ORDER_KEY);
@@ -286,7 +286,7 @@ export class DashboardCollabRoom {
   }
 
   /** Reorder widgets. */
-  reorderWidgets(peerId: string, orderedIds: string[]): void {
+  reorderWidgets(_peerId: string, orderedIds: string[]): void {
     this.doc.transact(() => {
       const order = this.doc.getArray(WIDGET_ORDER_KEY);
       order.delete(0, order.length);

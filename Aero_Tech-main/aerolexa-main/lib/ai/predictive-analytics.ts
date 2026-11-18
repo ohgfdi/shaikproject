@@ -116,7 +116,7 @@ export function exponentialSmoothing(
     }
 
     const forecastValue = Math.round(S * 100) / 100;
-    const mape = historicalValues.slice(1).reduce((sum, val, i) => {
+    const mape = historicalValues.slice(1).reduce((sum, val, _i) => {
       const fitted = S; // simplified fit
       const error = Math.abs(val - fitted) / Math.max(val, 1);
       return sum + error;

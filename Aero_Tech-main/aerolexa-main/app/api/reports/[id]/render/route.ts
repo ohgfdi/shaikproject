@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { reportSections } from "@/lib/serialize";
 import { ok, toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { getVisualRenderer } from "@/lib/server/visual-render";
 import type { ChartSpec, ReportSection, TableSpec } from "@/lib/types";
 

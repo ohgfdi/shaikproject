@@ -1444,7 +1444,7 @@ class Evaluator {
 
   private extractColumnPredicate(
     arg: Expr,
-    fc: FilterCtx,
+    _fc: FilterCtx,
     rc: RowCtx | null,
   ): { column: string; values: Set<string> } | null {
     if (arg.k !== "bin" || !["=", "<>", ">", "<", ">=", "<="].includes(arg.op)) return null;

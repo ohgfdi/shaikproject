@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
-import { rlsEnabled, rlsConfigError, rlsEnforcementStatus, isPostgres } from "@/lib/server/tenancy";
+import { rlsEnforcementStatus } from "@/lib/server/tenancy";
 
 /** GET /api/embed/validate?token=...&workspaceId=...
  *  Validate an embed JWT token and return the dashboard configuration.

@@ -731,7 +731,7 @@ export async function executeEngagementErasure(
   const projectIds = await projectIdsForEngagement(ctx, engagement.organizationId, engagement.id);
   const byProject = projectIds.length ? { projectId: { in: projectIds } } : { projectId: null as string | null };
 
-  const erased = await prisma.$transaction(async (tx) => {
+  const erased = await prisma.$transaction(async (_tx) => {
     const counts: Record<string, number> = {};
     counts.datasets = (await withTenantDb(ctx, (db) => db.dataset.deleteMany({ where: byProject }))).count;
     counts.analyses = (await withTenantDb(ctx, (db) => db.analysis.deleteMany({ where: byProject }))).count;

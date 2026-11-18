@@ -158,7 +158,7 @@ function tableHtml(
         .slice(0, 50)
         .map(
           (r) =>
-            `<tr>${columns.map((c, i) => `<td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;color:#374151">${r[i] === null || r[i] === undefined ? "—" : esc(String(r[i]))}</td>`).join("")}</tr>`,
+            `<tr>${columns.map((_c, i) => `<td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;color:#374151">${r[i] === null || r[i] === undefined ? "—" : esc(String(r[i]))}</td>`).join("")}</tr>`,
         )
         .join("")}</tbody>
     </table>`;

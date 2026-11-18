@@ -131,7 +131,7 @@ describe("crossValidatedRidge", () => {
     const constY = Array.from({ length: 20 }, () => 5);
     expect(
       crossValidatedRidge(
-        tinyX.map((v, i) => [i]),
+        tinyX.map((_v, i) => [i]),
         constY,
       ),
     ).toBeNull();

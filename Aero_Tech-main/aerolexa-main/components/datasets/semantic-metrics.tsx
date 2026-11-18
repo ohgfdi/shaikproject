@@ -32,7 +32,7 @@ interface MetricsResponse {
   count: number;
 }
 
-function formatMetric(metricName: string, v: MetricValue): string {
+function formatMetric(_metricName: string, v: MetricValue): string {
   return v.formattedValue;
 }
 

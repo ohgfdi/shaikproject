@@ -359,7 +359,7 @@ function integrateToOriginal(values: number[], z: number[], zPath: number[], ord
 function integrateForecast(
   values: number[],
   diffFore: number[],
-  orders: Orders,
+  _orders: Orders,
   d: number,
   D: number,
   s: number,

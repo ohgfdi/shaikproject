@@ -171,7 +171,7 @@ describe("pullConnectorTables — bounded-concurrency batch pulls", () => {
       schema: string,
       table: string,
       _limit: number,
-      incremental?: { column: string; since: string | number },
+      _incremental?: { column: string; since: string | number },
       retry?: { retries?: number; sleep?: (ms: number) => Promise<void>; rand?: () => number },
     ) => {
       // Honor the retry wrapper the real puller uses, so retry counts are testable.

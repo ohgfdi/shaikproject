@@ -651,7 +651,7 @@ function matchesRule(
 }
 
 function findVoucherForRule(
-  tx: { amount: number; date: string; reference?: string | null },
+  _tx: { amount: number; date: string; reference?: string | null },
   rule: { voucherTypes: string[]; dateWindowDays: number },
   vouchers: { id: string; date: string; voucherType: string; amount?: number }[],
 ): string | null {

@@ -57,7 +57,7 @@ function ClientPortal() {
             });
           }
         })
-        .catch((err) => {
+        .catch((_err) => {
           setError("Failed to verify access.");
           toast({
             title: "Error",

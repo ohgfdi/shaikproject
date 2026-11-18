@@ -11,10 +11,6 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
 import {
-  calculateMovingAverage,
-  calculateLinearRegression,
-  exponentialSmoothing,
-  detectAnomalies,
   generatePredictiveScore,
 } from "./predictive-engine";
 import type { MetricType } from "./predictive-engine";

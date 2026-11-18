@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  *
  * Retrieve one saved mapping profile by id.
  */
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
     await requireAuth();
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  *
  * Delete a saved mapping profile.
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
     await requireAuth();

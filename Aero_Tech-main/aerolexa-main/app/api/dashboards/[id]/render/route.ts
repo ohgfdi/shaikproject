@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { dashboardLayout, widgetToRenderPlan } from "@/lib/engine/widget-render-spec";
 import { parseJsonArray } from "@/lib/json";
 import { toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { getVisualRenderer } from "@/lib/server/visual-render";
 import type { DashboardWidget } from "@/lib/types";
 

@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { getPresenceRoom } from "@/lib/collab/presence";
 import { prisma } from "@/lib/db";
 import { toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 
 /**
  * tenancy-audit: global-operator — dashboard presence API provides

@@ -211,7 +211,7 @@ export function createLutEngine(): LutEngine {
    */
   async function cancelLut(
     lutId: string,
-    cancellerId: string,
+    _cancellerId: string,
     reason: string,
   ): Promise<{ lut: LutApplication; status: "CANCELLED"; message: string }> {
     const lut = await prisma.lutApplication.update({

@@ -183,7 +183,7 @@ export async function runScheduledNotebookNow(scheduleId: string): Promise<Sched
   <p><strong>Generated:</strong> ${escapeHtml(executedAt)}</p>
   <hr />`;
 
-    const renderOutput = (kind: string, output: NotebookCellOutput): string => {
+    const renderOutput = (_kind: string, output: NotebookCellOutput): string => {
       if (output.type === "error") {
         return `<p class="cell-error">Error: ${escapeHtml(output.message ?? "Unknown error.")}</p>`;
       }

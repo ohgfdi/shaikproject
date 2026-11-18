@@ -124,7 +124,7 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
       <div className="marketplace-filters">
         <select
           value={filterCategory}
-          onChange={(e) => {
+          onChange={(_e) => {
             // Reload with new category
           }}
         >
@@ -142,7 +142,7 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
           type="text"
           placeholder="Search plugins..."
           value={searchQuery || ""}
-          onChange={(e) => {
+          onChange={(_e) => {
             // Handle search
           }}
         />

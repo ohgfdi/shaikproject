@@ -129,7 +129,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         "No dataset is attached to this dashboard yet. What happened: none of the page's widgets reference a dataset-backed analysis. How to fix: add a chart, KPI or table widget from an analysis first.",
       );
     }
-    const dataset = await withTenantDb(ctx, (db) =>
+    const dataset = await withTenantDb(ctx, (_db) =>
       prisma.dataset.findUnique({ where: { id: datasetId } }),
   );
     if (!dataset) throw new ApiError(404, "NOT_FOUND", "The dashboard's dataset no longer exists.");

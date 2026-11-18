@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { getRoom } from "@/lib/collab/rooms";
 import { prisma } from "@/lib/db";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { requireModule } from "@/lib/server/modules";
 
 export const dynamic = "force-dynamic";

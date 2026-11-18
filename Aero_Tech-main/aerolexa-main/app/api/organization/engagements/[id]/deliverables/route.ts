@@ -177,7 +177,7 @@ function serializeVersion(
   };
 }
 
-async function listFormats(ctx: AuthContext, engagementId: string) {
+async function listFormats(_ctx: AuthContext, engagementId: string) {
   const formats = await prisma.engagementReportFormat.findMany({
     where: { engagementId },
     orderBy: { code: "asc" },
@@ -186,7 +186,7 @@ async function listFormats(ctx: AuthContext, engagementId: string) {
   return formats.map(serializeFormat);
 }
 
-async function listTemplates(ctx: AuthContext, engagementId: string) {
+async function listTemplates(_ctx: AuthContext, engagementId: string) {
   const templates = await prisma.engagementReportTemplate.findMany({
     where: { engagementId },
     orderBy: { createdAt: "desc" },
@@ -201,7 +201,7 @@ async function listTemplates(ctx: AuthContext, engagementId: string) {
   }));
 }
 
-async function listVersions(ctx: AuthContext, engagementId: string, formatCode: string) {
+async function listVersions(_ctx: AuthContext, engagementId: string, formatCode: string) {
   const versions = await prisma.engagementDeliverableVersion.findMany({
     where: { engagementId, formatCode },
     orderBy: [{ revision: "desc" }, { variant: "asc" }, { createdAt: "desc" }],

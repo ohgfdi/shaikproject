@@ -263,7 +263,7 @@ function opPhrase(op: AlertOperator): string {
   }
 }
 
-function severityFor(op: AlertOperator, threshold: number, value: number): AlertSeverity {
+function severityFor(_op: AlertOperator, threshold: number, value: number): AlertSeverity {
   // Beyond 2× the threshold distance → critical; otherwise warning.
   const distance = Math.abs(value - threshold);
   const reference = Math.max(Math.abs(threshold), 1e-9);

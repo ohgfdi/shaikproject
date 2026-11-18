@@ -10,7 +10,7 @@ import { logActivity } from "@/lib/server/activity";
 import { toErrorResponse } from "@/lib/server/api";
 import { modelArtifactPath } from "@/lib/server/artifacts";
 import { requireRowRole } from "@/lib/server/members";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { enforceUserRateLimit } from "@/lib/server/rate-limit";
 import type { ModelCard } from "@/lib/types";
 

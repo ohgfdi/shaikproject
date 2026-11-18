@@ -190,7 +190,7 @@ export async function registerDeal(
 
 /** Add activity to a deal. */
 export function addDealActivity(
-  dealId: string,
+  _dealId: string,
   activity: PartnerDealActivity
 ): PartnerDealActivity {
   return activity;

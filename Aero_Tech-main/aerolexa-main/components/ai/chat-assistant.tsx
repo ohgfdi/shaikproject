@@ -4,7 +4,7 @@
  * Provides natural language to chart generation (NL2Chart) and auto-insights.
  * Integrates with predictive analytics, plugin SDK, and existing dashboard data.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 import { prisma } from "../../lib/db";
 import { executePlugin } from "../../lib/extensions/plugin-sdk";

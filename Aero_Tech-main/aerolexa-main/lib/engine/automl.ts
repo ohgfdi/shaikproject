@@ -134,7 +134,7 @@ function gridFor(algorithm: MlAlgorithm): GridPoint[] {
 }
 
 /** Cost proxy for tie-breaking: total fits weighted by ensemble size. */
-function costOf(algorithm: MlAlgorithm, hyperparams: Record<string, number>, folds: number): number {
+function costOf(_algorithm: MlAlgorithm, hyperparams: Record<string, number>, folds: number): number {
   const trees = hyperparams.nTrees ?? 1;
   const epochs = hyperparams.epochs ?? 0; // MLP epoch cost counts against ties
   const layers = hyperparams.hiddenLayers ?? 0; // deeper stacks cost more too

@@ -192,7 +192,7 @@ function rowFromCaSource(source: {
 
 /** Create a mapping profile for one source kind. Returns the saved profile. */
 export async function createMappingProfile(
-  ctx: AuthContext,
+  _ctx: AuthContext,
   input: {
     sourceKind: CaSourceKind;
     name: string;
@@ -241,7 +241,7 @@ export async function createMappingProfile(
 
 /** List mapping profiles for one source kind (firm-scoped). */
 export async function listMappingProfiles(
-  ctx: AuthContext,
+  _ctx: AuthContext,
   sourceKind: CaSourceKind,
 ): Promise<CaMappingProfileEngine[]> {
   const rows = await prisma.caMappingProfile.findMany({

@@ -52,7 +52,7 @@ export function generateRecommendations(
   metricName: string,
   currentValue: number,
   trend: "up" | "down" | "stable",
-  targetValue?: number): Recommendation[] {
+  _targetValue?: number): Recommendation[] {
   const recommendations: Recommendation[] = [];
 
   // Generate type-specific recommendations based on metric category

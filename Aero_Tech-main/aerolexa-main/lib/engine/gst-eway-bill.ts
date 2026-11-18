@@ -729,7 +729,7 @@ export function calculateEwayBillPenalty(
   violation:
     "not-generated" | "value-mismatch" | "invalid-transport" | "expired-transit" | "fake-bill" | "goods-mismatch",
   taxInvolved: number, // tax amount involved
-  goodsValue: number,
+  _goodsValue: number,
   isExempt: boolean = false,
 ): EwayBillPenalty {
   if (isExempt) {

@@ -112,7 +112,7 @@ export function interpretQuery(query: string): { type: InsightType; extracted: R
 export function generateInsight(
   type: InsightType,
   extracted: Record<string, unknown>,
-  contextData: Record<string, unknown> = {}
+  _contextData: Record<string, unknown> = {}
 ): Insight {
   const id = `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const createdAt = new Date();

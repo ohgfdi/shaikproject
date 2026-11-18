@@ -353,7 +353,7 @@ function generateAgentResponse(
 function getExecutedActions(
   agentType: AgentType,
   industry: Industry,
-  context: Record<string, any>
+  _context: Record<string, any>
 ): string[] {
     const actions: Record<string, Record<string, string[]>> = {
       research: {

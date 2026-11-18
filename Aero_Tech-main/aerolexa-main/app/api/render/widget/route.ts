@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth/guard";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { getVisualRenderer } from "@/lib/server/visual-render";
 
 export const dynamic = "force-dynamic";

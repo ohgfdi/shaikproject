@@ -46,7 +46,7 @@ export interface EfilingResult {
  * object key ordering/format differences between callers.
  */
 function canonicalJson(payload: Record<string, unknown>): string {
-  return JSON.stringify(payload, (key, value) => {
+  return JSON.stringify(payload, (_key, value) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)));
     }

@@ -17,7 +17,7 @@ import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 import { modelArtifactPath, ensureDirs } from "@/lib/server/artifacts";
 import { applyRowSecurity } from "@/lib/server/dataset-access";
 import { requireRowRole } from "@/lib/server/members";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { completeRun, failRun, recordProgress, startRun } from "@/lib/server/training-progress";
 
 export const dynamic = "force-dynamic";

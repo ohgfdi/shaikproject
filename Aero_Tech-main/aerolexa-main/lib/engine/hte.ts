@@ -617,7 +617,7 @@ export function fitHte(rows: HteRow[], opts: HteOptions, featureNames: string[] 
     );
   }
 
-  const individual: IndividualEffect[] = rows.map((r, i) => ({
+  const individual: IndividualEffect[] = rows.map((_r, i) => ({
     index: i,
     effect: effects[i]!,
     se: cate.se,

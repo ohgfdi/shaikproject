@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { getDashboardCollabRoom } from "@/lib/collab/dashboard-collab";
 import { prisma } from "@/lib/db";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

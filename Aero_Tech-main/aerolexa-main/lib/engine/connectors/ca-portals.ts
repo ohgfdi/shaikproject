@@ -205,7 +205,7 @@ export interface PortalSubmissionResult {
  * the taxpayer category.
  */
 export function gstFilingWindow(
-  gstin: string,
+  _gstin: string,
   period: string,
 ): {
   opens: string;
@@ -249,7 +249,7 @@ export function gstFilingWindow(
  * July 31st (for individuals) or October 31st (for those requiring audit).
  */
 export function itFilingWindow(
-  pan: string,
+  _pan: string,
   assessmentYear: string,
 ): {
   opens: string;

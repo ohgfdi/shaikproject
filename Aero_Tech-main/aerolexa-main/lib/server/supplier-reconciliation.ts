@@ -82,7 +82,7 @@ export function createSupplierReconciliationEngine(): SupplierReconciliationEngi
    * and flag patterns that indicate the supplier is never in 2B.
    */
   async function reconcileSupplier(
-    workspaceId: string,
+    _workspaceId: string,
     bookId: string,
     supplierGstin: string,
     period?: string,
@@ -242,7 +242,7 @@ export function createSupplierReconciliationEngine(): SupplierReconciliationEngi
    * Flag new invoices for a supplier since a given date.
    */
   async function flagNewInvoices(
-    workspaceId: string,
+    _workspaceId: string,
     bookId: string,
     supplierGstin: string,
     sinceDate: string,

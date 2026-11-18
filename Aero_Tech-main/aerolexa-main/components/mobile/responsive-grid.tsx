@@ -75,7 +75,7 @@ export const useResponsiveBreakpoint = (): Breakpoint => {
 };
 
 /** Widget layout helper for dashboards. */
-export const useDashboardLayout = (widgetType: "chart" | "kpi" | "table" | "map") => {
+export const useDashboardLayout = (_widgetType: "chart" | "kpi" | "table" | "map") => {
   const breakpoint = useResponsiveBreakpoint();
 
   const layouts: Record<Breakpoint, { xs: number; sm: number; md: number; lg: number; xl: number }> = {

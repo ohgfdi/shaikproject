@@ -239,7 +239,7 @@ export function calculateWithRelated(model: SemanticModel, input: RelatedMeasure
       input.relatedFilter.dimensionColumn,
     );
     const allowed = new Set(input.relatedFilter.values.map(String));
-    rows = rows.filter((row, i) => {
+    rows = rows.filter((_row, i) => {
       const v = related[i];
       return v !== null && allowed.has(String(v));
     });

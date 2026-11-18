@@ -12,10 +12,10 @@ import { createHash } from "node:crypto";
  */
 
 import { prisma } from "@/lib/db";
-import { twoProportionZTest, bayesianAbTest, evaluateAbTest, AbArm, AbEvaluation } from "@/lib/engine/abtest";
+import { evaluateAbTest, AbArm, AbEvaluation } from "@/lib/engine/abtest";
 
 import { executeDecision, DecisionProposal, DecisionRiskLevel } from "./autonomous-decision-engine";
-import { runWhatIfScenario, ScenarioParameter, ScenarioConfig } from "../analytics/scenario-modeling";
+import { ScenarioParameter } from "../analytics/scenario-modeling";
 
 export type ABTestType = "model_comparison" | "feature_flag" | "workflow_variant" | "pricing_experiment";
 

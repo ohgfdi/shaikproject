@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/server/activity";
 import { toErrorResponse } from "@/lib/server/api";
 import { requireRowRole } from "@/lib/server/members";
 import { loadServeable } from "@/lib/server/model-serving";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 export const dynamic = "force-dynamic";
 
 /**

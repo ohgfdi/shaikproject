@@ -3,7 +3,7 @@ import { getRoom, type CollabCellState, type CollabRelay } from "@/lib/collab/ro
 import { prisma } from "@/lib/db";
 import { parseJsonArray } from "@/lib/json";
 import { toErrorResponse } from "@/lib/server/api";
-import { moduleEnabled, moduleEnabledForRequest } from "@/lib/server/modules";
+import { moduleEnabledForRequest } from "@/lib/server/modules";
 import { requireModule } from "@/lib/server/modules";
 import { fetchRemoteCollabUpdates, publishCollabUpdate } from "@/lib/server/replica-bus";
 import type { NotebookCell } from "@/lib/types";

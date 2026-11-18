@@ -263,7 +263,7 @@ export function detectMetricAnomalies(
 
 /** Identify contributing factors for anomalies. */
 function identifyContributingFactors(
-  metric: MetricType,
+  _metric: MetricType,
   industry: Industry,
   value: number
 ): string[] {
@@ -288,7 +288,7 @@ function identifyContributingFactors(
 
 /** Get recommended action for anomaly. */
 function getRecommendedAction(
-  metric: MetricType,
+  _metric: MetricType,
   industry: Industry,
   severity: "low" | "medium" | "high" | "critical"
 ): string {

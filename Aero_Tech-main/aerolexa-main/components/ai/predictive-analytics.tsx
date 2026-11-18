@@ -40,7 +40,7 @@ function movingAverage(data: number[], period: number): number[] {
 }
 
 /** Linear regression forecast. */
-function linearRegressionForecast(data: number[], periodsAhead: number): { slope: number; intercept: number } {
+function linearRegressionForecast(data: number[], _periodsAhead: number): { slope: number; intercept: number } {
   const n = data.length;
   const xValues = Array.from({ length: n }, (_, i) => i);
   

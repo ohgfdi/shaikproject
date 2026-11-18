@@ -90,7 +90,7 @@ function canonicalInvoiceJson(invoice: InvoiceForIRN): string {
     placeOfSupply: invoice.placeOfSupply,
     items: invoice.items,
   };
-  return JSON.stringify(obj, (key, value) => {
+  return JSON.stringify(obj, (_key, value) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)));
     }

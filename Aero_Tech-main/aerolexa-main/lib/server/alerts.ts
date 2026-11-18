@@ -251,7 +251,7 @@ export async function evaluateDataAlert(
 
 /** Workspace owner + alert creator emails; creator's verified phone for WhatsApp. */
 async function alertRecipients(
-  workspaceId: string,
+  _workspaceId: string,
   creatorId: string,
   notifyEmail: boolean,
   notifyWhatsapp: boolean,

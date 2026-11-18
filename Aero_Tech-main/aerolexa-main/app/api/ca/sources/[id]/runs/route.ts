@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * List the ingest runs recorded against a CA source, newest first. Every sync is
  * a versioned run, so the prior state stays retrievable after a repeat sync.
  */
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
     const ctx = await requireAuth();

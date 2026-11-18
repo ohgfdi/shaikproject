@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/feedback";
 import { Card, Badge } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
-import { CALCULATED_LABEL, TRUST_EXPLANATION } from "@/lib/trust/labels";
+import { CALCULATED_LABEL } from "@/lib/trust/labels";
 
 export interface AnalysisVersionView {
   id: string;

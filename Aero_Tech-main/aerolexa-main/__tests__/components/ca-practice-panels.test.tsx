@@ -129,7 +129,7 @@ function compute(body: Record<string, any>): unknown {
   }
 }
 
-mockApi.mockImplementation(((path: string, init?: RequestInit) => {
+mockApi.mockImplementation(((_path: string, init?: RequestInit) => {
   const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, any>;
   return Promise.resolve(compute(body));
 }) as typeof api);

@@ -73,9 +73,9 @@ export interface AggregatedAnalytics {
 
 /** Track a feature activation event (privacy-safe, aggregated only). */
 export function trackFeatureActivation(
-  tenantId: string,
-  feature: FeatureKey,
-  plan: PlanType,
+  _tenantId: string,
+  _feature: FeatureKey,
+  _plan: PlanType,
   sessionDuration: number
 ): {
   success: boolean;

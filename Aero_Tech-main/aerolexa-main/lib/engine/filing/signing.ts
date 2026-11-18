@@ -18,7 +18,7 @@ import { createHash, createHmac, createSign, createPrivateKey, randomUUID } from
 
 /** Stable, order-independent serialisation of a JSON document (sorted keys). */
 export function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (key, jsonValue) => {
+  return JSON.stringify(value, (_key, jsonValue) => {
     if (jsonValue && typeof jsonValue === "object" && !Array.isArray(jsonValue)) {
       return Object.fromEntries(Object.entries(jsonValue).sort(([a], [b]) => a.localeCompare(b)));
     }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { requireAuth, ApiError } from "@/lib/auth/guard";
+import { requireAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import {
   computeRiskScore,
