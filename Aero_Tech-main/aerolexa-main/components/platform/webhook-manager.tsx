@@ -61,7 +61,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
   const [newUrl, setNewUrl] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [retryId, setRetryId] = useState<string | null>(null);
+  const [, setRetryId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubscriptions();

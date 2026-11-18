@@ -35,7 +35,7 @@ export interface ForecastResult {
 export function simpleMovingAverage(
   historicalValues: number[],
   periods: number = 5,
-  { forecastPoints = 5, confidenceLevel = 0.95 }: { forecastPoints?: number; confidenceLevel?: number } = {},
+  { forecastPoints = 5 }: { forecastPoints?: number; confidenceLevel?: number } = {},
 ): ForecastResult {
     const windowSize = Math.min(periods, historicalValues.length);
     const window = historicalValues.slice(-windowSize);

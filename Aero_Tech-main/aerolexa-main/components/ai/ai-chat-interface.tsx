@@ -34,7 +34,6 @@ export const AIChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState("");
 
   // Load or create conversation
   useEffect(() => {
@@ -71,7 +70,7 @@ export const AIChatInterface: React.FC = () => {
       // Analyze the message and get response
       const response = await analyzeUserQuery(content);
       setMessages((prev) => [...prev, response]);
-    } catch (_error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {

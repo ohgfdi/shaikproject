@@ -72,7 +72,7 @@ export function getSecurityControls(): SecurityHardening[] {
     session_management: { initialStatus: "compliant" },
   };
 
-  for (const [control, def] of Object.entries(controlDefs) as [SecurityControl, { initialStatus: string }][]) {
+  for (const [control] of Object.entries(controlDefs) as [SecurityControl, { initialStatus: string }][]) {
     // Simulate some controls being non-compliant for demonstration
     const isCompliant = Math.random() > 0.3; // 70% compliant
     const status: "compliant" | "non_compliant" | "pending" = isCompliant ? "compliant" : "non_compliant";

@@ -27,7 +27,7 @@ export function EmbedWidget(): ReactElement {
   const [ready, setReady] = useState(false);
   const token = useRef<string | null>(null);
   const workspaceId = useRef<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   // Read token and workspace from data attributes
   useEffect(() => {

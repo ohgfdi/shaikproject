@@ -750,7 +750,7 @@ export function ChoroplethMap({
   showKPIs = false,
 }: ChoroplethMapProps) {
   const [compareMode, setCompareMode] = useState(false);
-  const [compareOrderState, setCompareOrderState] = useState<"current-first" | "compare-first">(compareOrder);
+  const [compareOrderState] = useState<"current-first" | "compare-first">(compareOrder);
 
   // Determine which data goes on which side
   const primaryData = compareOrderState === "current-first" ? data : compareData;

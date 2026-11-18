@@ -27,7 +27,7 @@ import { DashboardWidget } from "@/lib/types";
 export function ViewerDashboard({ dashboardId }: { dashboardId: string }) {
   const [scope, setScope] = useState<"us-states" | "countries">("us-states");
   const [metric, setMetric] = useState<string>("Value");
-  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
+  const [widgets] = useState<DashboardWidget[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<MapTemplate | null>(null);
 
   useEffect(() => {

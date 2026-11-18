@@ -32,11 +32,11 @@ function ClientPortal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [, setDeadlines] = useState<Deadline[]>([]);
   const [docTitle, setDocTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [, setUploading] = useState(false);
+  const [, setUploadError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -153,7 +153,7 @@ function ClientPortal() {
 
       const dl = await api(`/api/compliance/deadlines?engagementId=${engagementId}`);
       setDeadlines(dl as Deadline[] || []);
-    } catch (_err) {
+    } catch {
       setError("Failed to load engagement data.");
       toast({
         title: "Error",

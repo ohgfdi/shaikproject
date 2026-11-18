@@ -274,7 +274,7 @@ export const AIChatAssistant: React.FC = () => {
         `✅ Chart generated: ${spec.title}\n\nData points: ${values.length}\n\nThis would render a ${spec.type} chart in the UI with the above data.`,
         "chart"
       );
-    } catch (_error) {
+    } catch {
       addMessage(
         "assistant",
         "Sorry, I couldn't generate the chart. Please try a different query.",

@@ -137,7 +137,7 @@ export async function checkMobileHealth(
       lastSync: new Date(),
       version: "1.0.0",
     };
-  } catch (_error) {
+  } catch {
     return {
       status: "error",
       database: "disconnected",

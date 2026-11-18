@@ -34,7 +34,7 @@ export function EngagementAccessPanel({ engagementId, engagementName }: Engageme
   const [memberName, setMemberName] = useState("");
   const [memberRole, setMemberRole] = useState<"PARTNER" | "MANAGER" | "REVIEWER" | "SENIOR" | "ASSISTANT" | "AUDITOR">("MANAGER");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   // Load access and roles when component mounts
   useEffect(() => {

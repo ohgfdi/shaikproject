@@ -80,8 +80,6 @@ export const PricingCard: React.FC<{
   const features = pricingTiers[tier].features;
   const { name, price, billing, cta, ctaUrl: _ctaUrl } = pricingTiers[tier];
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   return (
     <div
       className={`

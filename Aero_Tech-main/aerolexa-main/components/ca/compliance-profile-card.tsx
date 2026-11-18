@@ -32,7 +32,7 @@ interface ComplianceProfileCardProps {
   showActions?: boolean;
 }
 
-export function ComplianceProfileCard({ engagementId, showActions = true }: ComplianceProfileCardProps) {
+export function ComplianceProfileCard({ engagementId }: ComplianceProfileCardProps) {
   const [profile, setProfile] = useState<ComplianceProfile | null>(null);
   const [status, setStatus] = useState<ComplianceStatus | null>(null);
   const [loading, setLoading] = useState(true);
