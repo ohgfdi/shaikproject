@@ -175,7 +175,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                   type="checkbox"
                   checked={subscriptions.some((s) => s.events.includes("widget:click"))}
                   onChange={(e) => {
-                    const currentEvents = subscriptions.map((s) => s.events);
+                    const _currentEvents = subscriptions.map((s) => s.events);
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
@@ -200,7 +200,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                   type="checkbox"
                   checked={subscriptions.some((s) => s.events.includes("widget:filter-change"))}
                   onChange={(e) => {
-                    const currentEvents = subscriptions.map((s) => s.events);
+                    const _currentEvents = subscriptions.map((s) => s.events);
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
@@ -227,7 +227,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                   type="checkbox"
                   checked={subscriptions.some((s) => s.events.includes("dashboard:saved"))}
                   onChange={(e) => {
-                    const currentEvents = subscriptions.map((s) => s.events);
+                    const _currentEvents = subscriptions.map((s) => s.events);
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>
@@ -252,7 +252,7 @@ export function WebhookManager({ dashboardId }: { dashboardId: string }) {
                   type="checkbox"
                   checked={subscriptions.some((s) => s.events.includes("dashboard:export"))}
                   onChange={(e) => {
-                    const currentEvents = subscriptions.map((s) => s.events);
+                    const _currentEvents = subscriptions.map((s) => s.events);
                     if (e.target.checked) {
                       setSubscriptions((prev) =>
                         prev.map((s) =>

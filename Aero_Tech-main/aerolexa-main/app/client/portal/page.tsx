@@ -120,7 +120,7 @@ function ClientPortal() {
       formData.append("title", docTitle);
       formData.append("file", file!);
 
-      const result = await api("/api/client/documents", {
+      const _result = await api("/api/client/documents", {
         method: "POST",
         body: formData,
       });
@@ -153,7 +153,7 @@ function ClientPortal() {
 
       const dl = await api(`/api/compliance/deadlines?engagementId=${engagementId}`);
       setDeadlines(dl as Deadline[] || []);
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to load engagement data.");
       toast({
         title: "Error",

@@ -11,7 +11,7 @@ export const metadata = { title: "Engagements" };
  * and retention in one place.
  */
 export default async function EngagementsPage() {
-  const ctx = await requirePageAuth();
+  const _ctx = await requirePageAuth();
 
   return (
     <div>

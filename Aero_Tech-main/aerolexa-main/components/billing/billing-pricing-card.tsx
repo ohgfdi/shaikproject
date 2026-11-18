@@ -78,7 +78,7 @@ export const PricingCard: React.FC<{
   onSubscribe?: (tier: PricingTier) => void;
 }> = ({ tier, highlighted = false, onSubscribe }) => {
   const features = pricingTiers[tier].features;
-  const { name, price, billing, cta, ctaUrl } = pricingTiers[tier];
+  const { name, price, billing, cta, ctaUrl: _ctaUrl } = pricingTiers[tier];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 

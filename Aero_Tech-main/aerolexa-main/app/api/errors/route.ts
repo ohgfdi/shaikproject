@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 /** GET: List fingerprinted errors with optional filtering. */
 export async function GET(request: Request) {
   try {
-    const ctx = await requireAuth();
+    const _ctx = await requireAuth();
 
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get("cursor") ?? undefined;

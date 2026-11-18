@@ -86,7 +86,7 @@ export function trackFeatureActivation(
 } {
   // In a real implementation, this would update Redis/PostgreSQL counters
   // Privacy: Only aggregated counters are tracked, no PII stored
-  const now = new Date();
+  const _now = new Date();
 
   // Simulate tracking update
   const simulatedUpdate = {

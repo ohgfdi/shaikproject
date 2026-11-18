@@ -68,7 +68,7 @@ export const AIChatAssistant: React.FC = () => {
       // Step 1: Check if this is a chart request (NL2Chart)
       const chartSpec = parseNL2Chart(text);
       if (chartSpec) {
-        const result = await generateChartFromSpec(chartSpec);
+        const _result = await generateChartFromSpec(chartSpec);
         addMessage(
           "assistant",
           `I've created a ${chartSpec.type} chart: ${chartSpec.title}`,
@@ -266,7 +266,7 @@ export const AIChatAssistant: React.FC = () => {
       });
 
       // Generate simple chart data
-      const labels = data.map((d) => d.date.toLocaleDateString());
+      const _labels = data.map((d) => d.date.toLocaleDateString());
       const values = data.map((d) => d.value || 0);
 
       addMessage(
@@ -274,7 +274,7 @@ export const AIChatAssistant: React.FC = () => {
         `✅ Chart generated: ${spec.title}\n\nData points: ${values.length}\n\nThis would render a ${spec.type} chart in the UI with the above data.`,
         "chart"
       );
-    } catch (error) {
+    } catch (_error) {
       addMessage(
         "assistant",
         "Sorry, I couldn't generate the chart. Please try a different query.",

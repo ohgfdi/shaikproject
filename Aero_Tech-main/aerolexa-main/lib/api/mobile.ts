@@ -137,7 +137,7 @@ export async function checkMobileHealth(
       lastSync: new Date(),
       version: "1.0.0",
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       status: "error",
       database: "disconnected",
@@ -178,11 +178,7 @@ export async function exportMobileData(
     });
   }
 
-  const formatter =
-    format === "csv"
-      ? "text/csv"
-      : "application/json";
-  const filename = `ledgerly-${tenantId}-${new Date()
+    const filename = `ledgerly-${tenantId}-${new Date()
     .toISOString()
     .split("T")[0]}.${format}`;
 

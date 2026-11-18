@@ -8,7 +8,7 @@
    ============================================================ */
 
 export class XeroIntegrationError extends Error {
-  constructor(message: string, code?: string) {
+  constructor(message: string, _code?: string) {
     super(message);
     this.name = 'XeroIntegrationError';
   }
@@ -323,7 +323,7 @@ export const XERO_INVOICE_RISK_MAPPING: Record<string, {
    ============================================================ *//** Sync Xero invoices and update compliance risk scores */
   export async function syncXeroInvoicesToDatabase(
     xeroClient: XeroClient,
-    clientId: string
+    _clientId: string
 ): Promise<{
   invoicesProcessed: number;
   riskScoreImpact: number;
@@ -410,7 +410,7 @@ export class QuickBooksClient {
     return [];
   }
 
-  async syncDataToDatabase(clientId: string): Promise<{
+  async syncDataToDatabase(_clientId: string): Promise<{
     invoicesSynced: number;
     customersSynced: number;
     syncedAt: Date;

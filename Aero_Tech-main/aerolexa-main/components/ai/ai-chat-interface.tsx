@@ -71,7 +71,7 @@ export const AIChatInterface: React.FC = () => {
       // Analyze the message and get response
       const response = await analyzeUserQuery(content);
       setMessages((prev) => [...prev, response]);
-    } catch (error) {
+    } catch (_error) {
       setMessages((prev) => [
         ...prev,
         {

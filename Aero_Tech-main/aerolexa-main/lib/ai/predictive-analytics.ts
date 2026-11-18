@@ -114,7 +114,7 @@ export function exponentialSmoothing(
       });
     }
 
-    const forecastValue = Math.round(S * 100) / 100;
+    const _forecastValue = Math.round(S * 100) / 100;
     const mape = historicalValues.slice(1).reduce((sum, val, _i) => {
       const fitted = S; // simplified fit
       const error = Math.abs(val - fitted) / Math.max(val, 1);
@@ -273,7 +273,7 @@ export async function GET(
     const historicalStr = searchParams.get("historical") || "120,135,130,145,150,160,155,170,165,180";
     const historicalValues = historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v));
     const forecastPoints = parseInt(searchParams.get("horizon") || "5", 10);
-    const method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
+    const _method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
 
     const result = linearTrendForecast(historicalValues, forecastPoints);
     result.metricName = searchParams.get("metricName") || "Revenue";

@@ -13,7 +13,6 @@ import { createHash } from "node:crypto";
 
 import { evaluateAbTest, AbArm, AbEvaluation } from "@/lib/engine/abtest";
 
-import { DecisionProposal } from "./autonomous-decision-engine";
 import { ScenarioParameter } from "../analytics/scenario-modeling";
 
 export type ABTestType = "model_comparison" | "feature_flag" | "workflow_variant" | "pricing_experiment";

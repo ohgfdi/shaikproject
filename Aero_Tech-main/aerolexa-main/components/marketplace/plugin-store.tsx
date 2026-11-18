@@ -111,7 +111,7 @@ export const PluginStore: React.FC = () => {
     }
   };
 
-  const executePlugin = (pluginId: string, args: any) => {
+  const _executePlugin = (pluginId: string, args: any) => {
     return executePluginSdk(pluginId, args);
   };
 

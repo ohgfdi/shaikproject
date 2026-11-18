@@ -68,7 +68,7 @@ export function QuickFilter({ scope, onScopeChange, metric, onMetricChange, metr
     setFocusOrigin(e.currentTarget as HTMLElement);
   };
 
-  const handleMetricClick = (e: React.MouseEvent, m: string) => {
+  const _handleMetricClick = (e: React.MouseEvent, m: string) => {
     e.stopPropagation();
     onMetricChange(m);
     setOpen(false);

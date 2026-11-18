@@ -12,10 +12,10 @@ export async function POST(request: Request) {
       clientName,
       financialYear,
       totalIncome,
-      salaryComponents,
+      salaryComponents: _salaryComponents,
       deductions,
       investments,
-      taxesPaid,
+      taxesPaid: _taxesPaid,
       entityKind,
     } = body as {
       type: 'prepare-itr' | 'tax-query' | 'tax-planning';

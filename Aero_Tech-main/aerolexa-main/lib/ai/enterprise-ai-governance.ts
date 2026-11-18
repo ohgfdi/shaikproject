@@ -9,13 +9,11 @@
  */
 import type { NextRequest } from "next/server";
 
-import { checkGovernancePolicies } from "@/lib/governance/audit-management";
 import type { AuditEvent, GovernanceFramework } from "@/lib/governance/audit-management";
 
 export type { GovernanceFramework };
 
 import type { Industry } from "./agent-orchestration";
-import { DecisionRiskLevel } from "./autonomous-decision-engine";
 
 
 export type ModelType = "predictive_score" | "anomaly_detection" | "forecasting" | "classification" | "regression";
@@ -138,8 +136,7 @@ export function generateAIGovernanceReport(
   });
 
   totalCompliance = Math.min(100, totalCompliance);
-  const averageRisk = totalRisk / frameworks.length;
-
+  
   // Generate recommendations
   const recommendations: string[] = [];
   

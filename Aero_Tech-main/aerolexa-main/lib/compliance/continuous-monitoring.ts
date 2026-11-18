@@ -69,7 +69,7 @@ export function runContinuousComplianceCheck(
   const detailResults: ComplianceCheckResult[] = [];
 
   // Drift impact on compliance score
-  const driftPenalty = driftReports.length > 0
+  const _driftPenalty = driftReports.length > 0
     ? Math.min(20, driftReports.length * 5) // max 20 point penalty
     : 0;
 

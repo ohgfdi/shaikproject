@@ -3,7 +3,7 @@ import { ok, toErrorResponse } from "@/lib/server/api";
 
 export async function POST(request: Request) {
   try {
-    const ctx = await requireAuth();
+    const _ctx = await requireAuth();
 
     // engagementId comes from query params (set by client portal)
     const { engagementId } = Object.fromEntries(await new URL(request.url).searchParams.entries());

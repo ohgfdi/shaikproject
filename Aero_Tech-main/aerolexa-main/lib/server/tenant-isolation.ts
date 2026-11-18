@@ -146,7 +146,7 @@ export function hasFeatureAccess(
   const proFeatures = ["advanced-charts", "pdf-export", "api-access", "custom-branding"];
 
   // Enterprise plan has everything
-  const enterpriseFeatures = ["*"]; // all features
+   // all features
 
   // Check plan-based access
   if (tenant.plan === "enterprise") return true;
@@ -162,7 +162,7 @@ export function checkQuota(
   quotaType: "dashboards" | "storage" | "api-calls",
   amount: number = 1
 ): { available: boolean; remaining: number; limit: number } {
-  const now = new Date();
+  const _now = new Date();
 
   switch (quotaType) {
     case "dashboards": {

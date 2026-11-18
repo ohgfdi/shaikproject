@@ -61,7 +61,7 @@ export function runSoxCheck(): SoxDashboard {
   for (const section of sections) {
     // Mock compliance check - in production this would query actual controls
     const baseScore = 85; // Baseline score per section
-    const totalControls = 10; // Typical controls per section
+     // Typical controls per section
     const criticalDeficiencyCount = Math.floor(Math.random() * 3); // 0-2 random
 
     const sectionScore = Math.max(0, baseScore - criticalDeficiencyCount * 15);

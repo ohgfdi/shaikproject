@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
-import { rlsEnabled } from "@/lib/server/tenancy";
 
 /** Schema for a webhook subscription. */
 const subscriptionSchema = z.object({
@@ -190,7 +189,7 @@ export async function PATCH(request: Request) {
   const id = new URL(request.url).searchParams.get("id") ?? "";
   try {
     const body = await request.json();
-    const { idempotencyKey } = body;
+    const { idempotencyKey: _idempotencyKey } = body;
 
     // Find the subscription
     const subscription = await prisma.webhookSubscription.findFirst({

@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { getIndustryTemplate } from "@/lib/industry";
 import type { Industry } from "@/lib/industry/finance";
 
 export type DashboardLayout = "finance" | "saas" | "retail" | "manufacturing";

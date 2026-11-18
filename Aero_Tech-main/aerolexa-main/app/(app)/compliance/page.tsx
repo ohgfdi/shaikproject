@@ -11,7 +11,7 @@ export const metadata = { title: "Compliance Calendar" };
  * and has anyone filed it?
  */
 export default async function CompliancePage() {
-  const ctx = await requirePageAuth();
+  const _ctx = await requirePageAuth();
 
   return (
     <div>

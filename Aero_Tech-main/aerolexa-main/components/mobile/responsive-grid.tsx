@@ -27,12 +27,7 @@ export const ResponsiveGrid: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ columns, children, className }) => {
-  const xs = columns.xs === 12 ? "col-span-12" : `col-span-${columns.xs}`;
-  const sm = columns.sm === 12 ? "col-span-12" : `col-span-${columns.sm}`;
-  const md = columns.md === 12 ? "col-span-12" : `col-span-${columns.md}`;
-  const lg = columns.lg === 12 ? "col-span-12" : `col-span-${columns.lg}`;
-  const xl = columns.xl === 12 ? "col-span-12" : `col-span-${columns.xl}`;
-
+          
   return (
     <div
       className={`

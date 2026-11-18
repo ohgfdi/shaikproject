@@ -159,7 +159,7 @@ export function generatePredictiveScore(
   config: PredictiveEngineConfig
 ): PredictiveScore {
   const window = config.seasonality ? Math.max(7, historicalValues.length / 4) : 7;
-  const movingAvg = calculateMovingAverage(historicalValues, window);
+  const _movingAvg = calculateMovingAverage(historicalValues, window);
   const lastValue = historicalValues[historicalValues.length - 1] || 0;
 
   // Simple prediction: extrapolate based on trend

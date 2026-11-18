@@ -227,7 +227,7 @@ export async function GET(
     }
 
     if (action === "deal") {
-      const partnerId = searchParams.get("partner_id") || "partner_1";
+      const _partnerId = searchParams.get("partner_id") || "partner_1";
       // In real implementation, fetch from DB
       const deals: PartnerDeal[] = [];
 

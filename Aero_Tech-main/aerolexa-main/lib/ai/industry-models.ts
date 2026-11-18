@@ -127,7 +127,7 @@ export const RetailDemandForecasting = {
   industry: "retail" as Industry,
 
   predict: async (input: Record<string, any>): Promise<ModelPrediction> => {
-    const { product_id, category, historical_sales, seasonality, promotions } = input;
+    const { product_id: _product_id, category: _category, historical_sales, seasonality, promotions } = input;
 
     // Simple demand forecasting logic
     const baseDemand = historical_sales || 100;

@@ -142,7 +142,7 @@ export function getIntegrationConfig(
 
 /** Check if integration is available (has credentials configured). */
 export function isIntegrationAvailable(type: IntegrationType): boolean {
-  const config = getIntegrationConfig(type);
+  const _config = getIntegrationConfig(type);
   return !!(
     process.env[`${type.toUpperCase()}_CLIENT_ID`] ||
     process.env[`${type.toUpperCase()}_API_KEY`]

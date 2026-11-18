@@ -33,7 +33,7 @@ export interface IndustryBenchmarkConfig {
 export function getIndustryBenchmarkConfig(
   industry: Industry
 ): IndustryBenchmarkConfig {
-  const now = new Date();
+  const _now = new Date();
 
   if (industry === "finance") {
     return {

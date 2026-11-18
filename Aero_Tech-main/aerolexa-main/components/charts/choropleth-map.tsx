@@ -332,8 +332,7 @@ function ChoroplethMapPanel({
     if (view !== "histogram") return null;
 
     const maxBarWidth = 300;
-    const barWidth = maxBarWidth / histogramBins;
-
+    
     return (
       <div
         role="img"
@@ -404,7 +403,7 @@ function ChoroplethMapPanel({
             key={`${scope}-${JSON.stringify(classified.breaks.bounds)}`}
             data={collection as FeatureCollectionLike}
             style={(feature) => {
-              const name = String(feature?.properties?.name ?? "");
+              const _name = String(feature?.properties?.name ?? "");
               return {
                 fillColor: getColor(feature),
                 color: "#6B6B6B",

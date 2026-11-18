@@ -1067,7 +1067,7 @@ export function RocCompliancePanel() {
   const updateFilings = (updates: Partial<RocFilingRow>[]) =>
     setFilings(filings.map((f, i) => i < updates.length ? { ...f, ...updates[i] } : f));
 
-  const updateCharges = (newCharges: { dateOfCreation: string; amount: number; securedDebts: number; asset: string }[]) =>
+  const _updateCharges = (newCharges: { dateOfCreation: string; amount: number; securedDebts: number; asset: string }[]) =>
     setCharges(newCharges);
 
   const updateDirectors = (newDirectors: { name: string; din: string; kycStatus: "done" | "pending" }[]) =>

@@ -17,8 +17,8 @@ const generateId = () => {
  */
 export async function POST(request: Request, props: { params: Promise<{ wpId: string }> }) {
   try {
-    const { wpId } = await props.params;
-    const ctx = await requireAuth();
+    const { wpId: _wpId } = await props.params;
+    const _ctx = await requireAuth();
 
     const body = await readJsonBody<{
       title: string;

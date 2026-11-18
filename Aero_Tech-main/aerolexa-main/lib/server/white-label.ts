@@ -81,7 +81,7 @@ export async function getWhiteLabelConfig(
 export function applyWhiteLabel(
   config: WhiteLabelConfig
 ): void {
-  const { companyName, logoUrl, faviconUrl, primaryColor, theme } = config;
+  const { companyName, logoUrl, faviconUrl, primaryColor, theme: _theme } = config;
 
   // Update document title
   document.title = `${companyName} - Ledgerly`;

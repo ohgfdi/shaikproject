@@ -45,7 +45,7 @@ function AITaxChatPage() {
     }
   }, [form]);
 
-  const handleModeChange = (newMode: "prepare-itr" | "tax-query" | "tax-planning") => {
+  const _handleModeChange = (newMode: "prepare-itr" | "tax-query" | "tax-planning") => {
     setMode(newMode);
     setForm({
       clientName: "",

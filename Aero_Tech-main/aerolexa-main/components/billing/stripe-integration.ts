@@ -113,8 +113,7 @@ export async function handleWebhook(
   // Handle specific events
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      // TODO: Activate user subscription in database
+            // TODO: Activate user subscription in database
       // await prisma.user.update({
       //   where: { stripeCustomerId: session.customer as string },
       //   data: { stripeStatus: "active", tier: session.metadata.tier },
@@ -123,20 +122,17 @@ export async function handleWebhook(
     }
 
     case "invoice.payment_succeeded": {
-      const invoice = event.data.object as Stripe.Invoice;
-      // TODO: Update payment status in database
+            // TODO: Update payment status in database
       break;
     }
 
     case "invoice.payment_failed": {
-      const invoice = event.data.object as Stripe.Invoice;
-      // TODO: Notify user of payment failure
+            // TODO: Notify user of payment failure
       break;
     }
 
     case "customer.subscription.deleted": {
-      const subscription = event.data.object as Stripe.Subscription;
-      // TODO: Downgrade user to free tier in database
+            // TODO: Downgrade user to free tier in database
       break;
     }
 

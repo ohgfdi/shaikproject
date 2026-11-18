@@ -123,8 +123,7 @@ export const PredictiveAnalytics: React.FC<{
 
     // Calculate forecast based on method
     let forecastValues: number[];
-    let forecastMethod: ForecastResult["method"];
-
+    
     switch (method) {
       case "moving-average":
         // Use last `period` values as simple forecast

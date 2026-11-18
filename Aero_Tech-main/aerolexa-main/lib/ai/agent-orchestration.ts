@@ -265,7 +265,7 @@ function generateAgentResponse(
   taskDescription: string,
   context: Record<string, any>
 ): string {
-  const { metric, currentValue, predictedValue, anomalyDetected, severity } = context;
+  const { metric: _metric, currentValue, predictedValue, anomalyDetected, severity: _severity } = context;
 
   switch (agentType) {
     case "research":

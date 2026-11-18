@@ -62,8 +62,7 @@ export function runGdprAssessment(): GdprDashboard {
   const rights: DataSubjectRight[] = ["access", "rectification", "erasure", "restriction", "portability", "objection"];
   const bases: ProcessingLawfulBasis[] = ["consent", "contract", "legal_obligation", "vital_interests", "public_task", "legitimate_interests"];
 
-  const totalScore = 0;
-  let effectiveControls = 0;
+    let effectiveControls = 0;
   let criticalDeficiencies = 0;
   const detailControls: GdprControl[] = [];
   const rightsStatus = {} as Record<DataSubjectRight, PrivacyStatus>;
