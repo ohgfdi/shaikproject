@@ -43,6 +43,10 @@ module.exports = {
   // ESM .js, so anything importing RGBELoader (the HDRI ladder) needs it run
   // through the transform above rather than handed to node raw.
   transformIgnorePatterns: ["/node_modules/(?!@prisma/client/runtime|three/examples)"],
+  // Run before the framework and before any app module: supplies AUTH_SECRET /
+  // DATABASE_URL from the tracked .env.test so suites do not depend on the
+  // developer's shell (see __tests__/env.ts).
+  setupFiles: ["<rootDir>/__tests__/env.ts"],
   setupFilesAfterEnv: ["<rootDir>/__tests__/setup.ts"],
   globalSetup: "<rootDir>/__tests__/api/global-setup.cjs",
   globalTeardown: "<rootDir>/__tests__/api/global-teardown.cjs",

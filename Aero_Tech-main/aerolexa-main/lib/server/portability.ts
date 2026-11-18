@@ -1102,6 +1102,56 @@ export const NOT_EXPORTED: { model: string; reason: string }[] = [
     reason:
       "Filing rollout state is firm administrative data; the subject's filings themselves appear in the filing section.",
   },
+
+  // Platform feature tables (multi-tenancy, flags, audit, marketplace,
+  // webhooks). They describe an installation or a tenant, not the requesting
+  // principal's content, so there is nothing here for a subject to port.
+  {
+    model: "Tenant",
+    reason:
+      "A tenant record is the firm's plan, limits and white-label theme — installation configuration, not data about a person.",
+  },
+  {
+    model: "FeatureFlag",
+    reason:
+      "Feature rollout switches (key, percentage, optional target ids). It describes which features an installation exposes, not the subject's content.",
+  },
+  {
+    model: "AuditLog",
+    reason:
+      "Operator security trail (actor id, action, IP, user agent) kept as evidence of access rather than authored content. The subject's own account, sessions and authored records are exported by the account and workspace sections instead.",
+  },
+  {
+    model: "WebhookSubscription",
+    reason:
+      "Dashboard notification endpoints and their signing secret are firm integration configuration; the secret is credential material and would never travel in a portable bundle.",
+  },
+  {
+    model: "Chart",
+    reason: "Tenant-level chart definitions (title and type) for the workspace's shared dashboards — workspace configuration, not subject content.",
+  },
+  {
+    model: "Kpi",
+    reason: "Tenant-level KPI labels and display colours — workspace configuration, not subject content.",
+  },
+  {
+    model: "ChartData",
+    reason:
+      "Aggregated metric points keyed by tenant and date. The rows carry no user identifier and no authored content.",
+  },
+  {
+    model: "ErrorTracking",
+    reason:
+      "Tenant-level error fingerprints and severity counts for operator triage. The row has no user identifier and carries no subject content.",
+  },
+  {
+    model: "Plugin",
+    reason: "Public plugin catalogue metadata (name, author, version, price, rating) — a store listing, not data about a person.",
+  },
+  {
+    model: "MarketplacePlugin",
+    reason: "Public marketplace catalogue metadata (category, price, rating, platforms) — a store listing, not data about a person.",
+  },
 ];
 
 /** Per-section outcome, shipped inside the bundle. */

@@ -42,8 +42,7 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user               User?
-  projects           Project[]
+  projects   Project[]
   activities         Activity[]
   datasets           Dataset[]
   analyses           Analysis[]
@@ -986,12 +985,11 @@ model User {
   experience      String?
   onboardedAt     DateTime?
   emailVerifiedAt DateTime?
-  workspaceId     String?    @unique
+  workspaceId     String?
   /// DANGER: `onDelete: Cascade` means deleting a Workspace deletes its owning
   /// User. eraseUser() therefore nulls this FK BEFORE deleting the workspace
   /// (see lib/server/dpdp.ts). Any other workspace-deletion path must do the
   /// same or it will silently destroy the account.
-  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

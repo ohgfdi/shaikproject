@@ -51,8 +51,8 @@ describe("durable queue — crash recovery (the durability guarantee)", () => {
   });
 
   it("claims atomically via compare-and-swap (never double-claims)", () => {
-    // The claim is a conditional updateMany on still-pending rows.
-    expect(SRC).toContain('where: { id, status: "pending", runAt: { lte: now } }');
+    // The claim is a conditional updateMany on still-pending, already-due rows.
+    expect(SRC).toMatch(/where: \{ id, status: "pending", runAt: \{ lte: (now|at) \} \}/);
     expect(SRC).toContain("attempts: { increment: 1 }");
   });
 

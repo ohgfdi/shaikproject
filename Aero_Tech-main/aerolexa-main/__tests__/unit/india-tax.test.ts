@@ -3,13 +3,23 @@
  *
  * Every expected figure is derived by hand from the statute's slabs/bands, not
  * captured from a previous run. The two rules that matter most are the 87A
- * marginal relief (the new-regime cliff at ₹7L) and surcharge marginal relief
- * (the cliff at each surcharge threshold); both are pinned exactly below.
+ * marginal relief (the FY 2024-25 new-regime cliff at ₹7L, and the FY 2025-26
+ * cliff at ₹12L) and surcharge marginal relief (the cliff at each surcharge
+ * threshold); both are pinned exactly below.
+ *
+ * The engine exposes `INDIVIDUAL_REGIMES` as the CURRENT year (FY 2025-26) and
+ * `INDIVIDUAL_REGIMES_BY_FY` for prior-year and rectification work, so the
+ * arithmetic below names the year it belongs to instead of assuming which one
+ * "new" means. `applyStandardDeduction: false` is stated explicitly wherever
+ * the case is about slab arithmetic rather than salary income — the engine
+ * applies the standard deduction by default because most real callers are
+ * computing salary tax.
  */
 
 import {
   CORPORATE_REGIMES,
   INDIVIDUAL_REGIMES,
+  INDIVIDUAL_REGIMES_BY_FY,
   INR,
   advanceTaxInstallments,
   computeCorporateTax,
@@ -35,14 +45,20 @@ describe("INR formatting", () => {
 
 describe("slab tax", () => {
   it("applies each slab only to the income within it", () => {
-    // New regime up to ₹10L: 3–7L @5% = 20,000 + 7–10L @10% = 30,000.
-    expect(slabTax(INR(1000000), INDIVIDUAL_REGIMES.new!.slabs)).toBe(INR(50000));
+    // Current year (FY 2025-26) up to ₹10L: 4–8L @5% = 20,000 + 8–10L @10% = 20,000.
+    expect(slabTax(INR(1000000), INDIVIDUAL_REGIMES.new!.slabs)).toBe(INR(40000));
   });
 });
 
-describe("individual income tax — new regime", () => {
+const FY2425 = INDIVIDUAL_REGIMES_BY_FY["2024-25"]!;
+
+describe("individual income tax — new regime, FY 2024-25 (retained prior-year rates)", () => {
   it("computes tax, surcharge-free, with 4% cess", () => {
-    const res = computeIncomeTax({ grossIncome: INR(1000000), regime: INDIVIDUAL_REGIMES.new! });
+    const res = computeIncomeTax({
+      grossIncome: INR(1000000),
+      regime: FY2425.new,
+      applyStandardDeduction: false,
+    });
     expect(r(res.taxableIncome)).toBe(1000000);
     expect(r(res.slabTax)).toBe(50000);
     expect(res.surcharge).toBe(0);
@@ -51,7 +67,7 @@ describe("individual income tax — new regime", () => {
   });
 
   it("zeroes out tax at ₹7L via the 87A rebate", () => {
-    const res = computeIncomeTax({ grossIncome: INR(700000), regime: INDIVIDUAL_REGIMES.new! });
+    const res = computeIncomeTax({ grossIncome: INR(700000), regime: FY2425.new, applyStandardDeduction: false });
     expect(r(res.slabTax)).toBe(20000); // 3–7L @5%
     expect(r(res.rebate)).toBe(20000);
     expect(res.totalTax).toBe(0);
@@ -60,32 +76,54 @@ describe("individual income tax — new regime", () => {
   it("grants marginal relief just above ₹7L (no cliff)", () => {
     // Income ₹7.10L: slab tax = 20,000 + 1,000 = 21,000. Excess over 7L = 10,000.
     // Relief caps tax at 10,000, so total = 10,000 + 4% cess = 10,400.
-    const res = computeIncomeTax({ grossIncome: INR(710000), regime: INDIVIDUAL_REGIMES.new! });
+    const res = computeIncomeTax({ grossIncome: INR(710000), regime: FY2425.new, applyStandardDeduction: false });
     expect(r(res.slabTax)).toBe(21000);
     expect(r(res.rebateMarginalRelief)).toBe(11000);
     expect(r(res.taxAfterRebate)).toBe(10000);
     expect(r(res.totalTax)).toBe(10400);
+  });
+});
+
+describe("individual income tax — new regime, current year (FY 2025-26)", () => {
+  it("charges 4–8L @5% and 8–12L @10% and wipes the tax out under the ₹12L rebate", () => {
+    const tax = computeIncomeTax({ grossIncome: INR(1000000), regime: INDIVIDUAL_REGIMES.new!, applyStandardDeduction: false });
+    expect(r(tax.slabTax)).toBe(40000); // 20,000 + 20,000
+    expect(r(tax.rebate)).toBe(40000);
+    expect(tax.totalTax).toBe(0);
+  });
+
+  it("charges slabs above the rebate threshold with 4% cess", () => {
+    // ₹16L: 4–8L @5% = 20,000 + 8–12L @10% = 40,000 + 12–16L @15% = 60,000.
+    const tax = computeIncomeTax({ grossIncome: INR(1600000), regime: INDIVIDUAL_REGIMES.new!, applyStandardDeduction: false });
+    expect(r(tax.slabTax)).toBe(120000);
+    expect(tax.rebate).toBe(0);
+    expect(r(tax.cess)).toBe(4800);
+    expect(r(tax.totalTax)).toBe(124800);
   });
 
   it("applies the standard deduction for salary income", () => {
     const res = computeIncomeTax({ grossIncome: INR(775000), regime: INDIVIDUAL_REGIMES.new!, applyStandardDeduction: true });
     expect(r(res.standardDeduction)).toBe(75000);
     expect(r(res.taxableIncome)).toBe(700000);
-    expect(res.totalTax).toBe(0); // rebate at exactly 7L
+    expect(res.totalTax).toBe(0); // taxable ₹7L is under the ₹12L rebate threshold
   });
 });
 
 describe("individual income tax — old regime", () => {
   it("computes tax with 4% cess", () => {
     // ₹10L: 2.5–5L @5% = 12,500 + 5–10L @20% = 1,00,000 = 1,12,500; cess 4,500.
-    const res = computeIncomeTax({ grossIncome: INR(1000000), regime: INDIVIDUAL_REGIMES.old! });
+    const res = computeIncomeTax({
+      grossIncome: INR(1000000),
+      regime: INDIVIDUAL_REGIMES.old!,
+      applyStandardDeduction: false,
+    });
     expect(r(res.slabTax)).toBe(112500);
     expect(r(res.cess)).toBe(4500);
     expect(r(res.totalTax)).toBe(117000);
   });
 
   it("rebates up to ₹5L", () => {
-    const res = computeIncomeTax({ grossIncome: INR(500000), regime: INDIVIDUAL_REGIMES.old! });
+    const res = computeIncomeTax({ grossIncome: INR(500000), regime: INDIVIDUAL_REGIMES.old!, applyStandardDeduction: false });
     expect(r(res.slabTax)).toBe(12500);
     expect(res.totalTax).toBe(0);
   });
@@ -97,7 +135,8 @@ describe("surcharge and marginal relief", () => {
     // up to 15L = 20,000+30,000+30,000+60,000 = 1,40,000; 15L→50.1L = 35.1L @30% = 10,53,000.
     // slabTax = 11,93,000. Surcharge raw = 1,19,300. Cap = tax@50L (11,90,000) + 10,000 = 12,00,000.
     // tax+surcharge = 13,12,300 > cap → surcharge = 12,00,000 - 11,93,000 = 7,000; relief 1,12,300.
-    const res = computeIncomeTax({ grossIncome: INR(5010000), regime: INDIVIDUAL_REGIMES.new! });
+    // FY 2024-25 slabs (the band arrangement these figures were derived from).
+    const res = computeIncomeTax({ grossIncome: INR(5010000), regime: FY2425.new, applyStandardDeduction: false });
     expect(r(res.slabTax)).toBe(1193000);
     expect(r(res.surcharge)).toBe(7000);
     expect(r(res.surchargeMarginalRelief)).toBe(112300);
@@ -108,7 +147,8 @@ describe("surcharge and marginal relief", () => {
 
   it("applies the 10% band at exactly ₹1Cr (strictly-above boundary)", () => {
     // At exactly 1Cr the 15% band does not apply yet; slab tax = 26,90,000.
-    const res = computeIncomeTax({ grossIncome: INR(10000000), regime: INDIVIDUAL_REGIMES.new! });
+    // FY 2024-25 slabs: up to 15L = 1,40,000, 15L→1Cr = 85L @30% = 25,50,000.
+    const res = computeIncomeTax({ grossIncome: INR(10000000), regime: FY2425.new, applyStandardDeduction: false });
     expect(r(res.slabTax)).toBe(2690000);
     expect(res.surchargeBandPct).toBe(10);
   });
@@ -151,10 +191,14 @@ describe("advance tax", () => {
     });
     expect(r(res.perInstallment[0]!.interest)).toBe(0);
     expect(r(res.perInstallment[1]!.shortfall)).toBe(5000);
-    expect(r(res.perInstallment[1]!.interest)).toBe(150); // 5,000 × 1% × 3
+    // 234C proviso: a shortfall is relieved when payments by 15 Sep reach 36%
+    // of assessed tax (₹36,000) — ₹40,000 was paid, so no interest for Q2.
+    expect(res.perInstallment[1]!.provisoRelief).toBe(true);
+    expect(r(res.perInstallment[1]!.interest)).toBe(0);
+    // Q3 has no proviso at 75%: 5,000 × 1% × 3 months.
     expect(r(res.perInstallment[2]!.interest)).toBe(150);
     expect(r(res.perInstallment[3]!.interest)).toBe(0);
-    expect(r(res.totalInterest)).toBe(300);
+    expect(r(res.totalInterest)).toBe(150);
   });
 
   it("charges 234B only below the 90% threshold", () => {

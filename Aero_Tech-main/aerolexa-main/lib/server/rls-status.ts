@@ -9,12 +9,13 @@
  * Keeping this as a pure module (no runtime deps) lets both the runtime guard
  * and the health/posture report agree without importing Prisma.
  *
- * STATUS: RLS_ENABLED=true is now SAFE PERMANENT. The tenancy audit has reached
- * zero unwrapped files (baseline 160), and RLS_QUERY_LAYER_WIRED=true confirms
- * the query layer is wrapped. RLS_ENABLED=true is safe to keep enabled; the
- * ratchet test ensures unwrapped files never increase above the baseline.
+ * STATUS: NOT WIRED. `npm run tenancy:audit` still reports unwrapped tenant
+ * files (the measured baseline below), so enabling RLS now would hide every
+ * row those call sites read. The flag flips to true only when the audit
+ * reports zero unwrapped files — the docs, the posture report and the tests
+ * all move together at that point.
  */
-export const RLS_QUERY_LAYER_WIRED = true;
+export const RLS_QUERY_LAYER_WIRED = false;
 
 /**
  * Measured `npm run tenancy:audit` count at the time this baseline was set.
