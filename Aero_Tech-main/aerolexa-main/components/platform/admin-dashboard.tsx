@@ -30,7 +30,6 @@ export function AdminDashboard({ dashboardId }: { dashboardId: string }) {
   const [metric, setMetric] = useState<string>("Value");
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<MapTemplate | null>(null);
-  const [webhookError, setWebhookError] = useState<string | null>(null);
 
   // Load widgets from dashboard state (would call API in production)
   useEffect(() => {

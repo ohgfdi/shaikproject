@@ -6,8 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-
 export type AnomalySeverity = "critical" | "high" | "medium" | "low";
 
 export type AnomalyType = 

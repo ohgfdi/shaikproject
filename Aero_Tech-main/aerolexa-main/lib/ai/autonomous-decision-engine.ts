@@ -10,8 +10,7 @@
 import type { NextRequest } from "next/server";
 
 import type { AnomalyDetection, PredictiveScore } from "@/lib/analytics/predictive-engine";
-import { prisma } from "@/lib/db";
-import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
+import { checkGovernancePolicies, AuditEventType } from "@/lib/governance/audit-management";
 import type { AuditEvent } from "@/lib/governance/audit-management";
 
 import type { AgentType, Industry } from "./agent-orchestration";

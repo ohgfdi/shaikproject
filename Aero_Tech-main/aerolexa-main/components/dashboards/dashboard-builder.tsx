@@ -124,18 +124,6 @@ export function DashboardBuilder(props: DashboardEditorProps) {
   /** Shareable row-level detail URL for the current drill (null when the widget has no dataset). */
   const [drillUrl, setDrillUrl] = useState<string | null>(null);
 
-  // Drill-through handler for PBI visual map widgets - captures component-scoped state
-  const handleDrillThrough = (widget: DashboardWidget, region: string) => {
-    if (!widget.datasetId) return;
-    const drill = drillThroughUrl({
-      datasetId: widget.datasetId,
-      filters: [{ column: widget.slicer?.column ?? "", value: region }],
-      sourceWidget: { id: widget.id, title: widget.title, kind: widget.type },
-    });
-    setDrillUrl(drill);
-    setDrill({...{ column: widget.slicer?.column ?? "", value: region, totalRows: 0 } as DrillThroughResult});
-  };
-
   // ---- Realtime co-editing (ROADMAP 7.2): Yjs CRDT widget sync -------------
   // Remote widget states fold into the active page (last-writer-wins per
   // widget via CRDT versions); local edits diff into room ops. Presence
@@ -977,8 +965,6 @@ function CrossFilterableBody({
   onSlicerToggle,
   activePage,
   onTileClick,
-  setDrillUrl,
-  setDrill,
 }: {
   widget: DashboardWidget;
   original: DashboardWidget;
@@ -1226,7 +1212,7 @@ function WidgetBody({
           scope={w.mapScope ?? "countries"}
           title={w.title}
           onTileClick={onTileClick}
-          onDrillClick={(widget: DashboardWidget, region: string) => {}}
+          onDrillClick={() => {}}
         />
       );
     }
@@ -1460,30 +1446,6 @@ function AddWidgetDialog({
       });
     } catch (err) {
       setPbiError(err instanceof Error ? err.message : "Could not build that slicer.");
-    }
-  };
-
-  const addMapWidget = (a: WidgetSourceAnalysis) => {
-    const result = a.result;
-    if (!result) return;
-    const chart = result.charts.find((c) => c.kind !== "kpi") ?? result.charts[0];
-    if (!chart) return;
-    try {
-      const spec = buildMapSpec({ title: a.title, chart });
-      setPbiError(null);
-      onAdd({
-        id: uid("w"),
-        type: "pbi-visual",
-        title: `${a.title} · map`,
-        analysisId: a.id,
-        pbiVisual: spec,
-        mapScope: "us-states",
-        w: 6,
-        h: 4,
-        sourceDatasetName: result.dataset.name,
-      });
-    } catch (err) {
-      setPbiError(err instanceof Error ? err.message : "Could not derive that map visual from this analysis.");
     }
   };
 

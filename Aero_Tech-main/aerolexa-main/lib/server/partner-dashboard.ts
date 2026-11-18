@@ -14,8 +14,6 @@
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 import { logActivity } from "@/lib/server/activity";
 import { requireOrgRole } from "@/lib/server/members";
 import {
@@ -26,6 +24,8 @@ import {
   type PracticeEconomics,
 } from "@/lib/server/practice-economics";
 import type { PracticeRole } from "@/lib/types";
+
+const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 
 const DAY_MS = 86_400_000;
 

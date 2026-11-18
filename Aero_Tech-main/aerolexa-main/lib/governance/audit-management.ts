@@ -9,7 +9,6 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
 
 export type GovernanceFramework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX" | "ISO_9001";
 
@@ -37,7 +36,7 @@ export interface AuditEvent {
   user_agent?: string;
   resource_type?: string;
   resource_id?: string;
-  changes?: Record<string, any>; // Before/after state
+  changes?: Record<string, unknown>; // Before/after state
   compliance_framework?: GovernanceFramework;
   status: "success" | "failure" | "blocked";
   risk_level: "low" | "medium" | "high" | "critical";
@@ -108,33 +107,10 @@ export class EnterpriseAuditTrail {
     total: number;
     has_more: boolean;
   }> {
-    const {
-      tenant_id,
-      event_types,
-      start_date,
-      end_date,
-      user_id,
-      risk_level,
-      framework,
-      status,
-      limit = 100,
-      offset = 0,
-    } = filters;
+    const { limit = 100, offset = 0 } = filters;
 
-    // Build where clause for Prisma
-    const whereClause: any = {
-      ...(tenant_id && { tenant_id }),
-      ...(risk_level && { risk_level }),
-      ...(framework && { compliance_framework: framework }),
-      ...(status && { status }),
-      ...(start_date && { timestamp: { gte: start_date } }),
-      ...(end_date && { timestamp: { lte: end_date } }),
-      ...(user_id && { user_id }),
-      ...(event_types && { event_type: { in: event_types } }),
-    };
-
-    // In a real implementation, this would query the database
-    // For now, return mock data
+    // In a real implementation, the remaining filters would build a Prisma
+    // where clause. For now, return mock data
     const mockEvents: AuditEvent[] = [
       {
         id: "audit_1",

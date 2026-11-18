@@ -1,19 +1,18 @@
-import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalyStats, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
-import { interpretQuery, generateInsight, InsightType, InsightConfidence, Insight, ChartConfig, InsightAction } from "@/lib/ai/natural-language-insight";
-import { linearTrendForecast, exponentialSmoothing, ForecastResult, ForecastMethod, ForecastPoint } from "@/lib/ai/predictive-analytics";
+import { detectAnomalies, getAnomalyStats, AnomalyEvent, AnomalySeverity, AnomalyType } from "@/lib/ai/anomaly-detection";
+import { interpretQuery, generateInsight, InsightType } from "@/lib/ai/natural-language-insight";
+import { linearTrendForecast } from "@/lib/ai/predictive-analytics";
 import { generateRecommendations, getMetricSummary } from "@/lib/ai/prescriptive-analytics";
 import { requireAuth } from "@/lib/auth/guard";
 import { runGdprAssessment } from "@/lib/compliance/gdpr-controls";
 import { runSoc2Assessment } from "@/lib/compliance/soc2-controls";
 import { runSoxCheck } from "@/lib/compliance/sox";
-import { complianceTaskState, ComplianceTaskState, daysUntil } from "@/lib/engine/compliance-calendar";
+import { ComplianceTaskState, daysUntil } from "@/lib/engine/compliance-calendar";
 import { PARTNER_TIER_DEFINITIONS, PartnerTier, PartnerProfile, PartnerStatus } from "@/lib/partner/partner-tiers";
 import { calculateCommission, CommissionTier } from "@/lib/partner/revenue-share";
 import { hasPermission, getEffectivePermissions, RoleKey, Permission, ROLE_DEFINITIONS } from "@/lib/rbac/permissions";
 import { getSecurityControls, getBugBountyProgram } from "@/lib/security/security-hardening";
 import { ok, toErrorResponse } from "@/lib/server/api";
 import { getComplianceCalendar } from "@/lib/server/compliance-calendar";
-import { mapOrgRoleToProjectRole } from "@/lib/server/members";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +54,8 @@ export async function GET(request: Request) {
       }
 
       if (action === "rbac:roles") {
-        const roles = Object.keys(ROLE_DEFINITIONS as any).map((key: any) => ({
-          key,
-          ...(ROLE_DEFINITIONS as any)[key],
+        const roles = (Object.keys(ROLE_DEFINITIONS) as RoleKey[]).map((key) => ({
+          ...ROLE_DEFINITIONS[key],
         }));
         return new Response(JSON.stringify({ roles }), {
           status: 200,
@@ -121,7 +119,8 @@ export async function GET(request: Request) {
           contactEmail: searchParams.get("contactEmail") || "",
           country: searchParams.get("country") || "",
           website: searchParams.get("website") || undefined,
-          integrationStatus: searchParams.get("integrationStatus") as any || undefined,
+          integrationStatus:
+            (searchParams.get("integrationStatus") as PartnerProfile["integrationStatus"]) || undefined,
           registeredDeals: parseInt(searchParams.get("registeredDeals") || "0", 10),
           closedDeals: parseInt(searchParams.get("closedDeals") || "0", 10),
           totalEarnings: parseFloat(searchParams.get("totalEarnings") || "0"),
@@ -268,7 +267,6 @@ export async function GET(request: Request) {
         const historicalStr = searchParams.get("historical") || "120,135,130,145,150,160,155,170,165,180";
         const historicalValues = historicalStr.split(",").map((v: string) => parseFloat(v)).filter((v: number) => !isNaN(v));
         const forecastPoints = parseInt(searchParams.get("horizon") || "5", 10);
-        const method = (searchParams.get("method") || "linear_trend") as ForecastMethod;
 
         const result = linearTrendForecast(historicalValues, forecastPoints);
         result.metricName = metricName;
@@ -332,10 +330,8 @@ export async function GET(request: Request) {
     }
 
     // Due date distribution
-    const dueDistribution = tasks.reduce((acc: any, task: any) => {
-      const state = task.state;
-      if (!acc[state]) acc[state] = 0;
-      acc[state]++;
+    const dueDistribution = tasks.reduce<Record<string, number>>((acc, task) => {
+      acc[task.state] = (acc[task.state] ?? 0) + 1;
       return acc;
     }, {});
 
@@ -347,32 +343,29 @@ export async function GET(request: Request) {
     };
 
     // Upcoming deadlines in next 30 days (using daysUntil from compliance-calendar)
-    const upcoming30Days = tasks.filter((task: any) => {
+    const upcoming30Days = tasks.filter((task) => {
       const diff = daysUntil(task.dueDate, today ?? new Date().toISOString().slice(0, 10));
       return diff >= 0 && diff <= 30;
     });
     const upcoming30DaysCount = upcoming30Days.length;
 
     // By authority breakdown
-    const authorityBreakdown = tasks.reduce((acc: any, task: any) => {
-      const auth = task.authority;
-      if (!acc[auth]) acc[auth] = 0;
-      acc[auth]++;
+    const authorityBreakdown = tasks.reduce<Record<string, number>>((acc, task) => {
+      if (!task.authority) return acc;
+      acc[task.authority] = (acc[task.authority] ?? 0) + 1;
       return acc;
     }, {});
 
     // State breakdown
-    const stateBreakdown = tasks.reduce((acc: any, task: any) => {
-      const state = task.state;
-      if (!acc[state]) acc[state] = 0;
-      acc[state]++;
+    const stateBreakdown = tasks.reduce<Record<string, number>>((acc, task) => {
+      acc[task.state] = (acc[task.state] ?? 0) + 1;
       return acc;
     }, {});
 
     // Clients with most obligations
-    const clientCounts: Record<string, number> = tasks.reduce((acc: any, task: any) => {
-      const clientId = task.clientId;
-      acc[clientId] = (acc[clientId] ?? 0) + 1;
+    const clientCounts = tasks.reduce<Record<string, number>>((acc, task) => {
+      if (!task.clientId) return acc;
+      acc[task.clientId] = (acc[task.clientId] ?? 0) + 1;
       return acc;
     }, {});
     const topClients = Object.entries(clientCounts)

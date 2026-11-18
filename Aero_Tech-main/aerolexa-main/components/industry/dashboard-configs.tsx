@@ -4,8 +4,8 @@
  * Pre-built dashboard layouts and widget configurations optimized for each industry vertical.
  * Integrates with the industry templates (Phases 33-36) and compliance mappings (Phase 37).
  */
-import React from "react";
 import type { NextRequest } from "next/server";
+import React from "react";
 
 import { prisma } from "@/lib/db";
 import { getIndustryTemplate, getComplianceRequirements } from "@/lib/industry";

@@ -74,7 +74,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
           const data = await res.json();
           setUser(data.user ?? null);
         }
-      } catch (e) {
+      } catch {
         // Session invalid — user is not logged in
         setUser(null);
       } finally {
@@ -279,8 +279,6 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
     }
   };
 
-  const dashboardPath = roleToPath(user.role);
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header with user info and logout */}
@@ -316,25 +314,5 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
         )}
       </main>
     </div>
-  );
-}
-
-/** Route to the correct dashboard based on user role. */
-function dashboardRoute({ userRole }: { userRole: "admin" | "power-user" | "viewer" }) {
-  const routes: Record<string, string> = {
-    admin: "/dashboard/admin",
-    "power-user": "/dashboard/power",
-    viewer: "/dashboard",
-  };
-
-  return (
-    <section
-      className="p-4"
-      style={{ display: "none" }} /* Placeholder — routes rendered by Next.js */
-    >
-      <p className="text-caption text-muted">
-        Redirecting to {routes[userRole] ?? "/dashboard"}…
-      </p>
-    </section>
   );
 }

@@ -14,9 +14,9 @@
 
 // TENANCY_GLOBAL_MARKER: tenancy-audit: global-operator - filing automation is a deployment-wide aggregate operation
 import { prisma } from "@/lib/db";
+import { notify } from "@/lib/server/activity";
 
 const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
-import { notify } from "@/lib/server/activity";
 
 export const REMINDER_OFFSETS = [7, 3, 0] as const;
 export type ReminderKind = "T-7" | "T-3" | "T-0";

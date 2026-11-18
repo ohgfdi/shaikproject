@@ -8,7 +8,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 import type { GovernanceFramework } from "@/lib/governance/audit-management";
 
 import type { AgentType, Industry } from "./agent-orchestration";
@@ -316,7 +315,6 @@ export async function POST(request: Request): Promise<Response> {
     const {
       agent_id,
       user_id,
-      industry,
       tier,
     } = body;
 

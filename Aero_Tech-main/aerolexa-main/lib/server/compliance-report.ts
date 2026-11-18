@@ -10,8 +10,6 @@
 
 import { ApiError, type AuthContext } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
-
-const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 import {
   buildClientComplianceCalendar,
   financialYearFor,
@@ -27,6 +25,8 @@ import {
 import { resolvePortalToken } from "@/lib/server/client-portal";
 import { defaultProfile, type ComplianceProfileSeed } from "@/lib/server/compliance-calendar";
 import { requireEngagementRole } from "@/lib/server/engagement";
+
+const withGlobalDb = <T>(fn: (db: typeof prisma) => Promise<T>): Promise<T> => fn(prisma);
 
 const ENTITY_KINDS = new Set<EntityKind>([
   "company",

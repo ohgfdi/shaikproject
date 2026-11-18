@@ -6,11 +6,17 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
 export type QueryLanguage = "finance_query" | "saas_query" | "retail_query" | "mfg_query";
+
+/** Minimal chainable query builder the vertical executors operate on. */
+export interface QueryBuilder {
+  where(filter: Record<string, unknown>): QueryBuilder;
+}
+
+/** Union of every vertical's filter surface — every field is optional. */
+type VerticalFilters = FinanceQuery & SaaSQuery & RetailQuery & ManufacturingQuery;
 
 export interface FinanceQuery {
   // Filter by risk category
@@ -29,9 +35,9 @@ export interface FinanceQuery {
 
 /** Execute a finance-domain query. */
 export function executeFinanceQuery(
-  baseQuery: any,
+  baseQuery: QueryBuilder,
   filters: FinanceQuery
-): any {
+): QueryBuilder {
   let query = baseQuery;
 
   if (filters.risk_category) {
@@ -87,9 +93,9 @@ export interface SaaSQuery {
 
 /** Execute a SaaS-domain query. */
 export function executeSaaSQuery(
-  baseQuery: any,
+  baseQuery: QueryBuilder,
   filters: SaaSQuery
-): any {
+): QueryBuilder {
   let query = baseQuery;
 
   if (filters.plan_type) {
@@ -143,9 +149,9 @@ export interface RetailQuery {
 
 /** Execute a retail-domain query. */
 export function executeRetailQuery(
-  baseQuery: any,
+  baseQuery: QueryBuilder,
   filters: RetailQuery
-): any {
+): QueryBuilder {
   let query = baseQuery;
 
   if (filters.category) {
@@ -200,9 +206,9 @@ export interface ManufacturingQuery {
 
 /** Execute a manufacturing-domain query. */
 export function executeMfgQuery(
-  baseQuery: any,
+  baseQuery: QueryBuilder,
   filters: ManufacturingQuery
-): any {
+): QueryBuilder {
   let query = baseQuery;
 
   if (filters.product_sku) {
@@ -235,9 +241,11 @@ export function executeMfgQuery(
 /** Get the query language executor for an industry. */
 export function getQueryExecutor(
   industry: Industry
-): (baseQuery: any, filters: any) => any {
+): (baseQuery: QueryBuilder, filters: VerticalFilters) => QueryBuilder {
   // Healthcare has no vertical query language yet — those calls fall back below.
-  const executors: Partial<Record<Industry, (baseQuery: any, filters: any) => any>> = {
+  const executors: Partial<
+    Record<Industry, (baseQuery: QueryBuilder, filters: VerticalFilters) => QueryBuilder>
+  > = {
     finance: executeFinanceQuery,
     saas: executeSaaSQuery,
     retail: executeRetailQuery,
@@ -257,7 +265,7 @@ export async function GET(
     const language = searchParams.get("language") as QueryLanguage || "saas_query";
 
     // Parse filters from query params
-    const filters: Record<string, any> = {};
+    const filters: Record<string, unknown> = {};
 
     // Parse common filter parameters
     for (const key of searchParams.keys()) {
@@ -266,9 +274,6 @@ export async function GET(
         filters[filterKey] = searchParams.get(key);
       }
     }
-
-    // Get the appropriate executor
-    const executor = getQueryExecutor(industry as Industry);
 
     // In a real implementation, we'd build a base Prisma query
     // and execute it with the industry-specific filters

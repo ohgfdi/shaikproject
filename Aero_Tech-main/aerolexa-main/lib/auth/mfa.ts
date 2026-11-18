@@ -34,7 +34,7 @@ export function generateTOTP(
   const digitCount = size === "6" ? 6 : 8;
 
   // Use provided secret or generate new one
-  let secretKey: string = secret || crypto.randomBytes(20).toString("base64");
+  const secretKey: string = secret || crypto.randomBytes(20).toString("base64");
 
   // Calculate time interval (30 seconds standard)
   const timeInterval = Math.floor(Date.now() / 30000);

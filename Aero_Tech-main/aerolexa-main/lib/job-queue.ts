@@ -90,7 +90,7 @@ export async function listPendingJobs(kind?: JobKind) {
 
 /** List failed jobs, optionally filtered by kind. */
 export async function listFailedJobs(kind?: JobKind) {
-  const where: any = { status: "failed" };
+  const where: { status: string; kind?: JobKind } = { status: "failed" };
   if (kind) {
     where.kind = kind;
   }
@@ -170,7 +170,6 @@ export async function failJob(
   options: { retryAfterMs?: number } = {},
 ) {
   const { retryAfterMs = 60000 } = options;
-  const now = new Date().toISOString();
 
   await prisma.jobQueue.update({
     where: { id: jobId },

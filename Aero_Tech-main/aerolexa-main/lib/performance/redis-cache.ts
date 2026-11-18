@@ -17,8 +17,6 @@
  */
 import { createRequire } from "node:module";
 
-import { prisma } from "@/lib/db";
-
 /**
  * Minimal Redis surface this module relies on. The `redis` package is an
  * optional runtime dependency: it is resolved lazily so a deployment without

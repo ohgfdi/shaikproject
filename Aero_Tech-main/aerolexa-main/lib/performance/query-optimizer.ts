@@ -14,13 +14,11 @@
  *     take: 50,
  *   });
  */
-import { prisma } from "@/lib/db";
-
 /** The subset of a Prisma `findMany` argument object these helpers touch. */
 interface FindManyArgs {
-  where?: Record<string, any>;
+  where?: Record<string, unknown>;
   orderBy?: { field: string; direction: "asc" | "desc" };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /** Add commonly used WHERE filters as AND conditions. */
@@ -38,14 +36,14 @@ export function addCommonFilters(
     search?: string;
   }
 ) {
-  const where: any = {};
+  const where: Record<string, unknown> = {};
 
   if (filters.createdAfter) {
     where.createdAt = { gte: filters.createdAfter };
   }
   if (filters.createdBefore) {
     where.createdAt = {
-      ...where.createdAt,
+      ...(where.createdAt as Record<string, unknown>),
       lte: filters.createdBefore,
     };
   }
@@ -67,7 +65,7 @@ export function addDefaultOrderBy(
   args: FindManyArgs,
   defaultField = "createdAt"
 ) {
-  const orderBy: any = {};
+  const orderBy: Record<string, string> = {};
 
   // Extract existing orderBy or use default
   if (args.orderBy) {

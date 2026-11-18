@@ -25,7 +25,6 @@ import {
 } from "@/lib/engine/ca-india";
 import { checkContract, runQualityGate, type ContractColumn, type Expectation } from "@/lib/engine/data-quality";
 import type { Cell } from "@/lib/engine/dataset";
-import { classifyValues } from "@/lib/engine/geo";
 import {
   applyCategoricalFilter,
   bucketByDate,
@@ -46,6 +45,7 @@ import { retrieveFeatures } from "@/lib/engine/feature-store";
 import { forecastSeries } from "@/lib/engine/forecast";
 import { arimaxForecast } from "@/lib/engine/forecast-advanced";
 import { fitSarima } from "@/lib/engine/forecast-seasonal";
+import { classifyValues } from "@/lib/engine/geo";
 import { runGeospatialAnalysis, type GeoPoint } from "@/lib/engine/geospatial";
 import { fitHte } from "@/lib/engine/hte";
 import { regularizedBeta } from "@/lib/engine/hypothesis";

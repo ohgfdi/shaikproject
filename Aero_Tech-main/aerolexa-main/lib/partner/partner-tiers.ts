@@ -6,8 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-
 export type PartnerTier = "startup" | "growth" | "enterprise" | "elite";
 
 export type PartnerStatus = "pending" | "approved" | "active" | "paused" | "terminated";

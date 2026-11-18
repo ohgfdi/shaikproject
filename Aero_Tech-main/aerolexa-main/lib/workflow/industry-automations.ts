@@ -6,8 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 
 export type AutomationTrigger =
@@ -27,14 +25,35 @@ export type AutomationAction =
   | "generate_pdf"
   | "assign_task";
 
+/**
+ * A connector record the rules evaluate. Columns vary by industry, so the
+ * fields rules actually compare are declared and anything else stays opaque.
+ */
+export interface AutomationRecord {
+  status?: string;
+  risk_score?: number;
+  days_overdue?: number;
+  trial_days?: number;
+  converted?: boolean;
+  churn_risk_score?: number;
+  usage_pct?: number;
+  current_stock?: number;
+  reorder_point?: number;
+  cart_abandoned_at?: Date;
+  defect_rate?: number;
+  downtime_minutes?: number;
+  /** Any other connector column. */
+  [field: string]: unknown;
+}
+
 export interface AutomationRule {
   id: string;
   name: string;
   industry: Industry;
   trigger: AutomationTrigger;
-  condition: (record: Record<string, any>) => boolean;
+  condition: (record: AutomationRecord) => boolean;
   action: AutomationAction;
-  action_config: Record<string, any>;
+  action_config: Record<string, unknown>;
   is_active: boolean;
   created_at: Date;
 }
@@ -134,7 +153,7 @@ export function getIndustryAutomations(
       name: "Fraud Detection Alert",
       industry: "finance",
       trigger: "threshold_crossed" as AutomationTrigger,
-      condition: (record) => record.risk_score > 70,
+      condition: (record) => (record.risk_score ?? 0) > 70,
       action: "notify_slack" as AutomationAction,
       action_config: {
         channel: "#fraud-alerts",
@@ -154,7 +173,7 @@ export function getIndustryAutomations(
       name: "Payment Overdue Reminder",
       industry: "finance",
       trigger: "schedule" as AutomationTrigger,
-      condition: (record) => record.days_overdue >= 7,
+      condition: (record) => (record.days_overdue ?? 0) >= 7,
       action: "send_email" as AutomationAction,
       action_config: {
         to: "{$record.customer_email}",
@@ -181,7 +200,7 @@ export function getIndustryAutomations(
       name: "Trial to Paid Conversion",
       industry: "saas",
       trigger: "threshold_crossed" as AutomationTrigger,
-      condition: (record) => record.trial_days >= 30 && record.converted === false,
+      condition: (record) => (record.trial_days ?? 0) >= 30 && record.converted === false,
       action: "send_email" as AutomationAction,
       action_config: {
         to: "{$record.user_email}",
@@ -205,7 +224,7 @@ export function getIndustryAutomations(
       name: "Churn Risk Alert",
       industry: "saas",
       trigger: "field_change" as AutomationTrigger,
-      condition: (record) => record.churn_risk_score && record.churn_risk_score > 75,
+      condition: (record) => (record.churn_risk_score ?? 0) > 75,
       action: "notify_slack" as AutomationAction,
       action_config: {
         channel: "#churn-alerts",
@@ -225,7 +244,7 @@ export function getIndustryAutomations(
       name: "Plan Upgrade Notification",
       industry: "saas",
       trigger: "field_change" as AutomationTrigger,
-      condition: (record) => record.usage_pct && record.usage_pct > 80,
+      condition: (record) => (record.usage_pct ?? 0) > 80,
       action: "send_email" as AutomationAction,
       action_config: {
         to: "{$record.user_email}",
@@ -252,7 +271,10 @@ export function getIndustryAutomations(
       name: "Low Stock Alert",
       industry: "retail",
       trigger: "threshold_crossed" as AutomationTrigger,
-      condition: (record) => record.current_stock <= record.reorder_point,
+      condition: (record) =>
+        record.current_stock !== undefined &&
+        record.reorder_point !== undefined &&
+        record.current_stock <= record.reorder_point,
       action: "send_sms" as AutomationAction,
       action_config: {
         to: "{$record.manager_phone}",
@@ -296,7 +318,9 @@ export function getIndustryAutomations(
       name: "Abandoned Cart Recovery",
       industry: "retail",
       trigger: "schedule" as AutomationTrigger,
-      condition: (record) => record.cart_abandoned_at && new Date() > new Date(record.cart_abandoned_at.getTime() + 24 * 60 * 60 * 1000),
+      condition: (record) =>
+        record.cart_abandoned_at !== undefined &&
+        new Date() > new Date(record.cart_abandoned_at.getTime() + 24 * 60 * 60 * 1000),
       action: "send_email" as AutomationAction,
       action_config: {
         to: "{$record.customer_email}",
@@ -323,7 +347,7 @@ export function getIndustryAutomations(
       name: "Quality Issue Alert",
       industry: "manufacturing",
       trigger: "field_change" as AutomationTrigger,
-      condition: (record) => record.defect_rate && record.defect_rate > 5,
+      condition: (record) => (record.defect_rate ?? 0) > 5,
       action: "notify_slack" as AutomationAction,
       action_config: {
         channel: "#quality-alerts",
@@ -343,7 +367,7 @@ export function getIndustryAutomations(
       name: "Maintenance Scheduled",
       industry: "manufacturing",
       trigger: "schedule" as AutomationTrigger,
-      condition: (record) => true,
+      condition: () => true,
       action: "send_email" as AutomationAction,
       action_config: {
         to: "{$maintenance_team_email}",
@@ -369,7 +393,7 @@ export function getIndustryAutomations(
       name: "Production Delay Notification",
       industry: "manufacturing",
       trigger: "threshold_crossed" as AutomationTrigger,
-      condition: (record) => record.downtime_minutes > 60,
+      condition: (record) => (record.downtime_minutes ?? 0) > 60,
       action: "notify_slack" as AutomationAction,
       action_config: {
         channel: "#production",

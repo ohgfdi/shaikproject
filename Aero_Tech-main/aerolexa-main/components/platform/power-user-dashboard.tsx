@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { MapTemplateGallery } from "@/components/charts/map-template-gallery";
@@ -31,8 +31,7 @@ export function PowerUserDashboard({ dashboardId }: { dashboardId: string }) {
   const [metric, setMetric] = useState<string>("Value");
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<MapTemplate | null>(null);
-  const [webhookError, setWebhookError] = useState<string | null>(null);
-  const [activeFilters, setActiveFilters] = useState<{
+  const [activeFilters] = useState<{
     widgetId: string;
     column: string;
     values: string[];
@@ -62,22 +61,6 @@ export function PowerUserDashboard({ dashboardId }: { dashboardId: string }) {
     setWidgets((prev) => [...prev, newWidget]);
     setSelectedTemplate(null);
   };
-
-  // Handle filter changes from other widgets
-  const handleFilterChange = useCallback(
-    (widgetId: string, column: string, values: string[]) => {
-      setActiveFilters((prev) => {
-        const existing = prev.find((f) => f.widgetId === widgetId);
-        if (existing) {
-          return prev.map((f) =>
-            f.widgetId === widgetId ? { ...existing, values } : f
-          );
-        }
-        return [...prev, { widgetId, column, values }];
-      });
-    },
-    []
-  );
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto p-4">

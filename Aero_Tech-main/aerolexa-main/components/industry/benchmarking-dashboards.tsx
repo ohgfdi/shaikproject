@@ -4,8 +4,8 @@
  * Pre-built dashboards with industry benchmarking comparisons.
  * Shows how a tenant's metrics compare to industry peers at various percentiles.
  */
-import React from "react";
 import type { NextRequest } from "next/server";
+import React from "react";
 
 import { prisma } from "@/lib/db";
 import { getIndustryTemplate } from "@/lib/industry";

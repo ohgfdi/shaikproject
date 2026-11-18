@@ -21,7 +21,6 @@
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
-
 import { enqueue } from "@/lib/job-queue";
 
 export type NotificationChannel = "email" | "in-app" | "push" | "sms";
