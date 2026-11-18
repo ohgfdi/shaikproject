@@ -7,7 +7,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type Locale = "en" | "es" | "de" | "fr" | "zh" | "ar" | "pt" | "ru" | "ja" | "hi";
 

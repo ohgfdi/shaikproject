@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/overlays";
 import { api } from "@/lib/client/api";
-import { cn } from "@/lib/utils";
 
 type Document = {
   id: string;

@@ -1,9 +1,7 @@
 "use client";
 
-import { CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent } from "@/components/ui/primitives";
 import { api, errorMessage } from "@/lib/client/api";
 

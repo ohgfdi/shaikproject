@@ -1,6 +1,5 @@
 import { prepareITRInEnglish } from '@/lib/ai/itr-preparation';
 import { requireAuth } from '@/lib/auth/guard';
-import { prisma } from '@/lib/db';
 import { ok, toErrorResponse } from '@/lib/server/api';
 
 export async function POST(request: Request) {

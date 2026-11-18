@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export interface ManufacturingKPI {
   id: string;

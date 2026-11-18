@@ -14,7 +14,6 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Client } from "pg";
 
-import { prisma } from "@/lib/db";
 
 const TEST_PG = process.env.TEST_POSTGRES_URL ?? "postgresql://aerolexa:aerolexa@localhost:55432/aerolexa?sslmode=disable";
 

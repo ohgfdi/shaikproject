@@ -8,9 +8,7 @@
 import type { NextRequest } from "next/server";
 
 import { checkModelCompliance } from "@/lib/ai/enterprise-ai-governance";
-import { generateAIGovernanceReport } from "@/lib/ai/enterprise-ai-governance";
 import type { ModelDriftReport, ModelMetadata } from "@/lib/ai/enterprise-ai-governance";
-import { prisma } from "@/lib/db";
 
 export type Framework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
 

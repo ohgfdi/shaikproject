@@ -15,7 +15,6 @@ import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { prisma } from "@/lib/db";
 import { activationVerdict } from "@/lib/server/growth-funnel";
 
 // startOfWeek/addWeeks are not exported; test them THROUGH weeklyFunnel's

@@ -8,7 +8,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 import type { Industry } from "@/lib/industry";
 import type { StreamType } from "@/lib/streaming/real-time-integrations";
 

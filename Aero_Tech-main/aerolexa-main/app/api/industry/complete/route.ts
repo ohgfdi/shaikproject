@@ -6,7 +6,6 @@
  - Compliance requirements - Vertical integrations config
  * - Dashboard configuration - Tenant-specific customization
  */
-import type { NextRequest } from "next/server";
 
 import { getIndustryDashboardConfig } from "@/components/industry/dashboard-configs";
 import { prisma } from "@/lib/db";

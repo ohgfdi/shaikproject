@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { requirePageAuth } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { moduleEnabled } from "@/lib/server/modules";
-import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Prompt Library" };
 

@@ -10,7 +10,6 @@ import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { prisma } from "@/lib/db";
 import { parseMetricNumber } from "@/lib/engine/versioning";
 
 const SCRATCH_DB =

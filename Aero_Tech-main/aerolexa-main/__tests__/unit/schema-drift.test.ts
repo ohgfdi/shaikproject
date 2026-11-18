@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
-import { prisma } from "@/lib/db";
 
 /**
  * Schema-drift gate.

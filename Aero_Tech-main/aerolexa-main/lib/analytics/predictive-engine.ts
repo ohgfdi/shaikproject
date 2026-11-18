@@ -8,8 +8,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-import { getIndustryTemplate } from "@/lib/industry";
 
 export type Industry = "finance" | "healthcare" | "saas" | "retail" | "manufacturing";
 

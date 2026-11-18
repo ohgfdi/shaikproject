@@ -9,14 +9,13 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
-import { checkGovernancePolicies, AuditEventType } from "@/lib/governance/audit-management";
+import { checkGovernancePolicies } from "@/lib/governance/audit-management";
 import type { AuditEvent, GovernanceFramework } from "@/lib/governance/audit-management";
 
 export type { GovernanceFramework };
 
 import type { Industry } from "./agent-orchestration";
-import { executeDecision, DecisionRiskLevel, DecisionProposal } from "./autonomous-decision-engine";
+import { DecisionRiskLevel } from "./autonomous-decision-engine";
 
 
 export type ModelType = "predictive_score" | "anomaly_detection" | "forecasting" | "classification" | "regression";

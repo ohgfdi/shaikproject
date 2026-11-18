@@ -3,7 +3,6 @@ import path from "node:path";
 import { z } from "zod";
 
 import { requireAuth, ApiError } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { dataDir } from "@/lib/engine/dataset";
 import { applyColumnOps } from "@/lib/file/parse";
 import { parseJsonArray } from "@/lib/json";

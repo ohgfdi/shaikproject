@@ -19,7 +19,6 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import * as Y from "yjs";
 
-import { prisma } from "@/lib/db";
 
 process.env.DATABASE_URL = "postgresql://aerolexa:aerolexa@localhost:55432/aerolexa?sslmode=disable";
 process.env.AUTH_SECRET = process.env.AUTH_SECRET ?? "replica-bus-test-secret-0123456789abcdef";

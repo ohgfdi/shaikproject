@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { notFoundError, requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { loadParsedDataset } from "@/lib/engine/dataset";
 import { serverEnv } from "@/lib/env";
 import { exportAnalysisScript } from "@/lib/export/python";

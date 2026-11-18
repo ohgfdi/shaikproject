@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type ForecastMethod = "simple_moving_average" | "exponential_smoothing" | "linear_trend" | "seasonal_decomposition";
 

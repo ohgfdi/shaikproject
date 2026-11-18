@@ -4,7 +4,6 @@
  * Provides mobile-optimized API endpoints for the React Native app.
  * Handles tenant-scoped queries, error summaries, and export formatting.
  */
-import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
 

@@ -22,7 +22,6 @@
  */
 
 import { ApiError } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { getRateTable } from "@/lib/engine/ca-rate-registry";
 import {
   RULE_CATALOG,

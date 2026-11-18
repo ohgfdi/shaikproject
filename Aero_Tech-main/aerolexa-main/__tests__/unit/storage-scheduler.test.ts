@@ -21,7 +21,6 @@ process.env.DATABASE_URL =
 process.env.AUTH_SECRET = process.env.AUTH_SECRET ?? "storage-scheduler-test-secret-0123456789abcdef";
 process.env.DATA_DIR = process.env.DATA_DIR ?? "data/storage-scheduler-test";
 
-import { prisma } from "@/lib/db";
 import { keys, localPath, saveFile, storageKind, exists, deleteFile, readTextFile } from "@/lib/server/storage";
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type ComplianceFramework = "SOC2" | "HIPAA" | "GDPR";
 

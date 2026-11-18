@@ -19,7 +19,6 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ComplianceProfileCard } from "@/components/ca/compliance-profile-card";
 import { EngagementAccessPanel } from "@/components/ca/engagement-access-panel";
 import { PortalAccountsPanel } from "@/components/practice/portal-accounts-panel";
 import { Button } from "@/components/ui/button";

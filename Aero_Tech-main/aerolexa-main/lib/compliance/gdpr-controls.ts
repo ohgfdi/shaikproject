@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type PrivacyStatus = "fully_compliant" | "partial" | "non_compliant" | "at_risk";
 

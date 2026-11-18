@@ -7,7 +7,6 @@
  */
 import React, { useState, useEffect } from "react";
 
-import { prisma } from "@/lib/db";
 
 export type AIMessage = {
   id: string;

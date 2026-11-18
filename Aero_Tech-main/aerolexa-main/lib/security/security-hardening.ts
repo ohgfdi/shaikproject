@@ -4,9 +4,7 @@
  * Comprehensive security hardening measures and formal bug bounty program.
  * Improves security posture and demonstrates commitment to vulnerability discovery.
  */
-import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type SecurityControl = 
   | "ssl_tls"

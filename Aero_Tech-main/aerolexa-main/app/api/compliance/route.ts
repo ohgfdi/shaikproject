@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 
 import { requireAuth } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import {
   computeRiskScore,
   forecastDeadlines,

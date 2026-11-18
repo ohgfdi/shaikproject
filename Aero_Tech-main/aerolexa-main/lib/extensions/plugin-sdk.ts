@@ -19,7 +19,6 @@
  *   // Execute a plugin
  *   const result = await executePlugin("my-custom-chart", { data, options });
  */
-import { prisma } from "@/lib/db";
 
 export type PluginType = "chart" | "analysis" | "export" | "integration" | "widget" | "component";
 

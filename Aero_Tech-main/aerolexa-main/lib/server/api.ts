@@ -3,7 +3,6 @@ import { ZodError } from "zod";
 
 import { Prisma } from "@/generated/prisma/client";
 import { ApiError } from "@/lib/auth/guard";
-import { prisma } from "@/lib/db";
 import { AnalysisInputError } from "@/lib/engine/analyses";
 import { AuditAssuranceError } from "@/lib/engine/ca-audit-assurance";
 import { DocumentError } from "@/lib/engine/ca-documents";

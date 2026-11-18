@@ -1,6 +1,5 @@
 import { ApiError, requireAuth } from "@/lib/auth/guard";
 import { uploadFileToS3 } from "@/lib/aws/s3";
-import { prisma } from "@/lib/db";
 import { ok, readJsonBody, toErrorResponse } from "@/lib/server/api";
 /** POST /api/organization/engagements/:id/working-papers/:wpId/upload
  *  Upload a document for a working paper version.

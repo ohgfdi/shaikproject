@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { logSecurityEvent } from "@/lib/server/activity";
-import { rlsEnabled, rlsConfigError } from "@/lib/server/tenancy";
+import { rlsEnabled } from "@/lib/server/tenancy";
 
 /** Schema for a webhook subscription. */
 const subscriptionSchema = z.object({

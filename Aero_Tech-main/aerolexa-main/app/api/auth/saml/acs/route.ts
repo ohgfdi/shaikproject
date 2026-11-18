@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { SAML_ENTITY_ID, fetchIdpMetadata, samlAcsUrl, splitStatePayload, validateSamlResponse } from "@/lib/auth/saml";
 import { createSessionCookie, createSessionToken } from "@/lib/auth/session";
 import { BRAND_STORAGE_KEYS, brandKey } from "@/lib/brand";
-import { prisma } from "@/lib/db";
 import { publicEnv, serverEnv } from "@/lib/env";
 import { logSecurityEvent } from "@/lib/server/activity";
 

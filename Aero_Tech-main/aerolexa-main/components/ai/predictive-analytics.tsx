@@ -6,7 +6,6 @@
  */
 import React, { useEffect, useState } from "react";
 
-import { prisma } from "@/lib/db";
 
 export interface ForecastPoint {
   x: Date; // time period

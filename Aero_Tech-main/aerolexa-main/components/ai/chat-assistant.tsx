@@ -7,7 +7,6 @@
 import React, { useState } from "react";
 
 import { prisma } from "../../lib/db";
-import { executePlugin } from "../../lib/extensions/plugin-sdk";
 
 export interface ChatMessage {
   id: string;

@@ -2,7 +2,6 @@ import { ComplianceCalendarWorkspace } from "@/components/compliance/compliance-
 import { PageHeader } from "@/components/layout/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePageAuth } from "@/lib/auth/guard";
-import { withTenantDb } from "@/lib/server/tenant-db";
 
 export const metadata = { title: "Compliance Calendar" };
 

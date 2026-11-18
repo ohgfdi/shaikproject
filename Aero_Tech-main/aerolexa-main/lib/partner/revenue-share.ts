@@ -6,7 +6,6 @@
  */
 import type { NextRequest } from "next/server";
 
-import { prisma } from "@/lib/db";
 
 export type DealStatus = "registered" | "in_progress" | "closed_won" | "closed_lost" | "expired";
 
