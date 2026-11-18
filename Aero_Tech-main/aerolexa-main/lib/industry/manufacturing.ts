@@ -193,8 +193,8 @@ export const ManufacturingTemplate = {
 };
 
 /** Get the active industry template. */
-export async function getIndustryTemplate(industry: string): Promise<any> {
-  const templates: Record<string, any> = {
+export async function getIndustryTemplate(industry: string): Promise<unknown> {
+  const templates: Record<string, unknown> = {
     manufacturing: ManufacturingTemplate,
     retail: await import("./retail").then((m) => m.RetailTemplate),
     saas: await import("./saas").then((m) => m.SaaSTemplate),

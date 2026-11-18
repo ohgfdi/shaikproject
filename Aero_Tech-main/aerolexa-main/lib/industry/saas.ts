@@ -201,8 +201,8 @@ export const SaaSTemplate = {
 };
 
 /** Get the active industry template. */
-export async function getIndustryTemplate(industry: string): Promise<any> {
-  const templates: Record<string, any> = {
+export async function getIndustryTemplate(industry: string): Promise<unknown> {
+  const templates: Record<string, unknown> = {
     saas: SaaSTemplate,
     finance: await import("./finance").then((m) => m.FinanceTemplate),
   };

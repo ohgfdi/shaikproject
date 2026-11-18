@@ -16,7 +16,7 @@ export interface DashboardWidgetConfig {
   position: { x: number; y: number; w: number; h: number };
   title: string;
   // Configuration specific to widget type
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
   // Linked KPI or data source
   kpiId?: string;
   chartSpecId?: string;

@@ -229,11 +229,11 @@ export class XeroClient {
     );
   }
 
-  async getAccounts(): Promise<any[]> {
+  async getAccounts(): Promise<unknown[]> {
     return this.apiRequest(`/Accounts`);
   }
 
-  async getBankTransactions(minDate?: string, maxDate?: string): Promise<any[]> {
+  async getBankTransactions(minDate?: string, maxDate?: string): Promise<unknown[]> {
     let url = '/BankTransactions';
     if (minDate) url += `?MinDate=${minDate}`;
     if (maxDate) {
@@ -243,7 +243,7 @@ export class XeroClient {
     return this.apiRequest(url);
   }
 
-  async createBankTransactionImport(file: File, filename: string): Promise<any> {
+  async createBankTransactionImport(file: File, filename: string): Promise<unknown> {
     const formData = new FormData();
     formData.append('File', file, filename);
     formData.append('Encoding', 'UTF-8');
@@ -398,15 +398,15 @@ export class QuickBooksClient {
     this.config = config;
   }
 
-  async getCompanyInfo(): Promise<any> {
+  async getCompanyInfo(): Promise<unknown> {
     return {};
   }
 
-  async getCustomers(): Promise<any[]> {
+  async getCustomers(): Promise<unknown[]> {
     return [];
   }
 
-  async getInvoices(): Promise<any[]> {
+  async getInvoices(): Promise<unknown[]> {
     return [];
   }
 

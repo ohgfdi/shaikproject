@@ -31,7 +31,7 @@ export interface AgentResponse {
   sources: string[];
   executed_actions: string[];
   execution_time_ms: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 /** Vertical-specific agent capabilities. */
@@ -191,7 +191,7 @@ export async function orchestrateAgents(
   industry: Industry,
   agentTypes: AgentType[],
   taskDescription: string,
-  context: Record<string, any> = {}
+  context: Record<string, unknown> = {}
 ): Promise<AgentResponse[]> {
   const responses: AgentResponse[] = [];
 
@@ -263,7 +263,7 @@ function generateAgentResponse(
   agentType: AgentType,
   industry: Industry,
   taskDescription: string,
-  context: Record<string, any>
+  context: Record<string, unknown>
 ): string {
   const { metric: _metric, currentValue, predictedValue, anomalyDetected, severity: _severity } = context;
 
@@ -352,7 +352,7 @@ function generateAgentResponse(
 function getExecutedActions(
   agentType: AgentType,
   industry: Industry,
-  _context: Record<string, any>
+  _context: Record<string, unknown>
 ): string[] {
     const actions: Record<string, Record<string, string[]>> = {
       research: {

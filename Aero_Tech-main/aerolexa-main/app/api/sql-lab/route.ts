@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     return ok({ ...result, executedBy: ctx.user?.id || 'unknown' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return toErrorResponse(err);
   }
 }

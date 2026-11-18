@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       default:
         return toErrorResponse(new Error(`Unknown AI type: ${type}`));
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return toErrorResponse(err);
   }
 }

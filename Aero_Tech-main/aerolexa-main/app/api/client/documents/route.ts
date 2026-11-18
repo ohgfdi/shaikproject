@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       uploadedAt: documentRef.uploadedAt,
       message: "Document uploaded successfully. AI analysis will be triggered shortly.",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return toErrorResponse(err);
   }
 }

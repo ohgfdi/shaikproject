@@ -17,12 +17,12 @@ export async function POST(request: Request) {
     }
 
     // Document-aware AI analysis based on category
-    let analysis: any = null;
+    let analysis: unknown = null;
 
     switch (documentType) {
       case 'trial-balance': {
         const lines = content.split('\n').filter((l: string) => l.trim());
-        const accounts: any[] = [];
+        const accounts: unknown[] = [];
         let totalDebit = 0;
         let totalCredit = 0;
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
           title,
           extractedAmount: ea,
           observations: obs,
-        } as any;
+        } as unknown;
         break;
       }
 
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
           title,
           extractedAmount: ea,
           observations: obs,
-        } as any;
+        } as unknown;
         break;
       }
 
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
           debitCount: debitMatch ? debitMatch.length : 0,
           creditCount: creditMatch ? creditMatch.length : 0,
           observations: 'Bank statement parsed for debit/credit entries.',
-        } as any;
+        } as unknown;
         break;
       }
 
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
           title,
           keyTerms,
           observations: keyTerms.length > 0 ? `Document mentions: ${keyTerms.join(', ')}` : 'Generic document analysis completed.',
-        } as any;
+        } as unknown;
         break;
       }
 
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
           documentType,
           title,
           observations: 'Document type recognized but no specific analysis module available.',
-        } as any;
+        } as unknown;
         break;
       }
     }
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       analyzedAt: new Date().toISOString(),
       analyzedBy: ctx.user?.id || 'unknown',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return toErrorResponse(err);
   }
 }

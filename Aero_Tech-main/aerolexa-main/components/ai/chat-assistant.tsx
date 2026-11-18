@@ -21,7 +21,7 @@ export interface ChartSpec {
   title: string;
   xAxis: string;
   yAxis: string;
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   forecasts?: ForecastPoint[];
 }
 
@@ -98,7 +98,7 @@ export const AIChatAssistant: React.FC = () => {
       const response = await generalDataQuery(text);
       addMessage("assistant", response, "text");
       setStatus("idle");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("AI Chat error:", error);
       addMessage(
         "assistant",
@@ -157,8 +157,8 @@ export const AIChatAssistant: React.FC = () => {
   };
 
   /** Extract filter parameters from natural language. */
-  const extractFilters = (text: string): Record<string, any> => {
-    const filters: Record<string, any> = {};
+  const extractFilters = (text: string): Record<string, unknown> => {
+    const filters: Record<string, unknown> = {};
     const lower = text.toLowerCase();
 
     // Date range filters

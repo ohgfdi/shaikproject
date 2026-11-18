@@ -16,7 +16,7 @@ export interface StreamMessage {
   type: StreamType;
   industry?: Industry;
   timestamp: Date;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   source: "server" | "client" | "integration";
   // For WebSocket connection tracking
   connection_id?: string;

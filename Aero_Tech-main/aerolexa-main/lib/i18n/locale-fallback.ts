@@ -31,7 +31,7 @@ export const LOCALE_FALLBACK_CHAIN: Record<Locale, Locale[]> = {
 export function loadLocaleWithFallback(
   locale: Locale,
   key: string,
-  options: Record<string, any> = {}
+  options: Record<string, unknown> = {}
 ): string {
   // Try the requested locale first
   const localeFile = getLocaleFile(locale);

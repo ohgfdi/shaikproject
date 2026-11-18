@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
  *  Only use when SQL_LAB_ENABLED=true in .env.
  *  Returns rows affected or selected.
  */
-export async function executeQuery(sql: string, params?: any[]) {
+export async function executeQuery(sql: string, params?: unknown[]) {
   if (!process.env.SQL_LAB_ENABLED) {
     throw new Error('SQL Lab is disabled. Set SQL_LAB_ENABLED=true in .env');
   }
@@ -22,7 +22,7 @@ export async function executeQuery(sql: string, params?: any[]) {
       const rawResult = await prisma.$queryRawUnsafe(sql, ...(params || []));
       return {
         type: 'select' as const,
-        rows: rawResult as any[],
+        rows: rawResult as unknown[],
         command: 'SELECT',
       };
     }
@@ -43,19 +43,19 @@ export async function executeQuery(sql: string, params?: any[]) {
 /** Safe query wrapper that validates common patterns. */
 export interface SafeQueryResult {
   success: boolean;
-  data: any[];
+  data: unknown[];
   error?: string;
   rowsAffected?: number;
 }
 
 /** Execute a parameterized query safely. */
-export async function safeQuery(sql: string, params?: any[]): Promise<SafeQueryResult> {
+export async function safeQuery(sql: string, params?: unknown[]): Promise<SafeQueryResult> {
   try {
     if (sql.trim().toUpperCase().startsWith('SELECT')) {
       const rows = await prisma.$queryRawUnsafe(sql, ...(params || []));
       return {
         success: true,
-        data: rows as any[],
+        data: rows as unknown[],
       };
     } else {
       const result = await prisma.$executeRawUnsafe(sql, ...(params || []));

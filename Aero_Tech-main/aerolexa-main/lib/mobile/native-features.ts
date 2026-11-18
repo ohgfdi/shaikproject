@@ -31,7 +31,7 @@ export interface PushNotification {
   title: string;
   body: string;
   type: "info" | "warning" | "critical" | "kpi_alert" | " workflow_alert";
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   target_role?: string[];
   target_industry?: Industry[];
   scheduled_at?: Date;

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       role: member?.practiceRole ?? "VIEWER",
       expiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return toErrorResponse(err);
   }
 }
