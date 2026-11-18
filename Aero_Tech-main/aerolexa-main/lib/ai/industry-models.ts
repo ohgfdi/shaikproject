@@ -21,12 +21,15 @@ export const ModelType = {
 
 export type ModelType = (typeof ModelType)[keyof typeof ModelType];
 
+/** Connector-supplied feature values for one model run. */
+export type ModelInput = Record<string, unknown>;
+
 export interface ModelPrediction {
   id: string;
   model_type: ModelType;
   industry: Industry;
-  input_data: Record<string, any>;
-  prediction: number | string | Record<string, any>;
+  input_data: Record<string, unknown>;
+  prediction: number | string | Record<string, unknown>;
   confidence: number; // 0-100
   explanation: string;
   generated_at: Date;
@@ -41,21 +44,21 @@ export const FinanceFraudDetection = {
   model_type: "fraud_detection" as ModelType,
   industry: "finance" as Industry,
 
-  predict: async (input: Record<string, any>): Promise<ModelPrediction> => {
+  predict: async (input: ModelInput): Promise<ModelPrediction> => {
     // Simulate ML model inference
     const riskFactors: number[] = [];
 
     // Check for red flags in input data
-    if (input.amount && input.amount > 100000) {
+    if (Number(input.amount) > 100000) {
       riskFactors.push(0.3);
     }
-    if (input.fico_score && input.fico_score < 600) {
+    if (input.fico_score !== undefined && Number(input.fico_score) < 600) {
       riskFactors.push(0.25);
     }
-    if (input.term_months && input.term_months > 36) {
+    if (Number(input.term_months) > 36) {
       riskFactors.push(0.15);
     }
-    if (input.purpose && input.purpose === "business" && !input.collateral) {
+    if (input.purpose === "business" && !input.collateral) {
       riskFactors.push(0.2);
     }
 
@@ -84,20 +87,20 @@ export const SaaSChurnPrediction = {
   model_type: "churn_prediction" as ModelType,
   industry: "saas" as Industry,
 
-  predict: async (input: Record<string, any>): Promise<ModelPrediction> => {
+  predict: async (input: ModelInput): Promise<ModelPrediction> => {
     const riskFactors: number[] = [];
 
     // Check churn indicators
-    if (input.trial_days && input.trial_days > 30 && !input.converted) {
+    if (Number(input.trial_days) > 30 && !input.converted) {
       riskFactors.push(0.3);
     }
-    if (input.usage_trend && input.usage_trend < 0) {
+    if (Number(input.usage_trend) < 0) {
       riskFactors.push(0.25);
     }
-    if (input.support_tickets && input.support_tickets > 5) {
+    if (Number(input.support_tickets) > 5) {
       riskFactors.push(0.2);
     }
-    if (input.login_frequency && input.login_frequency < 3) {
+    if (input.login_frequency !== undefined && Number(input.login_frequency) < 3) {
       riskFactors.push(0.15);
     }
 
@@ -126,13 +129,12 @@ export const RetailDemandForecasting = {
   model_type: "demand_forecasting" as ModelType,
   industry: "retail" as Industry,
 
-  predict: async (input: Record<string, any>): Promise<ModelPrediction> => {
-    const { product_id: _product_id, category: _category, historical_sales, seasonality, promotions } = input;
-
+  predict: async (input: ModelInput): Promise<ModelPrediction> => {
     // Simple demand forecasting logic
-    const baseDemand = historical_sales || 100;
-    const seasonalityFactor = seasonality || 1.0;
-    const promotionFactor = promotions && promotions.active ? 1.3 : 1.0;
+    const baseDemand = Number(input.historical_sales ?? 100);
+    const seasonalityFactor = Number(input.seasonality ?? 1);
+    const promotions = input.promotions as { active?: boolean } | undefined;
+    const promotionFactor = promotions?.active ? 1.3 : 1.0;
 
     const forecasted_demand = Math.round(baseDemand * seasonalityFactor * promotionFactor);
 
@@ -166,15 +168,13 @@ export const ManufacturingRiskScoring = {
   model_type: "risk_scoring" as ModelType,
   industry: "manufacturing" as Industry,
 
-  predict: async (input: Record<string, any>): Promise<ModelPrediction> => {
-    const { downtime_hours, defect_rate, oee, maintenance_delay } = input;
-
+  predict: async (input: ModelInput): Promise<ModelPrediction> => {
     const riskFactors: number[] = [];
 
-    if (downtime_hours && downtime_hours > 20) riskFactors.push(0.3);
-    if (defect_rate && defect_rate > 5) riskFactors.push(0.25);
-    if (oee && oee < 70) riskFactors.push(0.2);
-    if (maintenance_delay && maintenance_delay > 48) riskFactors.push(0.15);
+    if (Number(input.downtime_hours) > 20) riskFactors.push(0.3);
+    if (Number(input.defect_rate) > 5) riskFactors.push(0.25);
+    if (input.oee !== undefined && Number(input.oee) < 70) riskFactors.push(0.2);
+    if (Number(input.maintenance_delay) > 48) riskFactors.push(0.15);
 
     const riskScore = Math.min(100, riskFactors.reduce((a, b) => a + b, 0) * 100);
     const confidence = 80 + Math.random() * 13; // 80-93%
@@ -197,8 +197,8 @@ export const ManufacturingRiskScoring = {
 export function getIndustryModel(
   industry: Industry,
   modelType: ModelType
-): { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType } {
-  const models: Partial<Record<Industry, Partial<Record<ModelType, { predict: (input: Record<string, any>) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType }>>>> = {
+): { predict: (input: ModelInput) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType } {
+  const models: Partial<Record<Industry, Partial<Record<ModelType, { predict: (input: ModelInput) => Promise<ModelPrediction>; name: string; description: string; model_type: ModelType }>>>> = {
     finance: {
       [ModelType.FRAUD_DETECTION]: FinanceFraudDetection,
     },
@@ -234,7 +234,7 @@ export async function GET(
     const model = getIndustryModel(industry as Industry, modelType);
 
     // Generate a sample prediction with dummy data
-    const sampleInput: Record<string, any> = {};
+    const sampleInput: ModelInput = {};
     if (industry === "finance") {
       sampleInput.amount = 50000;
       sampleInput.fico_score = 720;

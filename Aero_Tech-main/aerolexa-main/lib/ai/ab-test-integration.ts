@@ -176,7 +176,7 @@ export function runABTestEvaluation(
 
   return {
     testId: config.testId,
-    variantWon: variantWon as any,
+    variantWon,
     frequentist: {
       pValue: evaluation.frequentist.pValue,
       relativeLiftPct: evaluation.frequentist.relativeLiftPct,
@@ -188,7 +188,7 @@ export function runABTestEvaluation(
     bayesian: {
       probabilityBetter: evaluation.bayesian.probabilityBetter,
       expectedLoss: evaluation.bayesian.expectedLoss,
-      winner: evaluation.bayesian.winner as any,
+      winner: evaluation.bayesian.winner,
       interpretation: evaluation.bayesian.interpretation,
     },
     evaluation,
