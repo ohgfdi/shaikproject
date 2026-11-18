@@ -42,14 +42,10 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
     setLoading(true);
 
     try {
-      const where: any = {
+      const where = {
         ...(workspaceId && { workspaceId }),
+        ...(filter !== "all" && { type: filter }),
       };
-
-      // Apply filter
-      if (filter !== "all") {
-        where.type = filter;
-      }
 
       const data = await prisma.activity.findMany({
         where,

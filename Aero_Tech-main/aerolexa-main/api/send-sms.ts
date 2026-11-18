@@ -64,21 +64,22 @@ export default async function handler(
       status: message.status,
       dateCreated: message.dateCreated,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Twilio SMS error:', error);
 
     // Provide helpful error messages for common Twilio errors
+    const twilioError = error as { status?: number; code?: string };
     let userFriendlyError = 'Failed to send SMS';
 
-    if (error.status === 400) {
+    if (twilioError.status === 400) {
       userFriendlyError = 'Bad request - check phone number format and message body';
-    } else if (error.status === 401) {
+    } else if (twilioError.status === 401) {
       userFriendlyError = 'Authentication failed - check Twilio credentials';
-    } else if (error.status === 403) {
+    } else if (twilioError.status === 403) {
       userFriendlyError = 'Forbidden - check Twilio phone number permissions';
-    } else if (error.code === 'ACCOUNT_LIMIT') {
+    } else if (twilioError.code === 'ACCOUNT_LIMIT') {
       userFriendlyError = 'Account limit reached - check Twilio plan';
-    } else if (error.code === 'RATE_LIMIT') {
+    } else if (twilioError.code === 'RATE_LIMIT') {
       userFriendlyError = 'Rate limit exceeded - please try again later';
     }
 

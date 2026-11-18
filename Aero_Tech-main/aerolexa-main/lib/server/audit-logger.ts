@@ -106,7 +106,7 @@ export async function logAuditEvent({
       targetId: event.targetId,
       ipAddress: event.ipAddress,
       userAgent: event.userAgent,
-      details: event.details as any,
+      details: event.details as object,
       status: event.status,
       createdAt: event.createdAt,
     },
@@ -137,32 +137,19 @@ export async function getAuditLog({
   page?: number;
   pageSize?: number;
 }) {
-  const where: any = {};
-
-  if (organizationId) {
-    where.organizationId = organizationId;
-  }
-  if (workspaceId) {
-    where.workspaceId = workspaceId;
-  }
-  if (userId) {
-    where.userId = userId;
-  }
-  if (action) {
-    where.action = action;
-  }
-  if (targetType) {
-    where.targetType = targetType;
-  }
-  if (startDate || endDate) {
-    where.createdAt = {};
-    if (startDate) {
-      where.createdAt.gte = startDate;
-    }
-    if (endDate) {
-      where.createdAt.lte = endDate;
-    }
-  }
+  const where = {
+    ...(organizationId && { organizationId }),
+    ...(workspaceId && { workspaceId }),
+    ...(userId && { userId }),
+    ...(action && { action }),
+    ...(targetType && { targetType }),
+    ...((startDate || endDate) && {
+      createdAt: {
+        ...(startDate && { gte: startDate }),
+        ...(endDate && { lte: endDate }),
+      },
+    }),
+  };
 
   const [items, total] = await Promise.all([
     prisma.auditLog.findMany({
@@ -195,23 +182,16 @@ export async function getAuditStats({
   startDate?: Date;
   endDate?: Date;
 }) {
-  const where: any = {};
-
-  if (organizationId) {
-    where.organizationId = organizationId;
-  }
-  if (workspaceId) {
-    where.workspaceId = workspaceId;
-  }
-  if (startDate || endDate) {
-    where.createdAt = {};
-    if (startDate) {
-      where.createdAt.gte = startDate;
-    }
-    if (endDate) {
-      where.createdAt.lte = endDate;
-    }
-  }
+  const where = {
+    ...(organizationId && { organizationId }),
+    ...(workspaceId && { workspaceId }),
+    ...((startDate || endDate) && {
+      createdAt: {
+        ...(startDate && { gte: startDate }),
+        ...(endDate && { lte: endDate }),
+      },
+    }),
+  };
 
   const [total, byAction, byMonth] = await Promise.all([
     prisma.auditLog.count({ where }),
@@ -259,7 +239,7 @@ export async function exportAuditLog({
   endDate: Date;
   format?: "csv" | "json";
 }): Promise<Blob> {
-  const where: any = {
+  const where = {
     organizationId,
     ...(startDate && endDate && {
       createdAt: {

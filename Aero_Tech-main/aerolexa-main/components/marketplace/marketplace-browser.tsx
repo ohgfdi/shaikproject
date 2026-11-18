@@ -60,22 +60,12 @@ export const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({
     setLoading(true);
 
     try {
-      const where: any = {};
-
-      // Filter by category if specified
-      if (filterCategory) {
-        where.category = filterCategory;
-      }
-
-      // Search query filter (mock - in production would search title/description)
-      if (searchQuery) {
-        where.name = {
-          contains: searchQuery,
-        };
-      }
-
       const data = await prisma.marketplacePlugin.findMany({
-        where,
+        where: {
+          ...(filterCategory && { category: filterCategory }),
+          // Search query filter (mock - in production would search title/description)
+          ...(searchQuery && { name: { contains: searchQuery } }),
+        },
         orderBy: { rating: "desc" },
       });
 

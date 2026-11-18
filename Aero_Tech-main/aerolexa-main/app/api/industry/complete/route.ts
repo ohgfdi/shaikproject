@@ -29,7 +29,11 @@ export async function GET(request: Request) {
 
     // 2. Get compliance requirements for key frameworks
     const complianceFrameworks = ["SOC2", "GDPR", "PCI_DSS", "HIPAA"].map(
-      (framework) => getComplianceRequirements(industry, framework as any)
+      (framework) =>
+        getComplianceRequirements(
+          industry,
+          framework as Parameters<typeof getComplianceRequirements>[1],
+        )
     );
 
     // 3. Get dashboard configuration

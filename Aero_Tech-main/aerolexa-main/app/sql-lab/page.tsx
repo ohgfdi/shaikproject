@@ -11,7 +11,7 @@ function SQLLabPage() {
     "SELECT * FROM engagement WHERE id = 'eng_123'"
   );
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<
     { query: string; success: boolean }[]
@@ -21,7 +21,7 @@ function SQLLabPage() {
     setLoading(true);
     setError(null);
     try {
-      const apiRes = await api<{ rows: any[] }>(
+      const apiRes = await api<{ rows: Record<string, unknown>[] }>(
         "/api/sql-lab/execute",
         {
           method: "POST",
@@ -33,8 +33,8 @@ function SQLLabPage() {
         { query, success: true },
         ...prev.slice(0, 9),
       ]);
-    } catch (err: any) {
-      setError(err.message ?? "Query execution failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Query execution failed");
     } finally {
       setLoading(false);
     }

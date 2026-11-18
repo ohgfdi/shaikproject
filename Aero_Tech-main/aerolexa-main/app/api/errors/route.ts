@@ -108,19 +108,12 @@ export async function GET(request: Request) {
     const category = searchParams.get("category") ?? undefined;
     const tag = searchParams.get("tag") ?? undefined;
 
-    const where: any = {};
-    if (resolved !== undefined) {
-      where.resolvedAt = resolved ? { not: null } : null;
-    }
-    if (severity) {
-      where.severity = severity;
-    }
-    if (category) {
-      where.category = category;
-    }
-    if (tag) {
-      where.tags = { has: tag };
-    }
+    const where = {
+      resolvedAt: resolved ? { not: null } : null,
+      ...(severity && { severity }),
+      ...(category && { category }),
+      ...(tag && { tags: { has: tag } }),
+    };
 
     const total = await prisma.errorReport.count({ where });
 

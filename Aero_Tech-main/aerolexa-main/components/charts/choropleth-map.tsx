@@ -188,7 +188,7 @@ function ChoroplethMapPanel({
   }, [baselineData]);
 
   // Determine fill color for each feature
-  const getFillColor = (feature: any) => {
+  const getFillColor = (feature?: { properties?: { name?: unknown } }) => {
     const name = String(feature?.properties?.name ?? "");
     const currentValue = currentValueOf.get(name);
     const baselineValue = baselineValueOf.get(name);
@@ -387,7 +387,7 @@ function ChoroplethMapPanel({
   };
 
   // Get fill color for a feature
-  const getColor = (feature: any) => getFillColor(feature);
+  const getColor = (feature?: { properties?: { name?: unknown } }) => getFillColor(feature);
 
   const renderMap = () => {
     return (
