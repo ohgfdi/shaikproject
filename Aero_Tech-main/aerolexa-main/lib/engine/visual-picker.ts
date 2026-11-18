@@ -261,6 +261,9 @@ export function buildPbiSpec(kind: PbiVisualKind, source: VisualPickerSource): P
         ],
       };
     }
+    case "map":
+      // Map visuals render through the Leaflet choropleth, not the canvas.
+      return buildMapSpec(source);
   }
 }
 

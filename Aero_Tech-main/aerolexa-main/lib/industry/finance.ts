@@ -195,7 +195,7 @@ export function getKPIById(
 /** Get a KPI's formatted value based on its type. */
 export function formatKPIValue(
   kpi: IndustryKPI,
-  value: number | string
+  value: number | string | Date
 ): string {
   switch (kpi.type) {
     case "percentage":

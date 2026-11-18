@@ -8,8 +8,8 @@
  */
 import type { NextRequest } from "next/server";
 
-import type { GovernanceFramework } from "@/lib/governance/audit-management";
 import { prisma } from "@/lib/db";
+import type { GovernanceFramework } from "@/lib/governance/audit-management";
 
 import type { AgentType, Industry } from "./agent-orchestration";
 
@@ -187,7 +187,7 @@ export const AgentMarketplace: AgentListing[] = [
     install_endpoint: "/api/ai/agent-orchestration?agent_types=research&industry=manufacturing",
     created_at: new Date("2024-01-30"),
     created_by: "agent_creator_4",
-    compliance_frameworks: ["ISO 9001", "SOC2"],
+    compliance_frameworks: ["ISO_9001", "SOC2"],
     version: "1.0.0",
   },
   {

@@ -307,7 +307,7 @@ export function SSOLogin({ redirectPath, onAuthSuccess, onAuthLogout }: SSOLogin
       {/* Main content — role-based dashboard */}
       <main className="flex-1 p-4">
         {/* Route to role-appropriate dashboard */}
-        {user.role === "admin" || user.role === "super-admin" ? (
+        {user.role === "admin" ? (
           <AdminDashboard dashboardId="default" />
         ) : user.role === "power-user" ? (
           <PowerUserDashboard dashboardId="default" />

@@ -9,10 +9,10 @@
  */
 import type { NextRequest } from "next/server";
 
+import type { AnomalyDetection, PredictiveScore } from "@/lib/analytics/predictive-engine";
 import { prisma } from "@/lib/db";
 import { checkGovernancePolicies, GovernanceFramework, AuditEventType } from "@/lib/governance/audit-management";
 import type { AuditEvent } from "@/lib/governance/audit-management";
-import type { AnomalyDetection, PredictiveScore } from "@/lib/analytics/predictive-engine";
 
 import type { AgentType, Industry } from "./agent-orchestration";
 import type { KnowledgeEntry } from "./industry-knowledge-bases";
@@ -159,7 +159,7 @@ export async function executeDecision(
           resource_type: "decision_engine",
           changes: { decision_id: proposal.id, required_approvals: proposal.required_approvals },
           compliance_framework: "SOC2",
-          status: "pending",
+          status: "blocked",
           risk_level: proposal.risk_level,
         },
       };

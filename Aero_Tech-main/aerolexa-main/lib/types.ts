@@ -2085,6 +2085,7 @@ export const ANALYSIS_KIND_DESCRIPTIONS: Record<AnalysisKind, string> = {
     "Advanced causal: IV (instrumental variable) / do-calculus for policy evaluation — confounding adjustment, transportability, and principal stratification",
   geospatial:
     "Geospatial / advanced mapping and regional analysis — choropleth, hot-spot detection, spatial autocorrelation, and point-pattern analysis",
+  map: "Choropleth map: region-level values classified into quantile classes so regions can be compared geographically",
 };
 
 export const ROLE_OPTIONS = [

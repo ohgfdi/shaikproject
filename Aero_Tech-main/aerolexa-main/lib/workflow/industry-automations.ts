@@ -209,7 +209,7 @@ export function getIndustryAutomations(
       action: "notify_slack" as AutomationAction,
       action_config: {
         channel: "#churn-alerts",
-        message: `*Churn Risk*: Customer *{$record.user_id}* has high churn risk (${$record.churn_risk_score}%) - assign to CSM`,
+        message: `*Churn Risk*: Customer *{$record.user_id}* has high churn risk ({$record.churn_risk_score}%) - assign to CSM`,
         persona: "@team",
       },
       is_active: true,

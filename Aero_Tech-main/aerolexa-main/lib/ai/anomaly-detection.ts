@@ -30,7 +30,7 @@ export interface AnomalyEvent {
   detectedAt: Date;
   timeRangeStart: Date;
   timeRangeEnd: Date;
-  status: "active" | "resolved" | " dismissed";
+  status: "active" | "resolved" | "dismissed";
   contributingFactors?: string[];
   resolutionNotes?: string;
   assignedTo?: string;

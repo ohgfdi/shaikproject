@@ -48,6 +48,7 @@ export function AdminDashboard({ dashboardId }: { dashboardId: string }) {
       type: "pbi-visual",
       title: template.props.title,
       pbiVisual: {
+        kind: "map",
         categories: [],
         values: [],
         ...template.props,

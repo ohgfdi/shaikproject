@@ -208,9 +208,11 @@ export async function GET(request: Request) {
 
       if (action === "anomaly:stats") {
         const eventsStr = searchParams.get("events");
-        const events = eventsStr
+        const events: AnomalyEvent[] = eventsStr
           ? eventsStr.split(";").map((e: string) => {
               const [id, metricId, metricName, type, severity, current, expected, devPct, detected, status] = e.split("|");
+              const eventStatus: AnomalyEvent["status"] =
+                status === "resolved" || status === "dismissed" ? status : "active";
               return {
                 id: id ?? "",
                 metricId: metricId ?? "",
@@ -223,7 +225,7 @@ export async function GET(request: Request) {
                 detectedAt: new Date(detected ?? Date.now()),
                 timeRangeStart: new Date(detected ?? Date.now()),
                 timeRangeEnd: new Date(detected ?? Date.now()),
-                status: status === "dismissed" ? " dismissed" : (status as "active" | "resolved"),
+                status: eventStatus,
               };
             })
             .filter((e) => e.metricId)

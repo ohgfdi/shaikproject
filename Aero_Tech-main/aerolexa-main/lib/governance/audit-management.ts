@@ -11,7 +11,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getComplianceRequirements } from "@/lib/industry/compliance-mappings";
 
-export type GovernanceFramework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX";
+export type GovernanceFramework = "SOC2" | "HIPAA" | "PCI_DSS" | "GDPR" | "SOX" | "ISO_9001";
 
 export const AuditEventType = {
   record_create: "record_create",

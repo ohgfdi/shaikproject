@@ -37,16 +37,25 @@ export interface JobPayload {
 export async function enqueue(
   kind: JobKind,
   payload: JobPayload,
-  options: { maxAttempts?: number; delayMs?: number } = {},
+  options: { maxAttempts?: number; delayMs?: number; workspaceId?: string } = {},
 ) {
   const { maxAttempts = 5, delayMs = 0 } = options;
 
   const jobId = uuidv4();
   const now = new Date().toISOString();
 
+  // JobQueue rows are workspace-scoped; fall back to the first workspace when
+  // the caller does not thread one through.
+  const workspaceId =
+    options.workspaceId ?? (await prisma.workspace.findFirst({ select: { id: true } }))?.id;
+  if (!workspaceId) {
+    throw new Error("enqueue: no workspace available for the job");
+  }
+
   await prisma.jobQueue.create({
     data: {
       id: jobId,
+      workspaceId,
       kind,
       status: "pending" as JobStatus,
       payload: JSON.stringify(payload),

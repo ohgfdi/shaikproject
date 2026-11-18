@@ -15,9 +15,28 @@
  *   // Invalidate cache after data change
  *   await cacheInvalidate(`query:datasets:${workspaceId}`);
  */
-import { createClient, RedisClientType } from "redis";
+import { createRequire } from "node:module";
 
 import { prisma } from "@/lib/db";
+
+/**
+ * Minimal Redis surface this module relies on. The `redis` package is an
+ * optional runtime dependency: it is resolved lazily so a deployment without
+ * it falls back to the in-memory client instead of failing at import time.
+ */
+export interface RedisClientType {
+  connect(): Promise<unknown>;
+  quit(): Promise<unknown>;
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ttlMs: number): Promise<unknown>;
+  del(...keys: string[]): Promise<unknown>;
+  keys(pattern: string): Promise<string[]>;
+  exists(key: string): Promise<unknown>;
+  ttl(key: string): Promise<number>;
+  ping(): Promise<string>;
+}
+
+const requireFromRoot = createRequire(process.cwd() + "/package.json");
 
 let redisClient: RedisClientType | null = null;
 
@@ -30,22 +49,26 @@ export async function getRedisClient(): Promise<RedisClientType> {
   const url = process.env.REDIS_URL || "redis://localhost:6379";
 
   try {
-    redisClient = createClient({ url });
-    await redisClient.connect();
+    const { createClient } = requireFromRoot("redis") as {
+      createClient: (options: { url: string }) => RedisClientType;
+    };
+    const client = createClient({ url });
+    redisClient = client;
+    await client.connect();
     console.log("Redis client connected successfully");
 
     // Set up graceful shutdown
     process.on("SIGTERM", async () => {
-      await redisClient.quit();
+      await client.quit();
       process.exit(0);
     });
 
     process.on("SIGINT", async () => {
-      await redisClient.quit();
+      await client.quit();
       process.exit(0);
     });
 
-    return redisClient;
+    return client;
   } catch (error) {
     console.warn("Redis client initialization failed, using memory cache", error);
     redisClient = null;
@@ -59,6 +82,17 @@ const memoryStore = new Map<string | symbol, { value: unknown; expiresAt: number
 
 function getMemoryClient(): RedisClientType {
   const mock: RedisClientType = {
+    /** The in-memory client is always "connected". */
+    async connect() {},
+
+    /** List in-memory keys matching a `prefix*` pattern. */
+    async keys(pattern: string) {
+      const prefix = pattern.endsWith("*") ? pattern.slice(0, -1) : pattern;
+      return [...memoryStore.keys()].filter(
+        (key): key is string => typeof key === "string" && key.startsWith(prefix),
+      );
+    },
+
     /** Get a value from cache. */
     async get(key: string) {
       const entry = memoryStore.get(key);

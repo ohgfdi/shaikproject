@@ -4,8 +4,11 @@ import { NextResponse } from "next/server";
  *  The provider's login endpoint sets cookies/redirects the user's browser.
  *  We 302 to the provider's authorize URL; NextAuth handles the redirect flow.
  */
-export async function GET(request: Request, { params }: { params: Promise<{ provider: string }> }) {
-  const { provider } = await params;
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const searchParams = url.searchParams;
+  // This route has no dynamic segment, so the provider is taken from the query.
+  const provider = searchParams.get("provider") || "";
 
   // Only allow known providers
   const allowed = ["google", "azure", "oidc"];
@@ -17,8 +20,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
   // NextAuth expects a POST to /api/auth/signin/[provider] but we'll redirect
   // The /api/auth/[...nextauth] route handles the actual OAuth dance.
   // Instead, we delegate to the NextAuth session handler.
-  const url = new URL(request.url);
-  const searchParams = url.searchParams;
   const redirectTo = searchParams.get("redirect") || "/dashboard";
 
   // Respond with JSON that the client can use to initiate the flow
@@ -31,8 +32,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
  *  NextAuth's /api/auth/callback/[provider] route handles this, but we
  *  expose a simple endpoint here for the frontend to POST to.
  */
-export async function POST(request: Request, { params }: { params: Promise<{ provider: string }> }) {
-  const { provider } = await params;
+export async function POST(request: Request) {
+  const provider = new URL(request.url).searchParams.get("provider") || "";
 
   if (!["google", "azure", "oidc"].includes(provider)) {
     return NextResponse.json({ ok: false, error: "Unknown provider" }, { status: 400 });

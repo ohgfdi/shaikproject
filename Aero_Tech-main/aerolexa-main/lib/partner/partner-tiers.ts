@@ -208,7 +208,7 @@ export async function GET(
     // Default: list tiers
     const tiers = Object.keys(PARTNER_TIER_DEFINITIONS).map((key) => ({
       key: key as string,
-      ...PARTNER_TIER_DEFINITIONS[key as string],
+      ...PARTNER_TIER_DEFINITIONS[key as PartnerTier],
     }));
     return new Response(JSON.stringify({ tiers }), {
       status: 200,

@@ -14,16 +14,19 @@
  *     take: 50,
  *   });
  */
-import { Prisma } from "@prisma/client";
-
 import { prisma } from "@/lib/db";
 
+/** The subset of a Prisma `findMany` argument object these helpers touch. */
+interface FindManyArgs {
+  where?: Record<string, any>;
+  orderBy?: { field: string; direction: "asc" | "desc" };
+  [key: string]: any;
+}
+
 /** Add commonly used WHERE filters as AND conditions. */
-export function addCommonFilters<
-  ModelName extends keyof Prisma.ModelTree,
->(
-  prisma: Prisma.ModelRegistry[ModelName],
-  args: Prisma.Args<ModelName, "findMany">,
+export function addCommonFilters(
+  prismaModel: unknown,
+  args: FindManyArgs,
   filters: {
     /** Only items created after this date */
     createdAfter?: Date;
@@ -60,10 +63,8 @@ export function addCommonFilters<
 }
 
 /** Add ORDER BY with default fallback. */
-export function addDefaultOrderBy<
-  ModelName extends keyof Prisma.ModelTree,
->(
-  args: Prisma.Args<ModelName, "findMany">,
+export function addDefaultOrderBy(
+  args: FindManyArgs,
   defaultField = "createdAt"
 ) {
   const orderBy: any = {};

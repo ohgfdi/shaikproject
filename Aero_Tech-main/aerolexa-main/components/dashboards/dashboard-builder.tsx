@@ -999,13 +999,31 @@ function CrossFilterableBody({
   }
   const clickable = widget.type === "chart" || widget.type === "table" || widget.type === "pbi-visual";
   if (!clickable) {
-    return <WidgetBody w={widget} numStyle={numStyle} insights={insights} onText={onText} editable={editable} />;
+    return (
+      <WidgetBody
+        w={widget}
+        numStyle={numStyle}
+        insights={insights}
+        onText={onText}
+        editable={editable}
+        activePage={activePage}
+        onTileClick={onTileClick}
+      />
+    );
   }
   const values = widgetCategories(original).values.filter((v) => v !== "");
   const unique = [...new Set(values)].slice(0, 24);
   return (
     <div className="flex h-full flex-col">
-      <WidgetBody w={widget} numStyle={numStyle} insights={insights} onText={onText} editable={editable} />
+      <WidgetBody
+        w={widget}
+        numStyle={numStyle}
+        insights={insights}
+        onText={onText}
+        editable={editable}
+        activePage={activePage}
+        onTileClick={onTileClick}
+      />
       {unique.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-line pt-2">
           <span className="text-caption text-muted">Click to filter:</span>
@@ -1145,12 +1163,16 @@ function WidgetBody({
   insights: _insights,
   onText,
   editable,
+  activePage,
+  onTileClick,
 }: {
   w: DashboardWidget;
   numStyle: "comma" | "dot" | "plain";
   insights: InsightCard[];
   onText: (t: string) => void;
   editable: boolean;
+  activePage: ReportPage;
+  onTileClick: (widget: DashboardWidget, value: string, opts?: { drill?: boolean }) => void;
 }) {
   if (w.type === "text") {
     return editable ? (

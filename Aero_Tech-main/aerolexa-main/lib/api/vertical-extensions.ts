@@ -236,7 +236,8 @@ export function executeMfgQuery(
 export function getQueryExecutor(
   industry: Industry
 ): (baseQuery: any, filters: any) => any {
-  const executors: Record<Industry, (baseQuery: any, filters: any) => any> = {
+  // Healthcare has no vertical query language yet — those calls fall back below.
+  const executors: Partial<Record<Industry, (baseQuery: any, filters: any) => any>> = {
     finance: executeFinanceQuery,
     saas: executeSaaSQuery,
     retail: executeRetailQuery,

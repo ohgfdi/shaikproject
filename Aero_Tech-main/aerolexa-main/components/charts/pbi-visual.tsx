@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { pbiVisualToECharts } from "@/lib/engine/pbi-echarts";
 
 export type PbiVisualKind =
-  "waterfall" | "funnel" | "sankey" | "treemap" | "sunburst" | "gauge" | "heatmap" | "boxplot" | "ribbon" | "pareto";
+  "waterfall" | "funnel" | "sankey" | "treemap" | "sunburst" | "gauge" | "heatmap" | "boxplot" | "ribbon" | "pareto" | "map";
 
 export interface PbiVisualSpec {
   kind: PbiVisualKind;
