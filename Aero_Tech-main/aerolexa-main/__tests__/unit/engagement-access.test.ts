@@ -223,14 +223,14 @@ describe("engagement governance (DB)", () => {
   let projectId = "";
 
   async function ctxFor(userId: string): Promise<AuthContext> {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { workspace: true } });
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const membership = await prisma.organizationMember.findFirst({
       where: { userId },
       include: { organization: true },
     });
     return {
       user,
-      workspace: user.workspace!,
+      workspace: { id: user.workspaceId!, name: `${user.id} WS` },
       settings: DEFAULT_WORKSPACE_SETTINGS,
       organization: membership?.organization ?? null,
       organizationRole: membership?.role ?? null,
@@ -250,7 +250,7 @@ describe("engagement governance (DB)", () => {
       [userOut, "Outsider"],
     ] as const) {
       await prisma.user.create({
-        data: { id, email: `${id}@test.com`, name, passwordHash: "x", workspace: { create: { name: `${name} WS` } } },
+        data: { id, email: `${id}@test.com`, name, passwordHash: "x", workspaceId: `${id}WS` },
       });
     }
 
@@ -285,7 +285,7 @@ describe("engagement governance (DB)", () => {
     await prisma.engagement.deleteMany({ where: { id: engagementId } });
     await prisma.organizationMember.deleteMany({ where: { organizationId: orgId } });
     await prisma.organization.deleteMany({ where: { id: orgId } });
-    await prisma.workspace.deleteMany({ where: { user: { id: { in: [userA, userB, userC, userOut] } } } });
+    await prisma.workspace.deleteMany({ where: { id: { in: [userA, userB, userC, userOut].map((id) => id + "WS") } } });
     await prisma.user.deleteMany({ where: { id: { in: [userA, userB, userC, userOut] } } });
   });
 
