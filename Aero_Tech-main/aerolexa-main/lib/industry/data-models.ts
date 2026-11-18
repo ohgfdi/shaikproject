@@ -200,9 +200,33 @@ export const ManufacturingDataModel = {
   },
 };
 
+/** One field in an industry data model table. */
+export interface DataModelField {
+  name: string;
+  type: string;
+  required: boolean;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  enum?: string[];
+  [key: string]: unknown;
+}
+
+/** One table in an industry data model. */
+export interface DataModelTable {
+  fields: Record<string, DataModelField>;
+  [key: string]: unknown;
+}
+
+/** An industry data model: named tables of typed fields. */
+export interface IndustryDataModel {
+  tables: Record<string, DataModelTable>;
+  [key: string]: unknown;
+}
+
 /** Get the data model for a specific industry. */
-export function getIndustryDataModel(industry: Industry): any {
-  const models: Partial<Record<Industry, any>> = {
+export function getIndustryDataModel(industry: Industry): IndustryDataModel {
+  const models: Partial<Record<Industry, IndustryDataModel>> = {
     finance: FinanceDataModel,
     saas: SaaSDataModel,
     retail: RetailDataModel,
@@ -214,9 +238,9 @@ export function getIndustryDataModel(industry: Industry): any {
 
 /** Validate data against industry model. */
 export function validateAgainstModel(
-  model: any,
+  model: IndustryDataModel,
   table: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): { valid: boolean; errors: string[] } {
   const tableDef = model.tables[table];
   if (!tableDef) {
@@ -225,47 +249,46 @@ export function validateAgainstModel(
 
   const errors: string[] = [];
 
-  for (const [fieldName, fieldDef] of Object.entries(
-    tableDef.fields as Record<string, any>
-  )) {
-    if (fieldDef.required && (data[fieldName] === undefined || data[fieldName] === null)) {
+  for (const [fieldName, fieldDef] of Object.entries(tableDef.fields)) {
+    const value: unknown = data[fieldName];
+    if (fieldDef.required && (value === undefined || value === null)) {
       errors.push(`${fieldName} is required`);
     }
 
-    if (data[fieldName] !== undefined && data[fieldName] !== null) {
+    if (value !== undefined && value !== null) {
       // Type check
-      if (fieldDef.type === "number" && typeof data[fieldName] !== "number") {
+      if (fieldDef.type === "number" && typeof value !== "number") {
         errors.push(`${fieldName} must be a number`);
       }
-      if (fieldDef.type === "string" && typeof data[fieldName] !== "string") {
+      if (fieldDef.type === "string" && typeof value !== "string") {
         errors.push(`${fieldName} must be a string`);
       }
-      if (fieldDef.type === "boolean" && typeof data[fieldName] !== "boolean") {
+      if (fieldDef.type === "boolean" && typeof value !== "boolean") {
         errors.push(`${fieldName} must be a boolean`);
       }
-      if (fieldDef.type === "date" && !(data[fieldName] instanceof Date)) {
+      if (fieldDef.type === "date" && !(value instanceof Date)) {
         errors.push(`${fieldName} must be a date`);
       }
 
       // Min/Max check for numbers
-      if (fieldDef.min !== undefined && typeof data[fieldName] === "number" && data[fieldName] < fieldDef.min) {
+      if (fieldDef.min !== undefined && typeof value === "number" && value < fieldDef.min) {
         errors.push(`${fieldName} must be >= ${fieldDef.min}`);
       }
-      if (fieldDef.max !== undefined && typeof data[fieldName] === "number" && data[fieldName] > fieldDef.max) {
+      if (fieldDef.max !== undefined && typeof value === "number" && value > fieldDef.max) {
         errors.push(`${fieldName} must be <= ${fieldDef.max}`);
       }
 
       // Pattern check for strings
-      if (fieldDef.pattern && typeof data[fieldName] === "string") {
+      if (fieldDef.pattern && typeof value === "string") {
         const regex = new RegExp(fieldDef.pattern);
-        if (!regex.test(data[fieldName])) {
+        if (!regex.test(value)) {
           errors.push(`${fieldName} does not match pattern ${fieldDef.pattern}`);
         }
       }
 
       // Enum check for strings
-      if (fieldDef.enum && typeof data[fieldName] === "string") {
-        if (!fieldDef.enum.includes(data[fieldName])) {
+      if (fieldDef.enum && typeof value === "string") {
+        if (!fieldDef.enum.includes(value)) {
           errors.push(`${fieldName} must be one of: ${fieldDef.enum.join(", ")}`);
         }
       }

@@ -7,12 +7,21 @@ import { Input, Select } from "@/components/ui/form";
 import { useToast } from "@/components/ui/overlays";
 import { Card, CardHeader, CardContent } from "@/components/ui/primitives";
 
+/** Response from /api/ai/chat — the populated fields depend on the requested mode. */
+interface AIChatResponse {
+  error?: string;
+  type?: string;
+  question?: string;
+  planningTips?: string[];
+  result?: { itrForm?: string; formReason?: string };
+}
+
 function AITaxChatPage() {
   const [mode, setMode] = useState<"prepare-itr" | "tax-query" | "tax-planning">(
     "prepare-itr" as const
   );
   const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any | null>(null);
+  const [response, setResponse] = useState<AIChatResponse | null>(null);
   const [form, setForm] = useState({
     clientName: "",
     financialYear: new Date().getFullYear().toString(),
@@ -208,7 +217,7 @@ function AITaxChatPage() {
               <>
                 <strong>Planning Tips:</strong>
                 <ul className="mt-2 list-disc list-inside">
-                  {response.planningTips.map((tip: string, i: number) => (
+                  {(response.planningTips ?? []).map((tip: string, i: number) => (
                     <li key={i}>{tip}</li>
                   ))}
                 </ul>
